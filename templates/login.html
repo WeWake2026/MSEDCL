@@ -2,36 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Sign In · MSEDCL Quality Audit</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('msedcl_theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <style>
     body {
-      background: radial-gradient(circle at top right, #1e3a8a, #0f172a);
+      background: radial-gradient(circle at top right, #1e3a8a, #0b1120);
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       margin: 0;
+      padding: 16px;
     }
     .login-container {
-      background: #ffffff;
-      border-radius: 14px;
-      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.25);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
       width: 100%;
       max-width: 420px;
-      padding: 36px;
-      margin: 20px;
+      padding: 32px 28px;
+      position: relative;
     }
     .brand-logo {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
     .brand-logo .icon {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       background: linear-gradient(135deg, #f59e0b, #ef4444);
       border-radius: 10px;
       display: flex;
@@ -39,21 +51,36 @@
       justify-content: center;
       font-size: 22px;
       color: #fff;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
     }
     .brand-logo h2 {
-      font-size: 19px;
-      color: #0f172a;
+      font-size: 18px;
+      color: var(--text-main);
       line-height: 1.2;
+      font-weight: 700;
     }
     .brand-logo p {
-      font-size: 12px;
-      color: #64748b;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+    .theme-corner-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
 <div class="login-container">
+  <button type="button" class="theme-corner-btn" onclick="toggleTheme()" id="themeIcon" title="Toggle Theme">🌓</button>
+
   <div class="brand-logo">
     <div class="icon">⚡</div>
     <div>
@@ -62,8 +89,8 @@
     </div>
   </div>
 
-  <h3 style="font-size:16px; margin-bottom:6px; color:#0f172a;">Sign In to Portal</h3>
-  <p style="font-size:12.5px; color:#64748b; margin-bottom:20px;">Enter your authorized system credentials to proceed.</p>
+  <h3 style="font-size:16px; margin-bottom:6px; color:var(--text-main); font-weight:700;">Sign In to Portal</h3>
+  <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:20px;">Enter your authorized system credentials to proceed.</p>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -77,22 +104,38 @@
 
   <form method="post" action="{{ url_for('login') }}">
     <div style="margin-bottom:14px;">
-      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px;">Username</label>
-      <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Username</label>
+      <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus autocomplete="username">
     </div>
 
     <div style="margin-bottom:20px;">
-      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px;">Password</label>
-      <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
     </div>
 
     <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px;">Sign In to Dashboard</button>
   </form>
 
-  <p style="text-align:center; margin-top:22px; font-size:11.5px; color:#94a3b8;">
+  <p style="text-align:center; margin-top:22px; font-size:11.5px; color:var(--text-light);">
     Strict role-based access. Administrative access is logged.
   </p>
 </div>
+
+<script>
+  function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('msedcl_theme', newTheme);
+    updateThemeIcon();
+  }
+  function updateThemeIcon() {
+    const theme = document.documentElement.getAttribute('data-theme');
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.innerText = theme === 'dark' ? '☀️' : '🌙';
+  }
+  document.addEventListener('DOMContentLoaded', updateThemeIcon);
+</script>
 
 </body>
 </html>
