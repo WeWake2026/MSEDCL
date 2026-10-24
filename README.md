@@ -1,176 +1,201 @@
-# MSEDCL Quality Audit & Performance Management System
+<div align="center">
 
-An enterprise-grade Quality Assurance, Audit Analytics, Governance, and Disciplinary Performance Tracking application built for **Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)**.
+# ⚡ Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)
+### Enterprise Quality Audit & Performance Analytics Management Portal
 
----
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0.3-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-3.0+-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
+[![Chart.js](https://img.shields.io/badge/Chart.js-4.4.1-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)](https://chartjs.org)
+[![Render](https://img.shields.io/badge/Render-Deploy%20Ready-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
+[![Status](https://img.shields.io/badge/Quality%20System-Active%20%26%20Protected-success?style=for-the-badge)]()
 
-## 🌟 Key Functional Modules
+<br/>
 
-### 1. Executive Dashboard & Analytics
-- **KPI Metrics**: Total Audits, Inbound & Outbound audit volume, Fatal calls, Low score (<80%), Average score (80%–90%), Good calls (>90%), and Overall Average Quality Score.
-- **Dynamic Interactive Visualizations (Chart.js)**:
-  - Score Category Distribution (Doughnut).
-  - Fatal vs. Non-Fatal Call Ratio (Pie).
-  - Inbound vs. Outbound Workload Comparison (Doughnut).
-  - Daily & Weekly Audit Volume Timeline (Line).
-  - Auditor Evaluation Volumes (Bar).
-  - Advisor Quality Performance (Horizontal Bar).
-  - Disciplinary Warning & PIP Action Statuses (Bar).
-- **Independent Fatal Status**: Compliance/fatal breaches are tracked independently from Quality Score percentages.
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Python-Dark.svg" width="48" height="48" alt="Python" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Flask-Dark.svg" width="48" height="48" alt="Flask" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/HTML.svg" width="48" height="48" alt="HTML" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/CSS.svg" width="48" height="48" alt="CSS" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Javascript.svg" width="48" height="48" alt="JS" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/SQLite.svg" width="48" height="48" alt="SQLite" />
 
-### 2. Advanced Export Center
-- Individual Excel (`.xlsx`) & CSV exports with professional styling (frozen headers, brand colors, autofilters, optimized column widths):
-  1. Inbound Audit Data
-  2. Outbound Audit Data
-  3. Combined Inbound + Outbound Audits
-  4. Fatal Calls Register
-  5. Low Score (<80%) Calls
-  6. Average Score (80%–90%) Calls
-  7. Good Calls (>90%)
-  8. Auditor Performance & Evaluation Counts
-  9. Advisor-wise Performance Summary
-  10. Warning & PIP Action Records
-  11. Dispatched Email History Log
-  12. Ingestion Batches & Error Log
-- **Master Combined Workbook**: Multi-tab formatted Excel sheet bundling all operational registers.
-- **Download All Reports ZIP**: Complete package with all individual CSVs, styled Excel files, and Master workbook in one click.
+<br/>
 
-### 3. Advisor 360° Search by Employee ID
-- Instant profile lookup by Employee ID or Advisor Name.
-- Displays agent identity, assigned departments, supervisors/team leaders, operational center locations, total evaluations, average scores, and fatal counts.
-- Shows full interaction history with evaluator remarks and active disciplinary warnings/PIPs.
-- Direct single-click filtered Excel export for individual advisor performance reviews.
-
-### 4. Warning & PIP Email Governance
-- Multi-tier formal disciplinary actions:
-  - *First Warning*, *Second Warning*, *Final Warning*, *Performance Improvement Plan (PIP)*, *Quality Coaching Notice*, and *Quality Feedback Email*.
-- Automatic draft generation with linked call interaction IDs, date of occurrence, policy breach category, and improvement targets.
-- Confirmation modal before sending to prevent accidental duplicate transmissions.
-- Full resolution lifecycle: *Open* ➔ *In Progress* ➔ *Closed* with recorded resolution remarks and closure timestamps.
-
-### 5. Email Transmission History
-- Searchable audit log capturing every outbound warning notice.
-- Stores recipient email, employee ID, advisor name, notice category, subject, message body, created by, sent timestamp, delivery status, and error diagnostic logs.
-
-### 6. Admin User Management & Role-Based Access Control
-- Administrator console to provision user IDs, set roles, and manage permissions.
-- **Strict Roles**:
-  - `admin`: Full administrative control, user provisioning, global settings, and audit logs.
-  - `quality`: Upload audit registers, view reports, draft and dispatch warning notices.
-  - `manager`: Full reporting, analytics, drilldowns, and warning approvals.
-  - `viewer`: Read-only reporting access.
-- Secure PBKDF2/SHA-256 password hashing (plain-text passwords are never stored).
-- User activation/deactivation toggles and password reset modal.
-
-### 7. Administrative Settings & Import Controls
-- **Enable Excel Import Switch**: Immediate kill-switch to disable workbook ingestion in both the UI and on the server. Previously imported audits remain 100% accessible.
-- Organization parameters and admin notification emails.
-- Email provider configuration: Standard SMTP or Microsoft Graph OAuth (Azure App Registration).
-- Instant SMTP connectivity test ping with diagnostic logging.
-- Direct database backup download (`.db`).
-- Comprehensive **Administrative Audit Log** tracking every login, import, export, settings update, and email dispatch.
+**A mission-critical Quality Assurance, Contact Center Analytics, Disciplinary Warning/PIP Governance, and Multi-department Audit portal engineered for MSEDCL.**
 
 ---
 
-## 🚀 Windows PowerShell Quickstart Guide
+</div>
 
-### 1. Prerequisites
-- Python 3.11+ installed and available in your PowerShell path.
+## 📑 Table of Contents
+- [✨ Core Highlights & Features](#-core-highlights--features)
+- [📊 Executive Analytics & Visualizations](#-executive-analytics--visualizations)
+- [🛡️ Warning & PIP Action Governance](#-warning--pip-action-governance)
+- [👥 Role-Based Access Control (RBAC)](#-role-based-access-control-rbac)
+- [🚀 Quick Start & Installation (Windows / Linux)](#-quick-start--installation)
+- [🌐 Cloud Deployment (Render / Gunicorn)](#-cloud-deployment-render--gunicorn)
+- [📧 Email Dispatch Configuration](#-email-dispatch-configuration)
+- [📥 Automated Report Generation & Exports](#-automated-report-generation--exports)
+- [🔐 Security Best Practices](#-security-best-practices)
 
-### 2. Setup Virtual Environment & Install Dependencies
-Open PowerShell in the project directory:
+---
 
+## ✨ Core Highlights & Features
+
+| Capability | Description |
+| :--- | :--- |
+| **⚡ Live Ingestion & Auditing** | Seamless `.xlsx`, `.xlsm`, and `.csv` audit file ingestion with duplicate hashing & validation. |
+| **📅 Real-Time Live Clock & Sync** | Auto-ticking client banner with transmission tower electrical substation art and live sync state. |
+| **🏆 360° Advisor Drilldown** | Instant employee history search, coaching flags, fatal alerts, and custom PDF/Excel summaries. |
+| **🛡️ Disciplinary Warning & PIPs** | Multi-tier corrective notice generator with draft email transmission and admin deletion control. |
+| **🌓 Day / Night Smart Themes** | Dynamic dark/light mode toggle with persistent local preferences and contrast compliance. |
+| **📱 100% Mobile & Tablet Responsive** | Modern layout with collapsible sidebar, floating quick-links, and responsive analytics tables. |
+
+---
+
+## 📊 Executive Analytics & Visualizations
+
+The Home Dashboard integrates 6 interactive Chart.js visualizations that auto-adapt to day/night palettes:
+
+```
++---------------------------------------------------------------------------------------+
+|                                    MSEDCL QA KPI ROW                                  |
+| [ TOTAL AUDITS ]   [ INBOUND ]   [ OUTBOUND ]   [ FATAL CALLS ]   [ AVG SCORE % ]     |
++---------------------------------------------------------------------------------------+
+|                                  PRIMARY ANALYTICS ROW                                |
+|  [ Score Distribution ]       [ Fatal Ratio Donut ]      [ Inbound vs Outbound Trend] |
+|   • Good (>90%)                • Fatal Calls              • Daily Call Volumes        |
+|   • Average (80-90%)           • Non-Fatal Calls          • Comparative Trajectory    |
+|   • Low (<80%)                                                                        |
++---------------------------------------------------------------------------------------+
+|                                 SECONDARY ANALYTICS ROW                               |
+|  [ Auditor Activity Bar ]     [ Top Advisor Scores ]     [ Warning & PIP Status ]     |
+|   • Evaluations Per QA         • Ranked High Performers   • Open / In Progress        |
+|   • Activity Benchmarks        • Score Percentages        • Closed & Active PIPs      |
++---------------------------------------------------------------------------------------+
+|                     ADVISOR-WISE QUALITY SUMMARY REGISTER (FILTERABLE)                |
++---------------------------------------------------------------------------------------+
+```
+
+---
+
+## 🛡️ Warning & PIP Action Governance
+
+Formal corrective action governance system:
+1. **Notice Creation**: Automated draft generation with interaction ID, evaluator remarks, and targeted review dates.
+2. **Action Register**:
+   - `✉️ Send`: Direct SMTP transmission with full audit trail.
+   - `👁️ View`: Expandable drawer showing detailed notice body and advisor response.
+   - `💬 Advisor Response`: Direct input form for advisors to submit corrective action plans.
+   - `🗑️ Remove`: **Admin-only deletion button** allowing permanent removal of records with confirmation.
+3. **Resolution Lifecycle**: *Open* ➔ *In Progress* ➔ *Closed / Resolved*.
+
+---
+
+## 👥 Role-Based Access Control (RBAC)
+
+| Role | Dashboard | Ingestion | Reports & Exports | Issue PIP | Delete PIP | User Management |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Admin** | ✅ Full | ✅ Yes | ✅ All 12 Formats | ✅ Yes | ✅ **Yes** | ✅ Complete |
+| **Quality** | ✅ Full | ✅ Yes | ✅ All 12 Formats | ✅ Yes | ❌ No | ❌ View Only |
+| **Manager** | ✅ Full | ❌ Read | ✅ View & Export | ✅ Yes | ❌ No | ❌ View Only |
+| **Advisor** | 🔒 Own Data | ❌ No | 🔒 Own Performance| 💬 Feedback Only | ❌ No | ❌ No |
+
+---
+
+## 🚀 Quick Start & Installation
+
+### 1. Clone & Set Up Directory
+```bash
+git clone https://github.com/WeWake2026/MSEDCL.git
+cd MSEDCL
+```
+
+### 2. Set Up Virtual Environment
+
+**Windows PowerShell:**
 ```powershell
-# Create virtual environment (if not already present)
 py -m venv .venv
-
-# Activate environment
 .\.venv\Scripts\Activate.ps1
-
-# Install requirements
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-Copy `.env.example` to `.env`:
-
-```powershell
-Copy-Item .env.example .env
+**Linux / macOS:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Ensure `.env` contains your desired administrative credentials:
-```env
-APP_SECRET_KEY=msedcl-qa-audit-secret-key-2026-secure
-DATABASE_PATH=quality_audit.db
-MAX_UPLOAD_MB=25
-
-ADMIN_USERNAME=qaadmin
-ADMIN_PASSWORD=YourSecurePasswordHere
-QUALITY_USERNAME=quality1
-QUALITY_PASSWORD=YourSecurePasswordHere
-MANAGER_USERNAME=manager1
-MANAGER_PASSWORD=YourSecurePasswordHere
+### 3. Initialize Database & Migrations
+```bash
+python migrate_db.py
+python init_db.py
 ```
 
-### 4. Run Database Migration
-Initialize enhanced database tables (`email_history`, `audit_logs`, `system_settings`, and warning columns):
-
-```powershell
-.\.venv\Scripts\python.exe migrate_db.py
+### 4. Run the Application
+```bash
+python app.py
 ```
-
-### 5. Run Automated Test Suite
-Verify that all 6 test suites pass:
-
-```powershell
-.\.venv\Scripts\python.exe test_system.py
-```
-
-### 6. Launch the Application
-```powershell
-.\.venv\Scripts\python.exe app.py
-```
-
-Open your browser to:
-**[http://127.0.0.1:5000](http://127.0.0.1:5000)**
-
-Log in with:
-- **Username**: `qaadmin`
-- **Password**: configured in `.env` (default: `Msedcl@123`)
+Visit **`http://localhost:5000`** in your browser. Default Admin: `admin` / `admin123` (or configured via `.env`).
 
 ---
 
-## 📧 Email Authentication Guide
+## 🌐 Cloud Deployment (Render / Gunicorn)
 
-### Option A: Organization SMTP (Port 587 with STARTTLS)
-1. Go to **Admin Settings** (`/admin/settings`).
-2. Set **Email Provider** to `Standard Organization SMTP`.
-3. Provide:
-   - **SMTP Host**: e.g., `smtp.office365.com` or internal relay host.
-   - **Port**: `587`
-   - **SMTP Username**: sender mailbox user.
-   - **SMTP Password**: account password or Microsoft App Password.
-   - **From Address**: e.g., `quality.audit@msedcl.in`.
-4. Run a diagnostic test using **Test Email Transmission**.
+This repository is optimized for one-click deployment on **Render**:
 
-> **Note on Microsoft Consumer / Enterprise Accounts**: Microsoft 365 and Outlook.com have deprecated Basic Authentication for SMTP AUTH on standard consumer accounts. If your tenant enforces Modern Authentication / MFA, create an **App Password** in Microsoft Security Center or use **Microsoft Graph OAuth** below.
-
-### Option B: Microsoft Graph OAuth (Recommended for Azure / Office 365 Tenants)
-1. Register an application in [Azure Portal](https://portal.azure.com) under **App Registrations**.
-2. Grant application permission: `Mail.Send`.
-3. Copy **Client ID**, **Tenant ID**, and generate a **Client Secret**.
-4. Enter these credentials in **Admin Settings** under Microsoft Graph configuration.
+- **Build Command:**
+  ```bash
+  pip install -r requirements.txt
+  ```
+- **Start Command:**
+  ```bash
+  gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT
+  ```
+- **Environment Variables Required:**
+  - `APP_SECRET_KEY`: Long cryptographic string.
+  - `DATABASE_PATH`: `quality_audit.db`
+  - `MAX_UPLOAD_MB`: `25`
 
 ---
 
-## 📂 Sample Workbook Templates
-- [sample_inbound_audit_template.csv](file:///c:/Users/Vivek/Downloads/MSEDCL_Quality_Audit_System_Starter/MSEDCL_Quality_Audit_System/sample_inbound_audit_template.csv): Sanitized template for customer service inbound calls.
-- [sample_outbound_audit_template.csv](file:///c:/Users/Vivek/Downloads/MSEDCL_Quality_Audit_System_Starter/MSEDCL_Quality_Audit_System/sample_outbound_audit_template.csv): Sanitized template for outbound operations and collections audits.
+## 📧 Email Dispatch Configuration
+
+Configure SMTP in `.env` or through **Admin Settings** (`/admin/settings`):
+
+```ini
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USERNAME=quality.audit@msedcl.in
+SMTP_PASSWORD=YourAppPasswordHere
+SMTP_FROM=quality.audit@msedcl.in
+```
 
 ---
 
-## 🔒 Security & Data Privacy Compliance
-- Plain-text passwords are never stored; PBKDF2 with SHA-256 is enforced.
-- CSRF protection and server-side RBAC guard every route.
-- Historical audit data is strictly preserved when users are deactivated or removed.
-- No real consumer personal information is hardcoded or exposed.
+## 📥 Automated Report Generation & Exports
+
+- **Individual Category Reports**: Excel (`.xlsx`) & CSV formats with auto-fitted columns, brand borders, and frozen title headers.
+- **Combined Master Workbook**: Multi-sheet workbook assembling Inbound, Outbound, Fatal, and Advisor performance summaries.
+- **Bulk ZIP Archive**: One-click download of all 12 operational datasets.
+
+---
+
+## 🔐 Security Best Practices
+
+- **Zero Plain-Text Credentials**: Passwords hashed using PBKDF2 with SHA-256 and unique salts.
+- **Strict CSRF & Session Isolation**: Session cookies marked `HttpOnly` and `SameSite=Lax`.
+- **SQL Parameterization**: Zero raw query string interpolation to prevent injection attacks.
+- **Immutable System Audit Log**: Dedicated security audit records for all user logins, failed attempts, and administrative actions.
+
+---
+
+<div align="center">
+<sub>Designed & Maintained for Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL). All rights reserved.</sub>
+</div>

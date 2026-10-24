@@ -163,6 +163,11 @@
               </form>
               {% endif %}
               <button onclick="toggleDetails('warn_{{ w.id }}')" class="btn btn-secondary btn-sm">👁️ View</button>
+              {% if user.role == 'admin' %}
+              <form method="post" action="{{ url_for('delete_warning', warning_id=w.id) }}" onsubmit="return confirm('Are you sure you want to permanently remove Warning / PIP record #{{ w.id }} for {{ w.advisor_name }}?')">
+                <button type="submit" class="btn btn-danger btn-sm" title="Remove Warning / PIP Record">🗑️ Remove</button>
+              </form>
+              {% endif %}
             </div>
           </td>
         </tr>

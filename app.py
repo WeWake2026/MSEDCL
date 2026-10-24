@@ -955,6 +955,20 @@ def close_warning(warning_id):
     flash(f"Warning / PIP #{warning_id} marked as Closed and resolved.", "success")
     return redirect(url_for("warnings"))
 
+@app.route("/warnings/<int:warning_id>/delete", methods=["POST"])
+@roles("admin")
+def delete_warning(warning_id):
+    with db() as con:
+        w = con.execute("SELECT * FROM warnings WHERE id=?", (warning_id,)).fetchone()
+        if not w:
+            abort(404)
+        con.execute("DELETE FROM warnings WHERE id=?", (warning_id,))
+        # Also clean associated email history if desired or keep as audit
+        con.execute("DELETE FROM email_history WHERE warning_id=?", (warning_id,))
+    log_audit("DELETE_WARNING", f"#{warning_id}", f"Advisor: {w['advisor_name']}, Type: {w['warning_type']}")
+    flash(f"Warning / PIP record #{warning_id} has been permanently removed.", "info")
+    return redirect(url_for("warnings"))
+
 @app.route("/warnings/<int:warning_id>/feedback", methods=["POST"])
 @login_required
 def warning_advisor_feedback(warning_id):
