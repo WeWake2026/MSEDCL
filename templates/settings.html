@@ -1,0 +1,172 @@
+{% extends "layout.html" %}
+{% block title %}System Settings · MSEDCL Quality Audit{% endblock %}
+{% block heading %}System & Security Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Application & Ingestion Governance</h3>
+    <span class="card-subtitle">Global environment, email providers, and upload permissions</span>
+  </div>
+  <form method="post" action="{{ url_for('settings_page') }}">
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+
+      <!-- General Settings -->
+      <div class="filter-group">
+        <label>Organization / Portal Name</label>
+        <input type="text" name="company_name" value="{{ settings.company_name }}" class="form-control" required>
+      </div>
+      <div class="filter-group">
+        <label>System Administrator Email</label>
+        <input type="email" name="admin_email" value="{{ settings.admin_email }}" class="form-control" required>
+      </div>
+      <div class="filter-group">
+        <label>Default Dashboard Date Filter (Days)</label>
+        <input type="number" name="default_date_range" value="{{ settings.default_date_range }}" class="form-control" required>
+      </div>
+
+      <!-- Feature Toggle: Enable Excel Import -->
+      <div class="filter-group" style="background:#f8fafc;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <label style="color:var(--primary);font-size:13px;margin-bottom:8px;"><strong>⚡ Excel Workbook Import Switch</strong></label>
+        <select name="enable_excel_import" class="form-control" style="font-weight:600;">
+          <option value="true" {{ 'selected' if settings.enable_excel_import=='true' else '' }}>✅ Enabled (Quality & Admins may upload)</option>
+          <option value="false" {{ 'selected' if settings.enable_excel_import=='false' else '' }}>⛔ Disabled (Workbook ingestion blocked)</option>
+        </select>
+        <small style="color:var(--text-muted);display:block;margin-top:6px;">When disabled, server immediately blocks all upload endpoints. Existing audits remain untouched.</small>
+      </div>
+
+    </div>
+
+    <hr style="border:0;border-top:1px solid var(--border-light);margin:24px 0;">
+
+    <!-- Email Dispatch Provider Settings -->
+    <h4 style="font-size:15px;margin-bottom:12px;color:var(--text-main);">📧 Email Dispatch Configuration</h4>
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+      <div class="filter-group">
+        <label>Selected Email Provider</label>
+        <select name="email_provider" class="form-control" id="providerSelect" onchange="toggleEmailFields()">
+          <option value="smtp" {{ 'selected' if settings.email_provider=='smtp' else '' }}>Standard Organization SMTP</option>
+          <option value="ms_graph" {{ 'selected' if settings.email_provider=='ms_graph' else '' }}>Microsoft Graph OAuth (MSEDCL Tenant)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sender 'From' Email Address</label>
+        <input type="email" name="smtp_from" value="{{ settings.smtp_from }}" class="form-control">
+      </div>
+    </div>
+
+    <!-- SMTP Specific Fields -->
+    <div id="smtpFields" style="margin-top:14px;">
+      <div class="filter-grid" style="grid-template-columns: 2fr 1fr 2fr 2fr;">
+        <div class="filter-group">
+          <label>SMTP Host</label>
+          <input type="text" name="smtp_host" value="{{ settings.smtp_host }}" class="form-control" placeholder="mail.msedcl.in or smtp.office365.com">
+        </div>
+        <div class="filter-group">
+          <label>Port</label>
+          <input type="number" name="smtp_port" value="{{ settings.smtp_port }}" class="form-control">
+        </div>
+        <div class="filter-group">
+          <label>SMTP Username</label>
+          <input type="text" name="smtp_username" value="{{ settings.smtp_username }}" class="form-control">
+        </div>
+        <div class="filter-group">
+          <label>SMTP Password / App Password</label>
+          <input type="password" name="smtp_password" value="{{ settings.smtp_password }}" class="form-control" placeholder="••••••••">
+        </div>
+      </div>
+    </div>
+
+    <!-- Microsoft Graph Specific Fields -->
+    <div id="msGraphFields" style="display:none;margin-top:14px;background:#f0fdf4;padding:14px;border-radius:var(--radius-sm);border:1px solid #bbf7d0;">
+      <p style="font-size:12px;color:#166534;margin-bottom:10px;"><strong>Microsoft Graph API Integration:</strong> Recommended for Microsoft 365 enterprise tenants where basic SMTP AUTH is disabled.</p>
+      <div class="filter-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="filter-group">
+          <label>Client ID (Application ID)</label>
+          <input type="text" name="ms_client_id" value="{{ settings.ms_client_id }}" class="form-control">
+        </div>
+        <div class="filter-group">
+          <label>Tenant ID (Directory ID)</label>
+          <input type="text" name="ms_tenant_id" value="{{ settings.ms_tenant_id }}" class="form-control">
+        </div>
+        <div class="filter-group">
+          <label>Client Secret</label>
+          <input type="password" name="ms_client_secret" value="{{ settings.ms_client_secret }}" class="form-control">
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;display:flex;justify-content:flex-end;">
+      <button type="submit" class="btn btn-primary" style="padding:10px 24px;">Save System Settings</button>
+    </div>
+  </form>
+</div>
+
+<!-- Database Backup & Email Connectivity Test Row -->
+<div class="charts-grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Database Maintenance & Backups</h3>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Create instantaneous snapshots of the active SQLite database file or download backup copies.</p>
+    <div style="display:flex;gap:10px;">
+      <a href="{{ url_for('db_backup_download') }}" class="btn btn-secondary">💾 Download Full Database Backup</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Test Email Transmission</h3>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Send a diagnostic test ping to verify current SMTP / provider credentials.</p>
+    <form method="post" action="{{ url_for('test_email_connection') }}" style="display:flex;gap:8px;">
+      <input type="email" name="test_recipient" placeholder="Recipient email address" class="form-control" required>
+      <button type="submit" class="btn btn-secondary">Send Ping</button>
+    </form>
+  </div>
+</div>
+
+<!-- System Operations & Maintenance Row -->
+<div class="charts-grid-2" style="margin-top:20px;">
+  <div class="card" style="border-left:4px solid var(--danger);">
+    <div class="card-header">
+      <h3 class="card-title" style="color:var(--danger);display:flex;align-items:center;gap:6px;">
+        <span>🔄</span> Server Operations & Full System Restart
+      </h3>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+      Perform a complete service restart of the Flask server and reload all system modules. An active administrator password is required for security authorization.
+    </p>
+    <div>
+      <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger">
+        <span>🔄</span> Request Full System Restart
+      </button>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--warning);">
+    <div class="card-header">
+      <h3 class="card-title" style="color:#d97706;display:flex;align-items:center;gap:6px;">
+        <span>🧹</span> Purge Uploaded Audits (Keep User Accounts)
+      </h3>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+      Remove all previously uploaded call audit records and batches to start completely fresh. <strong>All user accounts, credentials, and settings are preserved.</strong>
+    </p>
+    <form method="post" action="{{ url_for('purge_uploaded_audits') }}" onsubmit="return confirm('⚠️ Are you sure you want to remove all uploaded call audit files?\n\nThis will clear old call records and allow fresh uploads. All user logins and credentials will remain safely stored.')">
+      <button type="submit" class="btn btn-secondary" style="border-color:#d97706;color:#d97706;">
+        <span>🧹</span> Clear Historical Audits
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleEmailFields() {
+  const p = document.getElementById('providerSelect').value;
+  document.getElementById('smtpFields').style.display = (p === 'smtp') ? 'block' : 'none';
+  document.getElementById('msGraphFields').style.display = (p === 'ms_graph') ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', toggleEmailFields);
+</script>
+{% endblock %}

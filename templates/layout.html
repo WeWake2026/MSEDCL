@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MSEDCL Quality Audit Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      <div class="sidebar-brand-text">
+        <h2>MSEDCL QA</h2>
+        <p>Quality Audit Portal</p>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% if user.role in ('viewer', 'advisor') %}
+        <!-- Dedicated Advisor Workspace Menu (Strictly Personal Data Only) -->
+        <div class="nav-section-title">My Workspace</div>
+        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}">
+          <span class="icon">📊</span>
+          <span>My Performance Dashboard</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}">
+          <span class="icon">📞</span>
+          <span>My Inbound Calls</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Outbound') }}" class="nav-item {{ 'active' if page=='outbound_audits' else '' }}">
+          <span class="icon">📱</span>
+          <span>My Outbound Calls</span>
+        </a>
+        <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}">
+          <span class="icon">⚠️</span>
+          <span>My Fatal Calls</span>
+        </a>
+        <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}">
+          <span class="icon">🎯</span>
+          <span>My Score Breakdown</span>
+        </a>
+
+        <div class="nav-section-title">My Actions & Records</div>
+        <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}">
+          <span class="icon">✉️</span>
+          <span>My Warnings & PIP</span>
+        </a>
+        <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}">
+          <span class="icon">📥</span>
+          <span>Export My Records</span>
+        </a>
+      {% else %}
+        <!-- Full Operations Menu for Management & Quality Team -->
+        <div class="nav-section-title">Core Operations</div>
+        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}">
+          <span class="icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}">
+          <span class="icon">📞</span>
+          <span>Inbound Audits</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Outbound') }}" class="nav-item {{ 'active' if page=='outbound_audits' else '' }}">
+          <span class="icon">📱</span>
+          <span>Outbound Audits</span>
+        </a>
+        <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}">
+          <span class="icon">⚠️</span>
+          <span>Fatal Calls</span>
+        </a>
+        <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}">
+          <span class="icon">🎯</span>
+          <span>Score Reports</span>
+        </a>
+
+        <div class="nav-section-title">Analysis & Search</div>
+        <a href="{{ url_for('auditors_view') }}" class="nav-item {{ 'active' if page=='auditors' else '' }}">
+          <span class="icon">👥</span>
+          <span>Auditor Reports</span>
+        </a>
+        <a href="{{ url_for('advisor_search') }}" class="nav-item {{ 'active' if page=='advisor_search' else '' }}">
+          <span class="icon">🔍</span>
+          <span>Advisor Search</span>
+        </a>
+
+        <div class="nav-section-title">Governance & Actions</div>
+        <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}">
+          <span class="icon">✉️</span>
+          <span>Warnings & PIP</span>
+        </a>
+        <a href="{{ url_for('email_history') }}" class="nav-item {{ 'active' if page=='email_history' else '' }}">
+          <span class="icon">📬</span>
+          <span>Email History</span>
+        </a>
+        <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}">
+          <span class="icon">📥</span>
+          <span>Export Center</span>
+        </a>
+
+        <div class="nav-section-title">Administration</div>
+        <a href="{{ url_for('upload') }}" class="nav-item {{ 'active' if page=='upload' else '' }}">
+          <span class="icon">📤</span>
+          <span>Import Files</span>
+        </a>
+        {% if user.role in ('admin', 'manager') %}
+        <a href="{{ url_for('user_management') }}" class="nav-item {{ 'active' if page=='users' else '' }}">
+          <span class="icon">👤</span>
+          <span>User Management</span>
+        </a>
+        {% endif %}
+        {% if user.role == 'admin' %}
+        <a href="{{ url_for('settings_page') }}" class="nav-item {{ 'active' if page=='settings' else '' }}">
+          <span class="icon">⚙️</span>
+          <span>Admin Settings</span>
+        </a>
+        <a href="{{ url_for('audit_logs') }}" class="nav-item {{ 'active' if page=='audit_logs' else '' }}">
+          <span class="icon">📋</span>
+          <span>Audit Logs</span>
+        </a>
+        {% endif %}
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-info">
+          <strong>{{ user.username }}</strong>
+          <span>{{ user.role|title }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" title="Sign out" style="color:#ef4444;text-decoration:none;font-size:16px;">🚪</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Application Wrapper -->
+  <main class="app-main">
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">{% block heading %}MSEDCL Quality Audit Management System{% endblock %}</h1>
+      </div>
+      <div class="topbar-right">
+        {% if user.role not in ('viewer', 'advisor') %}
+        <!-- Quick Global Search for Employee ID -->
+        <form action="{{ url_for('advisor_search') }}" method="get" style="display:flex;gap:6px;">
+          <input type="text" name="emp_id" placeholder="🔍 Search Employee ID..." class="form-control" style="width:200px;padding:6px 10px;font-size:12.5px;" value="{{ request.args.get('emp_id','') }}">
+          <button class="btn btn-secondary btn-sm" type="submit">Go</button>
+        </form>
+        {% else %}
+        <span style="font-size:12.5px;color:var(--text-muted);font-weight:600;">Advisor Workspace</span>
+        {% endif %}
+        {% if user.role == 'admin' %}
+        <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger btn-sm" title="Restart Application Server (Admin Only)" style="display:flex;align-items:center;gap:4px;">
+          <span>🔄</span> <span>Restart System</span>
+        </button>
+        {% endif %}
+        <span class="badge badge-info">{{ user.role|upper }}</span>
+      </div>
+    </header>
+
+    {% if user.role == 'admin' %}
+    <!-- Admin Full Restart Confirmation Modal -->
+    <div id="systemRestartModal" class="modal-overlay">
+      <div class="modal-box" style="max-width:440px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="font-size:16px;color:var(--danger);display:flex;align-items:center;gap:6px;">
+            <span>⚠️</span> Confirm System Restart
+          </h3>
+          <button onclick="closeSystemRestartModal()" style="border:none;background:none;font-size:20px;cursor:pointer;">&times;</button>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
+          This action will safely flush memory, log an audit record, and perform a full restart of the <strong>MSEDCL Quality Audit System</strong> server.
+        </p>
+        <form method="post" action="{{ url_for('admin_restart_system') }}">
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Administrator Password *</label>
+            <input type="password" name="admin_password" class="form-control" required placeholder="Enter your login password to authorize" autofocus>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" onclick="closeSystemRestartModal()" class="btn btn-secondary">Cancel</button>
+            <button type="submit" class="btn btn-danger">Authorize & Restart</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+    function openSystemRestartModal() {
+      const m = document.getElementById('systemRestartModal');
+      if (m) m.classList.add('open');
+    }
+    function closeSystemRestartModal() {
+      const m = document.getElementById('systemRestartModal');
+      if (m) m.classList.remove('open');
+    }
+    </script>
+    {% endif %}
+
+    <div class="content-body">
+      <!-- Flash Alert Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category=='success' else ('danger' if category=='error' else 'warning') }}">
+              <span>{{ message }}</span>
+              <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:16px;">&times;</button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Page Content -->
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</body>
+</html>

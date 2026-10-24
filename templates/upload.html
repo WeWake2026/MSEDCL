@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+{% block title %}Import Files · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Import Audit Workbooks{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Upload Excel / CSV Audit Register</h3>
+      <p class="card-subtitle">Upload Inbound and Outbound files separately. Duplicates are auto-suppressed.</p>
+    </div>
+    {% if not import_enabled %}
+      <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
+    {% endif %}
+  </div>
+
+  {% if not import_enabled %}
+    <div class="alert alert-warning">
+      <strong>Notice:</strong> Workbook ingestion has been temporarily disabled by an Administrator in System Settings. All previously imported audits and reports remain fully accessible.
+    </div>
+  {% else %}
+    <form method="post" enctype="multipart/form-data">
+      <div class="filter-grid" style="grid-template-columns: 1fr 2fr;">
+        <div class="filter-group">
+          <label>Department Scope *</label>
+          <select name="department" class="form-control" required>
+            <option value="">Select Department</option>
+            <option value="Inbound">Inbound Customer Service</option>
+            <option value="Outbound">Outbound Operations</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Workbook File (.xlsx, .xlsm, .csv) *</label>
+          <input type="file" name="file" accept=".xlsx,.xlsm,.csv" class="form-control" required>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text-muted);">Max file size: {{ max_mb }} MB. Required columns: Advisor Name and Quality Score.</span>
+        <button type="submit" class="btn btn-primary">Validate and Ingest Workbook</button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+
+{% if result %}
+<div class="card" style="border-top:3px solid var(--success);">
+  <div class="card-header">
+    <h3 class="card-title">Batch Ingestion Summary</h3>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Rows Scanned</div>
+      <div class="stat-val primary">{{ result.seen }}</div>
+    </div>
+    <div class="stat-card good">
+      <div class="stat-label">Inserted Audits</div>
+      <div class="stat-val good">{{ result.inserted }}</div>
+    </div>
+    <div class="stat-card low">
+      <div class="stat-label">Duplicates Skipped</div>
+      <div class="stat-val warn">{{ result.duplicates }}</div>
+    </div>
+    <div class="stat-card fatal">
+      <div class="stat-label">Rejected Rows</div>
+      <div class="stat-val danger">{{ result.rejected }}</div>
+    </div>
+  </div>
+
+  <h4 style="font-size:14px;margin:18px 0 8px;">Auto-Detected Column Mapping</h4>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>Internal System Field</th><th>Detected Workbook Column</th></tr></thead>
+      <tbody>
+        {% for k, v in result.mapping.items() %}
+        <tr><td><strong>{{ k }}</strong></td><td>{{ v }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if result.errors %}
+  <h4 style="font-size:14px;margin:20px 0 8px;color:var(--danger);">Rejected Row Exceptions</h4>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>Workbook Row</th><th>Reason for Rejection</th></tr></thead>
+      <tbody>
+        {% for e in result.errors %}
+        <tr><td>Row {{ e.row }}</td><td>{{ e.reason }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Historical Batches -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Recent Ingestion Batches</h3>
+    <a href="{{ url_for('export_single', key='Import History', format='xlsx') }}" class="btn btn-secondary btn-sm">Export Import History</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Uploaded At</th>
+          <th>Department</th>
+          <th>Source File</th>
+          <th>Uploaded By</th>
+          <th>Rows Seen</th>
+          <th>Inserted</th>
+          <th>Duplicates</th>
+          <th>Rejected</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in import_batches %}
+        <tr>
+          <td>{{ b.uploaded_at }}</td>
+          <td><span class="badge badge-neutral">{{ b.department }}</span></td>
+          <td><strong>{{ b.source_file }}</strong></td>
+          <td>{{ b.uploaded_by }}</td>
+          <td>{{ b.rows_seen }}</td>
+          <td><span class="badge badge-success">{{ b.rows_inserted }}</span></td>
+          <td><span class="badge badge-warning">{{ b.duplicates }}</span></td>
+          <td><span class="badge badge-danger">{{ b.rejected }}</span></td>
+          <td>
+            <form method="post" action="{{ url_for('delete_import_batch', batch_id=b.id) }}" onsubmit="return confirm('⚠️ Are you sure you want to remove this import file ({{ b.source_file }})?\n\nThis will remove all {{ b.rows_inserted }} call audit records imported in this batch.')">
+              <button type="submit" class="btn btn-danger btn-sm" title="Remove import file and associated audits">🗑️ Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No upload history recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

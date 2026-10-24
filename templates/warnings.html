@@ -1,0 +1,280 @@
+{% extends "layout.html" %}
+{% block title %}Warning & PIP Management · MSEDCL{% endblock %}
+{% block heading %}Warnings & PIP Management Module{% endblock %}
+
+{% block content %}
+<!-- Metrics Summary Cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Drafts & Records</div>
+    <div class="stat-val primary">{{ rows|length }}</div>
+  </div>
+  <div class="stat-card fatal">
+    <div class="stat-label">Open / Action Required</div>
+    <div class="stat-val danger">{{ rows|selectattr('status', 'equalto', 'Open')|list|length }}</div>
+  </div>
+  <div class="stat-card low">
+    <div class="stat-label">In Progress PIPs</div>
+    <div class="stat-val warn">{{ rows|selectattr('status', 'equalto', 'In Progress')|list|length }}</div>
+  </div>
+  <div class="stat-card good">
+    <div class="stat-label">Resolved / Closed</div>
+    <div class="stat-val good">{{ rows|selectattr('status', 'equalto', 'Closed')|list|length }}</div>
+  </div>
+</div>
+
+{% if user.role not in ('viewer', 'advisor') %}
+<!-- Create Warning Draft Card -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Create Warning or PIP Notice</h3>
+    <span class="card-subtitle">Draft formal communication with attached call evidence and improvement timelines</span>
+  </div>
+  <form method="post" action="{{ url_for('warnings') }}" id="warningForm">
+    <!-- Quick Auto-Fill Banner -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:12.5px;color:#1e40af;">
+        💡 <strong>Smart Auto-Fill:</strong> Enter an Employee ID or Advisor Name and click <strong>Lookup & Auto-Fill</strong> (or press Enter) to pull live call audit counts, performance metrics, and draft the notice automatically.
+      </div>
+      <button type="button" onclick="triggerAdvisorLookup()" class="btn btn-primary btn-sm" id="btnLookup">⚡ Lookup & Auto-Fill</button>
+    </div>
+
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+      <div class="filter-group">
+        <label>Advisor Name *</label>
+        <input type="text" name="advisor_name" id="f_advisor_name" class="form-control" placeholder="Full name of advisor" required>
+      </div>
+      <div class="filter-group">
+        <label>Employee ID</label>
+        <input type="text" name="advisor_id" id="f_advisor_id" class="form-control" placeholder="e.g. DEMO001 or AIPLCC1243">
+      </div>
+      <div class="filter-group">
+        <label>Department</label>
+        <select name="department" id="f_department" class="form-control">
+          <option value="Inbound">Inbound</option>
+          <option value="Outbound">Outbound</option>
+          <option value="Both">Both</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Warning / Action Type *</label>
+        <select name="warning_type" id="f_warning_type" class="form-control" required>
+          <option value="First Warning">First Warning</option>
+          <option value="Second Warning">Second Warning</option>
+          <option value="Final Warning">Final Warning</option>
+          <option value="Performance Improvement Plan (PIP)">Performance Improvement Plan (PIP)</option>
+          <option value="Quality Feedback Email">Quality Feedback Email</option>
+          <option value="Coaching Notice">Coaching Notice</option>
+          <option value="Other Authorized Communication">Other Authorized Communication</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Issue Date</label>
+        <input type="date" name="issue_date" id="f_issue_date" value="{{ today }}" class="form-control" required>
+      </div>
+      <div class="filter-group">
+        <label>Review / Due Date</label>
+        <input type="date" name="review_date" id="f_review_date" class="form-control">
+      </div>
+      <div class="filter-group">
+        <label>Recipient Email Address *</label>
+        <input type="email" name="recipient_email" id="f_recipient_email" class="form-control" placeholder="advisor@msedcl.in" required>
+      </div>
+      <div class="filter-group">
+        <label>Email Subject *</label>
+        <input type="text" name="subject" id="f_subject" class="form-control" placeholder="Formal Quality Notice - MSEDCL QA" required>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:5px;">Email Body Content *</label>
+      <textarea name="body" id="f_body" rows="8" class="form-control" style="font-family:inherit;" required placeholder="Specify verified call interaction IDs, date of call, observed quality/compliance breach, mandatory score threshold target, and corrective timeline."></textarea>
+    </div>
+
+    <div class="filter-grid" style="margin-top:14px; grid-template-columns: 2fr 1fr 1fr;">
+      <div class="filter-group">
+        <label>Related Audit IDs / Evidence Remarks</label>
+        <input type="text" name="remarks" id="f_remarks" class="form-control" placeholder="e.g. Call ID: DEMO-002, Incorrect Tariff Resolution">
+      </div>
+      <div class="filter-group">
+        <label>Initial Status</label>
+        <select name="status" class="form-control">
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Save Notice Draft</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Warning Records Table with Filters -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Warning & PIP Action Register</h3>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Advisor</th>
+          <th>Type</th>
+          <th>Issue Date</th>
+          <th>Due Date</th>
+          <th>Recipient</th>
+          <th>Status</th>
+          <th>Email Dispatch</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in rows %}
+        <tr>
+          <td>#{{ w.id }}</td>
+          <td>
+            <strong>{{ w.advisor_name }}</strong><br>
+            <span class="badge badge-neutral">{{ w.advisor_id or '—' }}</span>
+          </td>
+          <td><span class="badge badge-info">{{ w.warning_type }}</span></td>
+          <td>{{ w.issue_date }}</td>
+          <td>{{ w.review_date or '—' }}</td>
+          <td>{{ w.recipient_email or '—' }}</td>
+          <td>
+            <span class="badge {% if w.status=='Closed' %}badge-success{% elif w.status=='In Progress' %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ w.status or 'Open' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if w.email_status=='Sent' %}badge-success{% elif w.email_status=='Failed' %}badge-danger{% else %}badge-neutral{% endif %}">
+              {{ w.email_status }}
+            </span>
+            {% if w.sent_at %}<br><small style="color:var(--text-muted);">{{ w.sent_at }}</small>{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;align-items:center;">
+              {% if user.role not in ('viewer', 'advisor') and w.email_status in ['Draft','Failed'] %}
+              <form method="post" action="{{ url_for('send_warning', warning_id=w.id) }}" onsubmit="return confirm('Send official warning email to {{ w.recipient_email }}?')">
+                <button type="submit" class="btn btn-primary btn-sm">✉️ Send</button>
+              </form>
+              {% endif %}
+              <button onclick="toggleDetails('warn_{{ w.id }}')" class="btn btn-secondary btn-sm">View</button>
+            </div>
+          </td>
+        </tr>
+        <tr id="warn_{{ w.id }}" style="display:none;background:#f8fafc;">
+          <td colspan="9" style="padding:16px 20px;">
+            <div style="border-left:3px solid var(--primary);padding-left:14px;">
+              <p><strong>Subject:</strong> {{ w.subject }}</p>
+              <pre style="white-space:pre-wrap;font-family:inherit;background:#fff;padding:12px;border:1px solid var(--border);border-radius:6px;margin:10px 0;">{{ w.body }}</pre>
+              <p style="font-size:12px;color:var(--text-muted);">
+                Created by <strong>{{ w.created_by }}</strong> at {{ w.created_at }} &nbsp;|&nbsp; Remarks: {{ w.remarks or 'None' }}
+              </p>
+              
+              <!-- Advisor Response & Feedback Display -->
+              {% if w.advisor_feedback %}
+              <div style="margin:12px 0;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;">
+                <p style="font-size:12.5px;color:#166534;font-weight:600;margin-bottom:4px;">
+                  💬 Advisor Response & Feedback (Received {{ w.advisor_feedback_date or '' }}):
+                </p>
+                <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.4;">{{ w.advisor_feedback }}</p>
+              </div>
+              {% endif %}
+
+              <!-- Advisor Feedback Input Form (Only for the recipient advisor/viewer if not already closed) -->
+              {% if user.role in ('viewer', 'advisor') and w.status != 'Closed' %}
+              <div style="margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px;">
+                <p style="font-size:12.5px;color:#1e40af;font-weight:600;margin-bottom:6px;">
+                  ✍️ Submit Your Feedback / Action Plan for this Notice:
+                </p>
+                <form method="post" action="{{ url_for('warning_advisor_feedback', warning_id=w.id) }}">
+                  <textarea name="feedback" rows="3" class="form-control" style="font-family:inherit;margin-bottom:8px;" placeholder="Provide your comments, explanation, or agreed corrective steps..." required>{{ w.advisor_feedback or '' }}</textarea>
+                  <button type="submit" class="btn btn-primary btn-sm">Submit Feedback</button>
+                </form>
+              </div>
+              {% endif %}
+
+              <!-- Closure Form (Supervisors / Management only) -->
+              {% if user.role not in ('viewer', 'advisor') and w.status != 'Closed' %}
+              <form method="post" action="{{ url_for('close_warning', warning_id=w.id) }}" style="display:flex;gap:10px;margin-top:14px;align-items:center;">
+                <input type="text" name="closure_remarks" placeholder="Enter resolution remarks..." class="form-control" style="width:300px;" required>
+                <button type="submit" class="btn btn-success btn-sm">Mark as Closed / Resolved</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No warning or PIP records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function toggleDetails(id) {
+  const el = document.getElementById(id);
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'table-row' : 'none';
+}
+
+function triggerAdvisorLookup() {
+  const empId = document.getElementById('f_advisor_id').value.trim();
+  const name = document.getElementById('f_advisor_name').value.trim();
+  const query = empId || name;
+  if (!query) {
+    alert('Please enter an Employee ID or Advisor Name to auto-fill.');
+    return;
+  }
+  
+  const btn = document.getElementById('btnLookup');
+  btn.innerText = 'Searching...';
+  
+  fetch('/api/advisor/lookup?query=' + encodeURIComponent(query))
+    .then(r => r.json())
+    .then(data => {
+      btn.innerText = '⚡ Lookup & Auto-Fill';
+      if (data.found) {
+        document.getElementById('f_advisor_name').value = data.advisor_name;
+        if (data.advisor_id) document.getElementById('f_advisor_id').value = data.advisor_id;
+        if (data.department) document.getElementById('f_department').value = data.department;
+        if (data.suggested_email) document.getElementById('f_recipient_email').value = data.suggested_email;
+        if (data.suggested_subject) document.getElementById('f_subject').value = data.suggested_subject;
+        if (data.suggested_body) document.getElementById('f_body').value = data.suggested_body;
+        if (data.remarks) document.getElementById('f_remarks').value = data.remarks;
+        
+        // Auto-set review date to 14 days ahead
+        const d = new Date();
+        d.setDate(d.getDate() + 14);
+        document.getElementById('f_review_date').value = d.toISOString().split('T')[0];
+      } else {
+        alert('No prior call audit records found for "' + query + '". You can still fill out the notice manually.');
+      }
+    })
+    .catch(err => {
+      btn.innerText = '⚡ Lookup & Auto-Fill';
+      console.error(err);
+    });
+}
+
+// Auto-trigger lookup when user stops typing in Advisor ID or Name
+let lookupTimeout;
+function attachAutoLookup(inputElem) {
+  inputElem.addEventListener('input', function() {
+    clearTimeout(lookupTimeout);
+    const val = this.value.trim();
+    if (val.length >= 4) {
+      lookupTimeout = setTimeout(triggerAdvisorLookup, 600);
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  attachAutoLookup(document.getElementById('f_advisor_id'));
+  attachAutoLookup(document.getElementById('f_advisor_name'));
+});
+</script>
+{% endblock %}

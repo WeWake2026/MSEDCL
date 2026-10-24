@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment and sensitive configuration files
+.env
+.env.local
+*.env
+
+# SQLite local databases and backups
+*.db
+*.db.bak
+*.sqlite
+*.sqlite3
+quality_audit_archive.db
+
+# Temporary directories and exports
+exports_temp/
+instance/
+.pytest_cache/
+
+# IDE / OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Zip release files
+*.zip

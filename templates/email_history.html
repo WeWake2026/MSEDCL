@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+{% block title %}Email History · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Warning & PIP Email Transmission History{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form method="get" action="{{ url_for('email_history') }}" class="filter-grid">
+    <div class="filter-group">
+      <label>Search Advisor / Recipient / Subject</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Keyword..." class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>Email Type</label>
+      <select name="email_type" class="form-control">
+        <option value="All" {{ 'selected' if email_type=='All' else '' }}>All Notification Types</option>
+        <option value="First Warning" {{ 'selected' if email_type=='First Warning' else '' }}>First Warning</option>
+        <option value="Second Warning" {{ 'selected' if email_type=='Second Warning' else '' }}>Second Warning</option>
+        <option value="Final Warning" {{ 'selected' if email_type=='Final Warning' else '' }}>Final Warning</option>
+        <option value="Performance Improvement Plan (PIP)" {{ 'selected' if 'PIP' in email_type else '' }}>PIP Notice</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Transmission Status</label>
+      <select name="status" class="form-control">
+        <option value="All" {{ 'selected' if status=='All' else '' }}>All Statuses</option>
+        <option value="Sent" {{ 'selected' if status=='Sent' else '' }}>Sent</option>
+        <option value="Failed" {{ 'selected' if status=='Failed' else '' }}>Failed</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">Filter Log</button>
+      <a href="{{ url_for('email_history') }}" class="btn btn-secondary">Reset</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Dispatched Emails Audit Trail ({{ rows|length }} Records)</h3>
+    <a href="{{ url_for('export_single', key='Email History', format='xlsx') }}" class="btn btn-secondary btn-sm">📥 Export Email History</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Dispatched Timestamp</th>
+          <th>Employee ID</th>
+          <th>Advisor Name</th>
+          <th>Notice Type</th>
+          <th>Recipient Email</th>
+          <th>Subject</th>
+          <th>Sender / Created By</th>
+          <th>Delivery Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in rows %}
+        <tr>
+          <td>#{{ e.id }}</td>
+          <td>{{ e.sent_at or e.created_at }}</td>
+          <td><span class="badge badge-neutral">{{ e.employee_id or '—' }}</span></td>
+          <td><strong>{{ e.advisor_name }}</strong></td>
+          <td><span class="badge badge-info">{{ e.email_type }}</span></td>
+          <td>{{ e.recipient_email }}</td>
+          <td>{{ e.subject }}</td>
+          <td>{{ e.created_by }}</td>
+          <td>
+            <span class="badge {% if e.sent_status=='Sent' %}badge-success{% else %}badge-danger{% endif %}">
+              {{ e.delivery_status or e.sent_status }}
+            </span>
+          </td>
+          <td>
+            <button onclick="toggleDetails('email_{{ e.id }}')" class="btn btn-secondary btn-sm">Preview</button>
+          </td>
+        </tr>
+        <tr id="email_{{ e.id }}" style="display:none;background:#f8fafc;">
+          <td colspan="10" style="padding:16px 20px;">
+            <div style="border-left:3px solid var(--info);padding-left:14px;">
+              <p><strong>To:</strong> {{ e.recipient_email }} &nbsp;|&nbsp; <strong>Subject:</strong> {{ e.subject }}</p>
+              <pre style="white-space:pre-wrap;font-family:inherit;background:#fff;padding:12px;border:1px solid var(--border);border-radius:6px;margin:10px 0;">{{ e.body }}</pre>
+              {% if e.error_details %}
+              <div class="alert alert-danger" style="margin-top:10px;">
+                <strong>Error Details:</strong> {{ e.error_details }}
+              </div>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-muted);">No email history records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function toggleDetails(id) {
+  const el = document.getElementById(id);
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'table-row' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+Call ID,Call Date,Evaluation Date,Employee ID,Employee Name,Team Leader Name,Evaluator Name,Quality Score,Fatal Status,Fatal Category,Error Category,Call Observation
+DEMO-001,2026-10-20,2026-10-21,DEMO001,Sample Advisor A,Sample TL,Sample Auditor,76,No,,Verification,Sample row only
+DEMO-002,2026-10-21,2026-10-21,DEMO002,Sample Advisor B,Sample TL,Sample Auditor,94,Yes,Incorrect Resolution,Incorrect Resolution,Sample row only
+DEMO-003,2026-10-22,2026-10-22,DEMO001,Sample Advisor A,Sample TL,Sample Auditor,91,No,,Closing,Sample row only

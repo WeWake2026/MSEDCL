@@ -1,0 +1,232 @@
+{% extends "layout.html" %}
+{% block title %}Advisor 360° Search · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Search Advisor by Employee ID{% endblock %}
+
+{% block content %}
+<!-- Search & Comprehensive Multi-Filter Bar -->
+<div class="card">
+  <form method="get" action="{{ url_for('advisor_search') }}" class="filter-grid">
+    <div class="filter-group" style="grid-column: span 2;">
+      <label>Employee ID or Advisor Name</label>
+      <input type="text" name="emp_id" value="{{ query_id }}" placeholder="e.g. DEMO001 or Advisor Name..." class="form-control" autofocus required>
+    </div>
+    <div class="filter-group">
+      <label>Department Scope</label>
+      <select name="department" class="form-control">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>Both (Inbound & Outbound)</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound Only</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound Only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>From Date</label>
+      <input type="date" name="start" value="{{ start }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>To Date</label>
+      <input type="date" name="end" value="{{ end }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>Fatal Filter</label>
+      <select name="fatal_filter" class="form-control">
+        <option value="All" {{ 'selected' if fatal_filter=='All' else '' }}>All Audits</option>
+        <option value="Fatal" {{ 'selected' if fatal_filter=='Fatal' else '' }}>Fatal Calls Only</option>
+        <option value="Non-Fatal" {{ 'selected' if fatal_filter=='Non-Fatal' else '' }}>Non-Fatal Only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Score Category</label>
+      <select name="score_filter" class="form-control">
+        <option value="All" {{ 'selected' if score_filter=='All' else '' }}>All Scores</option>
+        <option value="Low" {{ 'selected' if score_filter=='Low' else '' }}>Low (&lt; 80%)</option>
+        <option value="Mid" {{ 'selected' if score_filter=='Mid' else '' }}>Average (80% - 90%)</option>
+        <option value="Good" {{ 'selected' if score_filter=='Good' else '' }}>Good (&gt; 90%)</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">Search Profile</button>
+      <a href="{{ url_for('advisor_search') }}" class="btn btn-secondary">Clear</a>
+    </div>
+  </form>
+</div>
+
+{% if not query_id %}
+  <div class="card" style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+    <div style="font-size:42px; margin-bottom:12px;">🔍</div>
+    <h3>Direct Employee Search</h3>
+    <p>Enter any Employee ID or Advisor Name above to generate an immediate 360° Quality & Disciplinary Performance Profile.</p>
+  </div>
+{% elif not profile %}
+  <div class="card" style="text-align:center; padding:40px 20px; border-left: 4px solid var(--danger);">
+    <div style="font-size:42px; margin-bottom:12px;">❌</div>
+    <h3 style="color:var(--danger);">No Records Found</h3>
+    <p>No audit evaluations or advisor profiles match the identifier "<strong>{{ query_id }}</strong>" under the selected criteria.</p>
+    <p style="font-size:12px; color:var(--text-muted); margin-top:6px;">Please verify the spelling or check whether the audit data was imported.</p>
+  </div>
+{% else %}
+  <!-- Advisor Header Card -->
+  <div class="card" style="border-top: 4px solid var(--primary);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h2 style="font-size:22px; color:var(--text-main);">{{ profile.advisor_name }}</h2>
+          <span class="badge badge-info" style="font-size:13px;">ID: {{ profile.advisor_id or 'Unassigned' }}</span>
+        </div>
+        <p style="color:var(--text-muted); margin-top:4px;">
+          Department: <strong>{{ profile.departments|join(', ') }}</strong> &nbsp;|&nbsp; 
+          Team Leader: <strong>{{ profile.team_leaders|join(', ') or 'N/A' }}</strong> &nbsp;|&nbsp;
+          Location: <strong>{{ profile.locations|join(', ') or 'Main Center' }}</strong>
+        </p>
+      </div>
+      <div>
+        <a href="{{ url_for('export_advisor_report', emp_id=query_id, format='xlsx', department=dept, start=start, end=end) }}" class="btn btn-success">
+          📥 Export Advisor Report (.xlsx)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advisor Performance Metrics Cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Audited Calls</div>
+      <div class="stat-val primary">{{ profile.total_calls }}</div>
+      <div class="stat-sub">Across filtered date range</div>
+    </div>
+    <div class="stat-card avg">
+      <div class="stat-label">Average Quality Score</div>
+      <div class="stat-val">{{ profile.avg_score }}%</div>
+      <div class="stat-sub">Quality Benchmark</div>
+    </div>
+    <div class="stat-card fatal">
+      <div class="stat-label">Fatal Call Errors</div>
+      <div class="stat-val danger">{{ profile.fatal_calls }}</div>
+      <div class="stat-sub">{{ "%.1f"|format(profile.fatal_rate) }}% Fatal Rate</div>
+    </div>
+    <div class="stat-card low">
+      <div class="stat-label">Low Score (&lt;80%)</div>
+      <div class="stat-val warn">{{ profile.low_score_calls }}</div>
+      <div class="stat-sub">Needs Improvement</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-label">Average (80-90%)</div>
+      <div class="stat-val" style="color:var(--info);">{{ profile.mid_score_calls }}</div>
+      <div class="stat-sub">Acceptable Range</div>
+    </div>
+    <div class="stat-card good">
+      <div class="stat-label">Good Calls (&gt;90%)</div>
+      <div class="stat-val good">{{ profile.good_score_calls }}</div>
+      <div class="stat-sub">High Performers</div>
+    </div>
+  </div>
+
+  <!-- Tabbed Detail Panels -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Audited Interactions ({{ profile.audits|length }} Records)</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Call ID</th>
+            <th>Call Date</th>
+            <th>Eval Date</th>
+            <th>Department</th>
+            <th>Auditor</th>
+            <th>Score</th>
+            <th>Fatal</th>
+            <th>Fatal Category</th>
+            <th>Error Categories</th>
+            <th>Observation & Remarks</th>
+            <th>Call Recording</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in profile.audits %}
+          <tr>
+            <td><strong>{{ a.call_id or '—' }}</strong></td>
+            <td>{{ a.call_date or '—' }}</td>
+            <td>{{ a.evaluation_date or '—' }}</td>
+            <td><span class="badge badge-neutral">{{ a.department }}</span></td>
+            <td>{{ a.auditor_name or '—' }}</td>
+            <td><strong>{{ a.quality_score }}%</strong></td>
+            <td>
+              {% if a.is_fatal %}
+                <span class="badge badge-danger">FATAL</span>
+              {% else %}
+                <span class="badge badge-neutral">No</span>
+              {% endif %}
+            </td>
+            <td><span style="color:var(--danger);font-weight:600;">{{ a.fatal_category or '—' }}</span></td>
+            <td>{{ a.error_categories or '—' }}</td>
+            <td style="max-width:320px;min-width:220px;white-space:normal;word-break:break-word;line-height:1.45;color:#334155;">{{ a.observation or '—' }}</td>
+            <td>
+              {% if a.audio_url %}
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <audio controls preload="none" style="height:32px;width:170px;">
+                    <source src="{{ a.audio_url }}" type="audio/mpeg">
+                    Your browser does not support audio.
+                  </audio>
+                  <a href="{{ a.audio_url }}" target="_blank" title="Open audio stream in new tab" style="font-size:14px;text-decoration:none;">🔗</a>
+                </div>
+              {% else %}
+                <span style="color:var(--text-light);font-size:11.5px;">No Audio</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Disciplinary Warnings & PIP Section -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Disciplinary Warnings & PIP History ({{ profile.warnings|length }} Records)</h3>
+      <a href="{{ url_for('warnings') }}" class="btn btn-secondary btn-sm">+ Draft New Warning</a>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Warning ID</th>
+            <th>Warning Type</th>
+            <th>Issue Date</th>
+            <th>Review / Due Date</th>
+            <th>Status</th>
+            <th>Email Sent</th>
+            <th>Subject</th>
+            <th>Created By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in profile.warnings %}
+          <tr>
+            <td>#{{ w.id }}</td>
+            <td><strong>{{ w.warning_type }}</strong></td>
+            <td>{{ w.issue_date }}</td>
+            <td>{{ w.review_date or '—' }}</td>
+            <td>
+              <span class="badge {% if w.status=='Closed' %}badge-success{% elif w.status=='In Progress' %}badge-warning{% else %}badge-danger{% endif %}">
+                {{ w.status or 'Open' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge {% if w.email_status=='Sent' %}badge-success{% elif w.email_status=='Failed' %}badge-danger{% else %}badge-neutral{% endif %}">
+                {{ w.email_status }}
+              </span>
+            </td>
+            <td>{{ w.subject }}</td>
+            <td>{{ w.created_by }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" style="text-align:center;padding:18px;color:var(--text-muted);">No warning or PIP records registered for this advisor.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

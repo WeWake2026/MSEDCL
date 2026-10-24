@@ -1,0 +1,5 @@
+Call ID,Call Date,Evaluation Date,Employee ID,Employee Name,Team Leader Name,Evaluator Name,Quality Score,Fatal Status,Fatal Category,Error Category,Call Observation,Location
+OUT-2026-001,2026-10-20,2026-10-21,M100101,Vikram Pratap Rao,Sneha Kulkarni,Saheli Dusar,92,No,,Outbound Pitch,Customer bill dues reminder handled courteously,Amravati Zone
+OUT-2026-002,2026-10-21,2026-10-21,M100102,Pooja Ramesh Sawant,Sneha Kulkarni,Saheli Dusar,68,No,,Rude Tone,Agent tone was curt and escalated unnecessarily,Aurangabad
+OUT-2026-003,2026-10-22,2026-10-22,M100103,Ganesh Vishnu Jadhav,Mahesh Thorat,Tushar Katrujwar,88,No,,Hold Time,Customer put on hold without reason acknowledgment,Kolhapur
+OUT-2026-004,2026-10-22,2026-10-23,M100104,Monika Suresh Kadam,Mahesh Thorat,Tushar Katrujwar,78,Yes,Unauthorized Promise,Zero Tolerance,Promised waiver without billing engineer authorization,Nagpur Rural

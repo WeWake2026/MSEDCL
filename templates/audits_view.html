@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+{% block title %}{{ title }} · MSEDCL Quality Audit{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form method="get" class="filter-grid">
+    <div class="filter-group">
+      <label>Search Advisor / Employee ID / Remarks</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search query..." class="form-control">
+    </div>
+    {% if not fixed_dept %}
+    <div class="filter-group">
+      <label>Department</label>
+      <select name="department" class="form-control">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound</option>
+      </select>
+    </div>
+    {% endif %}
+    {% if show_score_filter %}
+    <div class="filter-group">
+      <label>Score Bracket</label>
+      <select name="score_band" class="form-control">
+        <option value="All" {{ 'selected' if score_band=='All' else '' }}>All Scores</option>
+        <option value="Low" {{ 'selected' if score_band=='Low' else '' }}>Low (&lt; 80%)</option>
+        <option value="Mid" {{ 'selected' if score_band=='Mid' else '' }}>Average (80% - 90%)</option>
+        <option value="Good" {{ 'selected' if score_band=='Good' else '' }}>Good (&gt; 90%)</option>
+      </select>
+    </div>
+    {% endif %}
+    <div class="filter-group">
+      <label>From Date</label>
+      <input type="date" name="start" value="{{ start }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>To Date</label>
+      <input type="date" name="end" value="{{ end }}" class="form-control">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">Filter</button>
+      <a href="?" class="btn btn-secondary">Reset</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Audit Records ({{ rows|length }} Matches)</h3>
+      <p class="card-subtitle">{{ subtitle }}</p>
+    </div>
+    <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Options</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Call ID</th>
+          <th>Date</th>
+          <th>Dept</th>
+          <th>Advisor Name / ID</th>
+          <th>Team Leader</th>
+          <th>Auditor</th>
+          <th>Quality Score</th>
+          <th>Fatal Status</th>
+          <th>Fatal Category</th>
+          <th>Error Categories</th>
+          <th>Observation & Feedback</th>
+          <th>Call Recording</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><strong>{{ r.call_id or '—' }}</strong></td>
+          <td>{{ r.call_date or r.evaluation_date or '—' }}</td>
+          <td><span class="badge badge-neutral">{{ r.department }}</span></td>
+          <td>
+            <strong>{{ r.advisor_name }}</strong><br>
+            <span class="badge badge-neutral"><a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" style="text-decoration:none;color:inherit;">{{ r.advisor_id or '—' }}</a></span>
+          </td>
+          <td>{{ r.team_leader or '—' }}</td>
+          <td>{{ r.auditor_name or '—' }}</td>
+          <td>
+            <strong style="font-size:14px; {% if r.quality_score < 80 %}color:var(--danger);{% elif r.quality_score > 90 %}color:var(--success);{% else %}color:var(--info);{% endif %}">
+              {{ r.quality_score }}%
+            </strong>
+          </td>
+          <td>
+            {% if r.is_fatal %}
+              <span class="badge badge-danger">FATAL</span>
+            {% else %}
+              <span class="badge badge-neutral">No</span>
+            {% endif %}
+          </td>
+          <td><span style="color:var(--danger);font-weight:600;">{{ r.fatal_category or '—' }}</span></td>
+          <td>{{ r.error_categories or '—' }}</td>
+          <td style="max-width:320px;min-width:220px;white-space:normal;word-break:break-word;line-height:1.45;color:#334155;">
+            {{ r.observation or '—' }}
+          </td>
+          <td>
+            {% if r.audio_url %}
+              <div style="display:flex;align-items:center;gap:6px;">
+                <audio controls preload="none" style="height:32px;width:170px;">
+                  <source src="{{ r.audio_url }}" type="audio/mpeg">
+                  Your browser does not support audio.
+                </audio>
+                <a href="{{ r.audio_url }}" target="_blank" title="Open audio stream in new tab" style="font-size:14px;text-decoration:none;">🔗</a>
+              </div>
+            {% else %}
+              <span style="color:var(--text-light);font-size:11.5px;">No Audio</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--text-muted);">No audit interactions match the current filter criteria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

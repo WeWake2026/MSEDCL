@@ -1,0 +1,5 @@
+Call ID,Call Date,Evaluation Date,Employee ID,Employee Name,Team Leader Name,Evaluator Name,Quality Score,Fatal Status,Fatal Category,Error Category,Call Observation,Location
+INB-2026-001,2026-10-20,2026-10-21,AIPLCC1001,Rajesh Kumar Sharma,Pooja Verma,Priya Latare,94,No,,Greeting & Verification,Excellent customer greeting and prompt query resolution,Nagpur Center
+INB-2026-002,2026-10-21,2026-10-21,AIPLCC1002,Neha Anil Patil,Pooja Verma,Priya Latare,72,No,,Incorrect Resolution,Did not follow meter replacement SOP,Pune Zone
+INB-2026-003,2026-10-22,2026-10-22,AIPLCC1003,Suresh Babu Shinde,Kiran Rao,Tushar Katrujwar,96,No,,Closing,Proper etiquette and customer satisfaction confirmation,Mumbai Central
+INB-2026-004,2026-10-22,2026-10-23,AIPLCC1004,Amit Dilip Deshmukh,Kiran Rao,Tushar Katrujwar,84,Yes,Wrong Tariff Quoted,Critical Compliance,Quoted residential tariff instead of commercial tariff,Nashik Division

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign In · MSEDCL Quality Audit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: radial-gradient(circle at top right, #1e3a8a, #0f172a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.25);
+      width: 100%;
+      max-width: 420px;
+      padding: 36px;
+      margin: 20px;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .brand-logo .icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #fff;
+    }
+    .brand-logo h2 {
+      font-size: 19px;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .brand-logo p {
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="brand-logo">
+    <div class="icon">⚡</div>
+    <div>
+      <h2>MSEDCL Quality Audit</h2>
+      <p>Maharashtra State Electricity Distribution</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:16px; margin-bottom:6px; color:#0f172a;">Sign In to Portal</h3>
+  <p style="font-size:12.5px; color:#64748b; margin-bottom:20px;">Enter your authorized system credentials to proceed.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-danger" style="padding:10px 14px; font-size:12.5px; margin-bottom:16px;">
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="post" action="{{ url_for('login') }}">
+    <div style="margin-bottom:14px;">
+      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px;">Username</label>
+      <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px;">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px;">Sign In to Dashboard</button>
+  </form>
+
+  <p style="text-align:center; margin-top:22px; font-size:11.5px; color:#94a3b8;">
+    Strict role-based access. Administrative access is logged.
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block title %}Auditor Reports · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Auditor Evaluation Statistics{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Auditor Performance Summary</h3>
+    <a href="{{ url_for('export_single', key='Auditor Summary', format='xlsx') }}" class="btn btn-secondary btn-sm">📥 Export Auditor Report</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Auditor / Evaluator Name</th>
+          <th>Total Audits Performed</th>
+          <th>Average Quality Score Given</th>
+          <th>Fatal Calls Identified</th>
+          <th>Low Scores (&lt;80%)</th>
+          <th>Good Scores (&gt;90%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in rows %}
+        <tr>
+          <td><strong>{{ a.auditor_name }}</strong></td>
+          <td>{{ a.total_audits }}</td>
+          <td><strong>{{ a.average_score }}%</strong></td>
+          <td>
+            {% if a.fatal_calls > 0 %}
+              <span class="badge badge-danger">{{ a.fatal_calls }}</span>
+            {% else %}
+              <span class="badge badge-neutral">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if a.low_scores > 0 %}
+              <span class="badge badge-warning">{{ a.low_scores }}</span>
+            {% else %}
+              0
+            {% endif %}
+          </td>
+          <td><span class="badge badge-success">{{ a.good_scores }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No auditor records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restarting Server · MSEDCL Quality Audit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta http-equiv="refresh" content="4;url={{ url_for('login') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-main, #0f172a);font-family:var(--font-sans, system-ui, sans-serif);">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:36px;max-width:440px;text-align:center;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);color:#f8fafc;">
+    <div style="font-size:48px;margin-bottom:16px;animation:spin 2s linear infinite;display:inline-block;">🔄</div>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:8px;color:#38bdf8;">Restarting System Server</h2>
+    <p style="font-size:13.5px;color:#94a3b8;line-height:1.5;margin-bottom:20px;">
+      The <strong>MSEDCL Quality Audit System</strong> is recycling background workers, flushing memory caches, and reloading operational modules.
+    </p>
+    <div style="background:#0f172a;border-radius:8px;padding:12px;font-size:12.5px;color:#cbd5e1;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span class="badge badge-success" style="padding:4px 8px;font-size:11px;">RECONNECTING</span>
+      <span>Redirecting to portal in a few seconds...</span>
+    </div>
+    <div style="margin-top:20px;">
+      <a href="{{ url_for('login') }}" class="btn btn-primary" style="display:inline-block;padding:8px 20px;font-size:13px;text-decoration:none;">
+        Open Login Now
+      </a>
+    </div>
+  </div>
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>

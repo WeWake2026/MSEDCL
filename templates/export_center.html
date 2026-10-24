@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+{% block title %}Export Center · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Advanced Export Center{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Filter Export Datasets</h3>
+      <p class="card-subtitle">Exports respect the selected department and date ranges below</p>
+    </div>
+  </div>
+  <form method="get" action="{{ url_for('export_center') }}" class="filter-grid">
+    <div class="filter-group">
+      <label>Department Scope</label>
+      <select name="department" class="form-control">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound Only</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound Only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Auditor Filter</label>
+      <select name="auditor" class="form-control">
+        <option value="">All Evaluators</option>
+        {% for a in auditors_list %}
+        <option value="{{ a }}" {{ 'selected' if selected_auditor==a else '' }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Start Date</label>
+      <input type="date" name="start" value="{{ start }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>End Date</label>
+      <input type="date" name="end" value="{{ end }}" class="form-control">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">Apply Filter</button>
+      <a href="{{ url_for('export_center') }}" class="btn btn-secondary">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Bulk Master Exports Highlight Banner -->
+<div class="card" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; border: none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h3 style="font-size:18px; margin-bottom:6px; color:#ffffff;">📦 Complete Executive Master Exports</h3>
+      <p style="font-size:13px; color:#cbd5e1;">Generate multi-tab Excel workbooks or package all 12 individual reports into a single ZIP archive.</p>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="{{ url_for('export_combined', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-success" style="padding:10px 18px; font-size:14px;">
+        📑 Combined Master Workbook (.xlsx)
+      </a>
+      <a href="{{ url_for('export_zip', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-primary" style="background:#f59e0b; border-color:#f59e0b; padding:10px 18px; font-size:14px; color:#0f172a;">
+        🗜️ Download All Reports ZIP
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Individual Export Datasets Grid -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+
+  <!-- 1. Inbound Audit Data -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">1. Inbound Audit Data</h4>
+      <span class="badge badge-info">{{ counts['Inbound Audits'] }} rows</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">All Inbound customer call evaluations with scores, fatals, and evaluator remarks.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Inbound Audits', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Inbound Audits', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 2. Outbound Audit Data -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">2. Outbound Audit Data</h4>
+      <span class="badge badge-info">{{ counts['Outbound Audits'] }} rows</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">All Outbound customer outreach audits, scores, feedback observations, and details.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Outbound Audits', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Outbound Audits', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 3. Combined Inbound + Outbound -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">3. All Audits (Combined)</h4>
+      <span class="badge badge-neutral">{{ counts['All Audits'] }} rows</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Unified dataset combining both Inbound and Outbound records.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='All Audits', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='All Audits', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 4. Fatal Calls -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">4. Fatal Calls</h4>
+      <span class="badge badge-danger">{{ counts['Fatal Calls'] }} calls</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Critical compliance breaches, zero-tolerance infractions, and fatal categories.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Fatal Calls', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Fatal Calls', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 5. Low Score Calls -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">5. Low Score Calls (&lt; 80%)</h4>
+      <span class="badge badge-warning">{{ counts['Low Score (<80%)'] }} calls</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Calls falling below acceptable benchmark quality requiring immediate coaching.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Low Score (<80%)', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Low Score (<80%)', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 6. Average Score Calls -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">6. Average Score (80% - 90%)</h4>
+      <span class="badge badge-info">{{ counts['Average Score (80-90%)'] }} calls</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Audits in the standard quality threshold range (80% to 90% inclusive).</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Average Score (80-90%)', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Average Score (80-90%)', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 7. Good Calls -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">7. Good Calls (&gt; 90%)</h4>
+      <span class="badge badge-success">{{ counts['Good Calls (>90%)'] }} calls</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Top-tier customer interaction audits scoring above 90%.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Good Calls (>90%)', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Good Calls (>90%)', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 8. Auditor Performance -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">8. Auditor Counts & Performance</h4>
+      <span class="badge badge-neutral">{{ counts['Auditor Summary'] }} auditors</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Auditor evaluation volumes, average scores given, and fatal rate distribution.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Auditor Summary', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Auditor Summary', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 9. Advisor Performance -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">9. Advisor Audit Performance</h4>
+      <span class="badge badge-neutral">{{ counts['Advisor Summary'] }} advisors</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Advisor-wise call counts, fatals, low scores, and average quality scores.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Advisor Summary', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Advisor Summary', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 10. Warning & PIP Records -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">10. Warning & PIP Records</h4>
+      <span class="badge badge-warning">{{ counts['Warning & PIP History'] }} records</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Complete disciplinary register: First, Second, Final Warnings, PIPs and status.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Warning & PIP History', format='xlsx') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Warning & PIP History', format='csv') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 11. Email History -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">11. Email Transmission History</h4>
+      <span class="badge badge-info">{{ counts['Email History'] }} emails</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Comprehensive log of dispatched warning emails, delivery timestamps, and recipients.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Email History', format='xlsx') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Email History', format='csv') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+  <!-- 12. Import History & Logs -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="card-title">12. Import Batches & Errors</h4>
+      <span class="badge badge-neutral">{{ counts['Import History'] }} batches</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Workbook ingestion audit trail, rows processed, duplicate counts, and rejected entries.</p>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('export_single', key='Import History', format='xlsx') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export Excel</a>
+      <a href="{{ url_for('export_single', key='Import History', format='csv') }}" class="btn btn-secondary btn-sm" style="flex:1;">Export CSV</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

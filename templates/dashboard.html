@@ -1,0 +1,361 @@
+{% extends "layout.html" %}
+{% block title %}Executive Quality Dashboard · MSEDCL{% endblock %}
+{% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
+
+{% block content %}
+<!-- Interactive Filter Bar -->
+<div class="filter-bar">
+  <form method="get" action="{{ url_for('dashboard') }}" class="filter-grid" id="dashFilterForm">
+    <div class="filter-group">
+      <label>Department</label>
+      <select name="department" class="form-control" onchange="this.form.submit()">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound Only</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound Only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Start Date</label>
+      <input type="date" name="start" value="{{ start }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>End Date</label>
+      <input type="date" name="end" value="{{ end }}" class="form-control">
+    </div>
+    <div class="filter-group">
+      <label>Auditor Filter</label>
+      <select name="auditor" class="form-control">
+        <option value="">All Evaluators</option>
+        {% for a in auditors_list %}
+        <option value="{{ a }}" {{ 'selected' if selected_auditor==a else '' }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">Apply Filters</button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Primary Metric KPI Cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Audited Calls</div>
+    <div class="stat-val primary">{{ metrics.total_audits }}</div>
+    <div class="stat-sub">Inbound: {{ metrics.inbound_count }} | Outbound: {{ metrics.outbound_count }}</div>
+  </div>
+
+  <div class="stat-card fatal">
+    <div class="stat-label">Fatal Call Errors</div>
+    <div class="stat-val danger">{{ metrics.fatal_count }}</div>
+    <div class="stat-sub">{{ "%.1f"|format(metrics.fatal_rate) }}% of total audited interactions</div>
+  </div>
+
+  <div class="stat-card low">
+    <div class="stat-label">Low Score (&lt; 80%)</div>
+    <div class="stat-val warn">{{ metrics.low_score_count }}</div>
+    <div class="stat-sub">Requires active coaching</div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-label">Average Score (80-90%)</div>
+    <div class="stat-val" style="color:var(--info);">{{ metrics.avg_score_count }}</div>
+    <div class="stat-sub">Acceptable quality band</div>
+  </div>
+
+  <div class="stat-card good">
+    <div class="stat-label">Good Calls (&gt; 90%)</div>
+    <div class="stat-val good">{{ metrics.good_score_count }}</div>
+    <div class="stat-sub">Benchmark performers</div>
+  </div>
+
+  <div class="stat-card avg">
+    <div class="stat-label">Average Quality Score</div>
+    <div class="stat-val">{{ metrics.overall_avg }}%</div>
+    <div class="stat-sub">Aggregated weighted quality</div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-label">Warnings & PIPs</div>
+    <div class="stat-val" style="color:#6366f1;">{{ metrics.total_warnings }}</div>
+    <div class="stat-sub">Open: {{ metrics.open_warnings }} | PIPs: {{ metrics.active_pips }}</div>
+  </div>
+</div>
+
+<!-- Charts Row 1: Score Category Counts & Fatal Ratio & Inbound vs Outbound -->
+<div class="charts-grid-3">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Score Category Distribution</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="scoreDistChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Fatal vs Non-Fatal Ratio</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="fatalRatioChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Inbound vs Outbound Audits</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="deptRatioChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 2: Audit Timeline Trend & Auditor Performance -->
+<div class="charts-grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Daily / Weekly Audit Volume Trend</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Auditor Evaluation Activity</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="auditorChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 3: Advisor Performance & Warnings/PIP Status -->
+<div class="charts-grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Advisor Quality Performance (Top 10 vs Bottom 10)</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="advisorChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Warning & PIP Action Status</h3>
+    </div>
+    <div class="chart-container">
+      <canvas id="warningStatusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Data Tables Split: Advisor-wise Performance & Critical Calls -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Advisor-wise Quality Summary</h3>
+      <p class="card-subtitle">Showing performance metrics for advisors under current filter criteria</p>
+    </div>
+    <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Detailed Data</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Advisor Name</th>
+          <th>Department</th>
+          <th>Total Calls</th>
+          <th>Average Score</th>
+          <th>Fatal Calls</th>
+          <th>Low (&lt;80%)</th>
+          <th>Mid (80-90%)</th>
+          <th>Good (&gt;90%)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in advisor_summary %}
+        <tr>
+          <td><span class="badge badge-neutral">{{ r.advisor_id or 'N/A' }}</span></td>
+          <td><strong>{{ r.advisor_name }}</strong></td>
+          <td>{{ r.department }}</td>
+          <td>{{ r.calls }}</td>
+          <td><strong>{{ r.avg_score }}%</strong></td>
+          <td>
+            {% if r.fatals > 0 %}
+              <span class="badge badge-danger">{{ r.fatals }}</span>
+            {% else %}
+              <span class="badge badge-neutral">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.low_calls > 0 %}
+              <span class="badge badge-warning">{{ r.low_calls }}</span>
+            {% else %}
+              0
+            {% endif %}
+          </td>
+          <td>{{ r.mid_calls }}</td>
+          <td><span class="badge badge-success">{{ r.good_calls }}</span></td>
+          <td>
+            <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="btn btn-secondary btn-sm">Drilldown</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-muted);">No advisor records match your filter criteria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartData = {{ chart_data|tojson }};
+
+  // 1. Score Categories Doughnut
+  new Chart(document.getElementById('scoreDistChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Low (<80%)', 'Average (80-90%)', 'Good (>90%)'],
+      datasets: [{
+        data: [chartData.low_scores, chartData.mid_scores, chartData.good_scores],
+        backgroundColor: ['#f59e0b', '#0284c7', '#10b981'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // 2. Fatal vs Non-Fatal Pie
+  new Chart(document.getElementById('fatalRatioChart'), {
+    type: 'pie',
+    data: {
+      labels: ['Fatal Calls', 'Non-Fatal Calls'],
+      datasets: [{
+        data: [chartData.fatal_count, chartData.non_fatal_count],
+        backgroundColor: ['#ef4444', '#3b82f6'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // 3. Dept Comparison
+  new Chart(document.getElementById('deptRatioChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Inbound', 'Outbound'],
+      datasets: [{
+        data: [chartData.inbound_count, chartData.outbound_count],
+        backgroundColor: ['#6366f1', '#0d9488'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // 4. Trend Line Chart
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: chartData.dates,
+      datasets: [{
+        label: 'Audit Count',
+        data: chartData.date_counts,
+        borderColor: '#1e3a8a',
+        backgroundColor: 'rgba(30, 58, 138, 0.1)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  // 5. Auditor Activity Bar Chart
+  new Chart(document.getElementById('auditorChart'), {
+    type: 'bar',
+    data: {
+      labels: chartData.auditor_names,
+      datasets: [{
+        label: 'Evaluations Completed',
+        data: chartData.auditor_counts,
+        backgroundColor: '#0284c7',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  // 6. Advisor Performance Bar Chart
+  new Chart(document.getElementById('advisorChart'), {
+    type: 'bar',
+    data: {
+      labels: chartData.top_advisors,
+      datasets: [{
+        label: 'Avg Score %',
+        data: chartData.top_scores,
+        backgroundColor: '#10b981',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { min: 0, max: 100 } }
+    }
+  });
+
+  // 7. Warning & PIP Status
+  new Chart(document.getElementById('warningStatusChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Open', 'In Progress', 'Closed', 'Active PIPs'],
+      datasets: [{
+        label: 'Record Count',
+        data: [chartData.open_warnings, chartData.in_progress_warnings, chartData.closed_warnings, chartData.active_pips],
+        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#6366f1'],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+});
+</script>
+{% endblock %}

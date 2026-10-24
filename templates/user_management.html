@@ -1,0 +1,158 @@
+{% extends "layout.html" %}
+{% block title %}User Management · MSEDCL Quality Audit{% endblock %}
+{% block heading %}User Access & Role Management{% endblock %}
+
+{% block content %}
+<!-- Create New User ID Card -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Provision New User Account</h3>
+    <span class="card-subtitle">Administrators can create user credentials and assign strict role permissions</span>
+  </div>
+  <form method="post" action="{{ url_for('user_create') }}" class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <div class="filter-group">
+      <label>Username *</label>
+      <input type="text" name="username" class="form-control" placeholder="Unique system login" required>
+    </div>
+    <div class="filter-group">
+      <label>Full Name</label>
+      <input type="text" name="full_name" class="form-control" placeholder="Staff Name">
+    </div>
+    <div class="filter-group">
+      <label>Email Address</label>
+      <input type="email" name="email" class="form-control" placeholder="user@msedcl.in">
+    </div>
+    <div class="filter-group">
+      <label>Assigned Role *</label>
+      <select name="role" class="form-control" required>
+        <option value="admin">Administrator (Full Control)</option>
+        <option value="quality" selected>Quality Team (Audits, Uploads, Warnings)</option>
+        <option value="manager">Manager (Audits, Reports, Approvals)</option>
+        <option value="viewer">Advisor / Read-Only (Restricted to own data)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Linked Advisor ID / Code</label>
+      <input type="text" name="advisor_id" class="form-control" placeholder="e.g. ADV-1021 or 10425 (for advisor/viewer)">
+    </div>
+    <div class="filter-group">
+      <label>Initial Secure Password *</label>
+      <input type="password" name="password" class="form-control" placeholder="Strong password" required>
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button type="submit" class="btn btn-primary" style="width:100%;">Create Account</button>
+    </div>
+  </form>
+</div>
+
+<!-- Registered Users Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Registered Accounts ({{ users|length }})</h3>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Full Name / Email</th>
+          <th>System Role</th>
+          <th>Linked Advisor</th>
+          <th>Status</th>
+          <th>Created Date</th>
+          <th>Last Login</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>#{{ u.id }}</td>
+          <td><strong>{{ u.username }}</strong></td>
+          <td>
+            {{ u.full_name or '—' }}<br>
+            <small style="color:var(--text-muted);">{{ u.email or '—' }}</small>
+          </td>
+          <td>
+            <span class="badge {% if u.role=='admin' %}badge-danger{% elif u.role=='quality' %}badge-info{% elif u.role=='manager' %}badge-warning{% else %}badge-neutral{% endif %}">
+              {{ u.role|upper }}
+            </span>
+          </td>
+          <td>
+            {% if u.advisor_id %}
+              <span class="badge badge-info" style="font-family:var(--font-mono);">{{ u.advisor_id }}</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px;">All Access</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.active %}
+              <span class="badge badge-success">Active</span>
+            {% else %}
+              <span class="badge badge-neutral">Inactive</span>
+            {% endif %}
+          </td>
+          <td>{{ u.created_at or '—' }}</td>
+          <td>{{ u.last_login or 'Never' }}</td>
+          <td>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <!-- Toggle Active / Inactive (Enable / Disable) -->
+              {% if u.id != user.id %}
+              <form method="post" action="{{ url_for('user_toggle_status', user_id=u.id) }}">
+                <button type="submit" class="btn btn-sm {% if u.active %}btn-secondary{% else %}btn-success{% endif %}" title="Toggle Active/Inactive">
+                  {{ '⛔ Disable' if u.active else '✅ Enable' }}
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Password Reset Trigger -->
+              <button onclick="openPasswordModal('{{ u.id }}', '{{ u.username }}')" class="btn btn-secondary btn-sm">Reset Pwd</button>
+
+              <!-- Safe Delete -->
+              {% if u.id != user.id %}
+              <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" onsubmit="return confirm('Permanently remove user {{ u.username }}? Historical audits and reports will be preserved.')">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Password Reset Modal -->
+<div id="pwdModal" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;">Reset Password for <span id="modalUsername"></span></h3>
+      <button onclick="closePasswordModal()" style="border:none;background:none;font-size:20px;cursor:pointer;">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('user_reset_password') }}">
+      <input type="hidden" name="user_id" id="modalUserId">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">New Password</label>
+        <input type="password" name="new_password" class="form-control" required placeholder="Enter strong replacement password">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button type="button" onclick="closePasswordModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openPasswordModal(id, username) {
+  document.getElementById('modalUserId').value = id;
+  document.getElementById('modalUsername').innerText = username;
+  document.getElementById('pwdModal').classList.add('open');
+}
+function closePasswordModal() {
+  document.getElementById('pwdModal').classList.remove('open');
+}
+</script>
+{% endblock %}
