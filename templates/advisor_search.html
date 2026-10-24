@@ -122,56 +122,168 @@
 
   <!-- Tabbed Detail Panels -->
   <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">Audited Interactions ({{ profile.audits|length }} Records)</h3>
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h3 class="card-title">Audited Interactions ({{ profile.audits|length }} Records)</h3>
+        <p class="card-subtitle" style="margin:2px 0 0; font-size:12px; color:var(--text-muted);">
+          Comprehensive evaluation history, call observations, quality benchmarks, and recording telemetry
+        </p>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+        <span class="badge badge-info" style="font-weight:600;">Scroll horizontally on smaller screens</span>
+      </div>
     </div>
-    <div class="table-responsive">
-      <table class="data-table">
+    
+    <div class="advisor-table-wrapper">
+      <table class="advisor-data-table">
         <thead>
           <tr>
-            <th>Call ID</th>
-            <th>Call Date</th>
-            <th>Eval Date</th>
-            <th>Department</th>
-            <th>Auditor</th>
-            <th>Score</th>
-            <th>Fatal</th>
-            <th>Fatal Category</th>
-            <th>Error Categories</th>
-            <th>Observation & Remarks</th>
-            <th>Call Recording</th>
+            <th class="advisor-col-callid">Call ID</th>
+            <th class="advisor-col-date">Call Date</th>
+            <th class="advisor-col-date">Eval Date</th>
+            <th class="advisor-col-dept">Department</th>
+            <th class="advisor-col-auditor">Auditor</th>
+            <th class="advisor-col-score">Score</th>
+            <th class="advisor-col-fatal">Fatal Status</th>
+            <th class="advisor-col-fatalcat">Fatal Category</th>
+            <th class="advisor-col-errorcat">Error Categories</th>
+            <th class="advisor-col-obs">Observation &amp; Remarks</th>
+            <th class="advisor-col-rec">Call Recording</th>
           </tr>
         </thead>
         <tbody>
           {% for a in profile.audits %}
           <tr>
-            <td><strong>{{ a.call_id or '—' }}</strong></td>
-            <td>{{ a.call_date or '—' }}</td>
-            <td>{{ a.evaluation_date or '—' }}</td>
-            <td><span class="badge badge-neutral">{{ a.department }}</span></td>
-            <td>{{ a.auditor_name or '—' }}</td>
-            <td><strong>{{ a.quality_score }}%</strong></td>
-            <td>
-              {% if a.is_fatal %}
-                <span class="badge badge-danger">FATAL</span>
+            <!-- 1. Call ID -->
+            <td class="advisor-col-callid">
+              {% if a.call_id %}
+                <span style="color:var(--text-main); font-weight:700;">{{ a.call_id }}</span>
               {% else %}
-                <span class="badge badge-neutral">No</span>
+                <span class="badge badge-neutral" style="font-size:11px;">#{{ a.id }}</span>
               {% endif %}
             </td>
-            <td><span style="color:var(--danger);font-weight:600;">{{ a.fatal_category or '—' }}</span></td>
-            <td>{{ a.error_categories or '—' }}</td>
-            <td style="max-width:320px;min-width:220px;white-space:normal;word-break:break-word;line-height:1.45;color:#334155;">{{ a.observation or '—' }}</td>
-            <td>
-              {% if a.audio_url %}
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <audio controls preload="none" style="height:32px;width:170px;">
-                    <source src="{{ a.audio_url }}" type="audio/mpeg">
-                    Your browser does not support audio.
-                  </audio>
-                  <a href="{{ a.audio_url }}" target="_blank" title="Open audio stream in new tab" style="font-size:14px;text-decoration:none;">🔗</a>
+
+            <!-- 2. Call Date -->
+            <td class="advisor-col-date">
+              <span style="font-weight:500;">{{ a.call_date or 'Not Recorded' }}</span>
+            </td>
+
+            <!-- 3. Evaluation Date -->
+            <td class="advisor-col-date">
+              <span style="color:var(--text-muted);">{{ a.evaluation_date or '—' }}</span>
+            </td>
+
+            <!-- 4. Department -->
+            <td class="advisor-col-dept">
+              {% if a.department == 'Inbound' %}
+                <span class="badge badge-info">📞 Inbound</span>
+              {% elif a.department == 'Outbound' %}
+                <span class="badge badge-success">📱 Outbound</span>
+              {% else %}
+                <span class="badge badge-neutral">{{ a.department }}</span>
+              {% endif %}
+            </td>
+
+            <!-- 5. Auditor -->
+            <td class="advisor-col-auditor">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="color:var(--brand-blue); font-size:13px;">👤</span>
+                <span>{{ a.auditor_name or 'Unassigned' }}</span>
+              </div>
+            </td>
+
+            <!-- 6. Quality Score -->
+            <td class="advisor-col-score">
+              <span class="badge {% if a.quality_score >= 90 %}badge-success{% elif a.quality_score >= 80 %}badge-info{% else %}badge-warning{% endif %}" style="font-size:12.5px; padding:4px 8px;">
+                {{ "%.0f"|format(a.quality_score) if a.quality_score is not none else '0' }}%
+              </span>
+            </td>
+
+            <!-- 7. Fatal Status -->
+            <td class="advisor-col-fatal">
+              {% if a.is_fatal %}
+                <span class="badge badge-danger" title="Critical fatal violation">⚠️ FATAL</span>
+              {% else %}
+                <span class="badge badge-neutral" style="color:var(--brand-green); border-color:var(--kpi-green-border); background:var(--kpi-green-bg);">Non-Fatal</span>
+              {% endif %}
+            </td>
+
+            <!-- 8. Fatal Category -->
+            <td class="advisor-col-fatalcat">
+              {% if a.is_fatal and a.fatal_category %}
+                <span style="color:var(--brand-red); font-weight:600;">{{ a.fatal_category }}</span>
+              {% elif a.is_fatal %}
+                <span style="color:var(--brand-red); font-style:italic;">Critical Failure</span>
+              {% else %}
+                <span style="color:var(--text-muted); font-size:11.5px;">None</span>
+              {% endif %}
+            </td>
+
+            <!-- 9. Error Categories (Show actual categories instead of generic 'Yes', or 'Not Available') -->
+            <td class="advisor-col-errorcat">
+              {% if not a.error_categories or a.error_categories|trim == '' %}
+                <span style="color:var(--text-muted); font-size:11.5px;">Not Available</span>
+              {% elif a.error_categories|trim|lower == 'yes' %}
+                <!-- Generic 'Yes' in data: display contextual coaching note rather than empty Yes -->
+                <span class="badge badge-warning" title="Generic Error Flagged in Audit Data">Coaching Required</span>
+              {% else %}
+                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                  {% for cat in a.error_categories.split(';') %}
+                    {% set clean_cat = cat|trim %}
+                    {% if clean_cat %}
+                      <span class="badge badge-neutral" style="font-size:10.5px; padding:2px 6px; font-weight:500;">
+                        {{ clean_cat }}
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </td>
+
+            <!-- 10. Observation & Remarks with 3-Line Preview and Modal Expansion -->
+            <td class="advisor-col-obs">
+              {% if a.observation and a.observation|trim != '' %}
+                <div class="obs-preview-box">
+                  <div class="obs-preview-text" id="obsPreviewText_{{ a.id }}">{{ a.observation }}</div>
+                  <button type="button" class="obs-view-btn" onclick="openObservationModal('{{ a.id }}', '{{ a.call_id or ('#' ~ a.id) }}', '{{ a.call_date or '' }}', '{{ a.auditor_name or '' }}', '{{ a.quality_score }}%')">
+                    <span>📖</span> <span>Read Full Observation</span>
+                  </button>
+                  <!-- Hidden store for safe modal population without escaping conflicts -->
+                  <div id="obsFullContent_{{ a.id }}" style="display:none;">{{ a.observation }}</div>
                 </div>
               {% else %}
-                <span style="color:var(--text-light);font-size:11.5px;">No Audio</span>
+                <span style="color:var(--text-muted); font-style:italic; font-size:12px;">No observation notes recorded</span>
+              {% endif %}
+            </td>
+
+            <!-- 11. Call Recording Status Distinction -->
+            <td class="advisor-col-rec">
+              {% if a.audio_url and a.audio_url|trim != '' %}
+                {% if a.audio_url|lower in ['unavailable', 'corrupted', 'error', 'expired'] %}
+                  <span class="rec-badge rec-badge-unavailable" title="Audio stream unavailable">
+                    ❌ Recording Unavailable
+                  </span>
+                {% else %}
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <span class="rec-badge rec-badge-available" title="Audio recording verified">
+                      <span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>
+                      Recording Available
+                    </span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <audio controls preload="none" style="height:28px; width:145px;">
+                        <source src="{{ a.audio_url }}" type="audio/mpeg">
+                        Your browser does not support audio.
+                      </audio>
+                      <a href="{{ a.audio_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="padding:3px 7px; font-size:11px;" title="Stream audio in new window">
+                        🎧
+                      </a>
+                    </div>
+                  </div>
+                {% endif %}
+              {% else %}
+                <span class="rec-badge rec-badge-noaudio" title="No audio file associated with this evaluation">
+                  🔇 No Audio
+                </span>
               {% endif %}
             </td>
           </tr>
@@ -180,6 +292,77 @@
       </table>
     </div>
   </div>
+
+  <!-- Observation Detail Modal -->
+  <div class="obs-modal-overlay" id="obsModalOverlay" onclick="handleObsModalBackdrop(event)">
+    <div class="obs-modal-dialog" onclick="event.stopPropagation()">
+      <div class="obs-modal-header">
+        <h4>
+          <span>📝</span>
+          <span>Auditor Evaluation Observation</span>
+        </h4>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeObservationModal()" style="padding:4px 8px; font-size:14px; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center;">✕</button>
+      </div>
+      <div class="obs-modal-body">
+        <div class="obs-modal-meta">
+          <div class="obs-modal-meta-item">
+            <span>Interaction ID:</span> <strong id="obsModalCallId">—</strong>
+          </div>
+          <div class="obs-modal-meta-item">
+            <span>Call Date:</span> <strong id="obsModalCallDate">—</strong>
+          </div>
+          <div class="obs-modal-meta-item">
+            <span>Auditor:</span> <strong id="obsModalAuditor">—</strong>
+          </div>
+          <div class="obs-modal-meta-item">
+            <span>Quality Score:</span> <strong id="obsModalScore">—</strong>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:6px;">Complete Evaluator Remarks:</label>
+          <div class="obs-modal-text" id="obsModalFullText"></div>
+        </div>
+      </div>
+      <div class="obs-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeObservationModal()">Close Panel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function openObservationModal(recordId, callId, callDate, auditor, score) {
+    const contentEl = document.getElementById('obsFullContent_' + recordId);
+    if (!contentEl) return;
+    
+    document.getElementById('obsModalCallId').textContent = callId || 'N/A';
+    document.getElementById('obsModalCallDate').textContent = callDate || 'N/A';
+    document.getElementById('obsModalAuditor').textContent = auditor || 'Unassigned';
+    document.getElementById('obsModalScore').textContent = score || 'N/A';
+    document.getElementById('obsModalFullText').textContent = contentEl.textContent;
+    
+    const modal = document.getElementById('obsModalOverlay');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeObservationModal() {
+    const modal = document.getElementById('obsModalOverlay');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function handleObsModalBackdrop(e) {
+    if (e.target.id === 'obsModalOverlay') {
+      closeObservationModal();
+    }
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeObservationModal();
+    }
+  });
+  </script>
 
   <!-- Disciplinary Warnings & PIP Section -->
   <div class="card">

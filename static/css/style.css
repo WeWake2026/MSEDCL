@@ -1176,3 +1176,228 @@ table.data-table th {
   .stat-grid { grid-template-columns: 1fr; }
 }
 
+/* ==========================================================================
+   Advisor 360 Interactions Table & Observation Modal Styles
+   ========================================================================== */
+.advisor-table-wrapper {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+
+.advisor-data-table {
+  width: 100%;
+  min-width: 1250px; /* Ensures all columns fit comfortably without header clipping */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.advisor-data-table th {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.advisor-data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+  color: var(--text-main);
+  transition: background var(--transition-fast);
+}
+
+.advisor-data-table tbody tr:hover td {
+  background: var(--bg-card-hover, rgba(2, 132, 199, 0.03));
+}
+
+/* Col Widths & Alignments */
+.advisor-col-callid { width: 130px; font-weight: 700; font-family: monospace; }
+.advisor-col-date { width: 105px; white-space: nowrap; font-size: 12.5px; }
+.advisor-col-dept { width: 100px; text-align: center; }
+.advisor-col-auditor { width: 150px; font-weight: 500; }
+.advisor-col-score { width: 90px; text-align: center; font-weight: 700; font-size: 13.5px; }
+.advisor-col-fatal { width: 95px; text-align: center; }
+.advisor-col-fatalcat { width: 150px; font-size: 12px; }
+.advisor-col-errorcat { width: 200px; font-size: 12px; }
+.advisor-col-obs { min-width: 340px; max-width: 440px; }
+.advisor-col-rec { width: 190px; text-align: center; }
+
+/* Observation Preview Container */
+.obs-preview-box {
+  position: relative;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.obs-preview-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-main);
+  word-break: break-word;
+  margin-bottom: 6px;
+}
+
+.obs-view-btn {
+  background: none;
+  border: none;
+  color: var(--brand-blue);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--transition-fast);
+}
+.obs-view-btn:hover {
+  color: var(--brand-cyan);
+  text-decoration: underline;
+}
+
+/* Call Recording Badges & Audio Player */
+.rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rec-badge-available {
+  background: var(--kpi-green-bg);
+  color: var(--brand-green);
+  border: 1px solid var(--kpi-green-border);
+}
+.rec-badge-noaudio {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.rec-badge-unavailable {
+  background: var(--kpi-red-bg);
+  color: var(--brand-red);
+  border: 1px solid var(--kpi-red-border);
+}
+
+/* Observation Full View Modal */
+.obs-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.obs-modal-overlay.active {
+  display: flex;
+}
+
+.obs-modal-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 680px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.obs-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.obs-modal-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obs-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-main);
+}
+
+.obs-modal-meta {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.obs-modal-meta-item strong {
+  color: var(--text-main);
+}
+.obs-modal-meta-item span {
+  color: var(--text-muted);
+}
+
+.obs-modal-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-card-subtle);
+  border-left: 3px solid var(--brand-blue);
+  padding: 14px 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 13.5px;
+}
+
+.obs-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--bg-card-subtle);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
