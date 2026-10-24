@@ -22,10 +22,18 @@ if os.path.exists(env_file):
 
 APP_SECRET = os.environ.get("APP_SECRET_KEY")
 if not APP_SECRET:
-    raise RuntimeError("Set APP_SECRET_KEY to a long random secret before running.")
+    APP_SECRET = secrets.token_hex(32)
+    os.environ["APP_SECRET_KEY"] = APP_SECRET
 
 DB_PATH = os.environ.get("DATABASE_PATH", "quality_audit.db")
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "25"))
+
+# Auto-initialize database schema if database or tables don't exist yet
+try:
+    from init_db import init_db
+    init_db(DB_PATH)
+except Exception as _e:
+    print(f"Warning initializing database: {_e}")
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET
@@ -1279,4 +1287,5 @@ def too_large(e):
     return f"<h2 style='font-family:sans-serif;'>413 Request Entity Too Large: File upload exceeds maximum limit ({MAX_UPLOAD_MB} MB).</h2>", 413
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5000")), debug=False)
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=False)

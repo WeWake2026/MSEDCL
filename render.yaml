@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: msedcl-quality-audit
+    runtime: python
+    buildCommand: "pip install -r requirements.txt && python init_db.py"
+    startCommand: "gunicorn app:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: quality_audit.db
+      - key: MAX_UPLOAD_MB
+        value: 25
+      - key: ADMIN_USERNAME
+        value: qaadmin
+      - key: ADMIN_PASSWORD
+        value: Msedcl@123
+      - key: QUALITY_USERNAME
+        value: quality1
+      - key: QUALITY_PASSWORD
+        value: Msedcl@1234
+      - key: MANAGER_USERNAME
+        value: manager1
+      - key: MANAGER_PASSWORD
+        value: Msedcl@1235
