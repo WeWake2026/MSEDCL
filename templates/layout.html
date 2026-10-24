@@ -178,6 +178,38 @@
       </div>
       
       <div class="topbar-right">
+        <!-- Quick Refresh Button with confirmation/feedback -->
+        <button type="button" class="btn btn-secondary btn-sm" onclick="handleDashboardRefresh()" title="Refresh Dashboard Data" style="padding:6px 10px;display:flex;align-items:center;gap:4px;">
+          <span id="refreshIcon">🔄</span>
+          <span class="hide-mobile">Refresh</span>
+        </button>
+
+        <!-- Notification Bell with Active Indicator -->
+        <div class="notification-wrapper" style="position:relative;">
+          <button type="button" class="sidebar-toggle-btn" onclick="toggleNotifications()" id="notifBellBtn" title="System Notifications" style="position:relative;">
+            <span>🔔</span>
+            <span class="notif-badge" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:2px solid var(--bg-card);"></span>
+          </button>
+          
+          <!-- Notification Dropdown Panel -->
+          <div id="notifDropdown" class="notif-dropdown" style="display:none;position:absolute;top:46px;right:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light);padding-bottom:8px;margin-bottom:8px;">
+              <strong style="font-size:13px;color:var(--text-main);">Notifications</strong>
+              <span class="badge badge-info" style="font-size:10px;">Live Audits</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:8px;">
+              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--success);">
+                <strong style="color:var(--text-main);display:block;">Data Store Connected</strong>
+                <span>Database engine active with SQLite journaling.</span>
+              </div>
+              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--warning);">
+                <strong style="color:var(--text-main);display:block;">Audit Threshold Alert</strong>
+                <span>Calls under 80% automatically flagged for PIP review.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Theme Mode Toggle Button -->
         <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light/Dark Mode">
           <span id="themeIcon">🌓</span>
@@ -187,18 +219,23 @@
         {% if user.role not in ('viewer', 'advisor') %}
         <!-- Quick Global Search for Employee ID (Desktop) -->
         <form action="{{ url_for('advisor_search') }}" method="get" class="topbar-search-form hide-mobile" style="display:flex;gap:4px;">
-          <input type="text" name="emp_id" placeholder="🔍 Search Emp ID..." class="form-control" style="width:150px;padding:5px 8px;font-size:12px;" value="{{ request.args.get('emp_id','') }}">
+          <input type="text" name="emp_id" placeholder="🔍 Search Emp ID..." class="form-control" style="width:140px;padding:5px 8px;font-size:12px;" value="{{ request.args.get('emp_id','') }}">
           <button class="btn btn-secondary btn-sm" type="submit">Go</button>
         </form>
         {% endif %}
 
         {% if user.role == 'admin' %}
         <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger btn-sm" title="Restart Application Server (Admin Only)" style="display:flex;align-items:center;gap:4px;">
-          <span>🔄</span> <span class="hide-mobile">Restart</span>
+          <span>⚡</span> <span class="hide-mobile">Restart</span>
         </button>
         {% endif %}
 
-        <span class="badge badge-info hide-mobile">{{ user.role|upper }}</span>
+        <!-- User Profile Pill -->
+        <div class="user-profile-pill hide-mobile" style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:12px;">
+          <span style="width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;">{{ user.username[0]|upper }}</span>
+          <span style="font-weight:600;color:var(--text-main);">{{ user.username }}</span>
+          <span class="badge {% if user.role=='admin' %}badge-danger{% elif user.role=='quality' %}badge-info{% elif user.role=='manager' %}badge-warning{% else %}badge-neutral{% endif %}" style="font-size:10px;padding:2px 6px;">{{ user.role|upper }}</span>
+        </div>
       </div>
     </header>
 
@@ -326,6 +363,28 @@
         icon.innerText = theme === 'dark' ? '☀️' : '🌙';
         icon.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
       }
+    }
+
+    // --- Notification Dropdown Handler ---
+    function toggleNotifications() {
+      const drop = document.getElementById('notifDropdown');
+      if (drop) {
+        drop.style.display = (drop.style.display === 'none' || !drop.style.display) ? 'block' : 'none';
+      }
+    }
+    document.addEventListener('click', function(e) {
+      const wrapper = document.querySelector('.notification-wrapper');
+      const drop = document.getElementById('notifDropdown');
+      if (wrapper && drop && !wrapper.contains(e.target)) {
+        drop.style.display = 'none';
+      }
+    });
+
+    // --- Dashboard Refresh Handler ---
+    function handleDashboardRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      if (icon) icon.style.transform = 'rotate(360deg)';
+      window.location.reload();
     }
 
     // --- Admin Restart Modal Handlers ---

@@ -293,7 +293,10 @@ def dashboard():
     dept = request.args.get("department", "All")
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    selected_auditor = request.args.get("auditor", "")
+    selected_auditor = request.args.get("auditor", "").strip()
+    advisor_query = request.args.get("advisor_q", "").strip()
+    score_bracket = request.args.get("score_bracket", "All")
+    fatal_status = request.args.get("fatal_status", "All")
     
     where = ["1=1"]
     params = []
@@ -309,6 +312,19 @@ def dashboard():
     if selected_auditor:
         where.append("auditor_name=?")
         params.append(selected_auditor)
+    if advisor_query:
+        where.append("(advisor_id LIKE ? OR advisor_name LIKE ?)")
+        params.extend([f"%{advisor_query}%", f"%{advisor_query}%"])
+    if fatal_status == "fatal":
+        where.append("is_fatal=1")
+    elif fatal_status == "non_fatal":
+        where.append("is_fatal=0")
+    if score_bracket == "low":
+        where.append("quality_score < 80")
+    elif score_bracket == "mid":
+        where.append("quality_score >= 80 AND quality_score <= 90")
+    elif score_bracket == "good":
+        where.append("quality_score > 90")
     
     # Restrict viewer with advisor_id to their own data only
     curr_user = getattr(request, "current_user", None)
@@ -319,6 +335,12 @@ def dashboard():
     sql_base = " FROM audits WHERE " + " AND ".join(where)
     
     with db() as con:
+        # System live status metadata
+        last_batch = con.execute("SELECT uploaded_at, source_file FROM import_batches ORDER BY uploaded_at DESC LIMIT 1").fetchone()
+        last_sync_time = last_batch["uploaded_at"] if last_batch else None
+        last_sync_file = last_batch["source_file"] if last_batch else None
+        all_time_records = con.execute("SELECT COUNT(*) FROM audits").fetchone()[0]
+
         total_audits = con.execute("SELECT COUNT(*)" + sql_base, params).fetchone()[0]
         inbound_count = con.execute("SELECT COUNT(*)" + sql_base + " AND department='Inbound'", params).fetchone()[0]
         outbound_count = con.execute("SELECT COUNT(*)" + sql_base + " AND department='Outbound'", params).fetchone()[0]
@@ -419,6 +441,14 @@ def dashboard():
         "active_pips": active_pips
     }
 
+    sync_status = {
+        "last_sync_time": last_sync_time or "No batches ingested",
+        "last_sync_file": last_sync_file or "—",
+        "all_time_records": all_time_records,
+        "filtered_count": total_audits,
+        "is_filtered": bool(dept != "All" or start or end or selected_auditor or advisor_query or score_bracket != "All" or fatal_status != "All")
+    }
+
     return render_template("dashboard.html",
                            page="dashboard",
                            metrics=metrics,
@@ -426,6 +456,10 @@ def dashboard():
                            advisor_summary=advisor_summary,
                            auditors_list=auditors_list,
                            selected_auditor=selected_auditor,
+                           advisor_query=advisor_query,
+                           score_bracket=score_bracket,
+                           fatal_status=fatal_status,
+                           sync_status=sync_status,
                            dept=dept, start=start, end=end)
 
 # --- Routes: Audits Views (Inbound, Outbound, Fatal, Scores) ---

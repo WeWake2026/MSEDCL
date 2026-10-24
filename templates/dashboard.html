@@ -1,29 +1,89 @@
 {% extends "layout.html" %}
-{% block title %}Executive Quality Dashboard · MSEDCL{% endblock %}
-{% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
+{% block title %}Executive Quality Dashboard · MSEDCL QA{% endblock %}
+{% block heading %}MSEDCL Quality Audit & Performance Analytics Portal{% endblock %}
 
 {% block content %}
-<!-- Interactive Filter Bar -->
-<div class="filter-bar">
-  <form method="get" action="{{ url_for('dashboard') }}" class="filter-grid" id="dashFilterForm">
+<!-- 1. Live Data Sync Status & Filter Indicator Banner -->
+<div class="card" style="padding:14px 18px;margin-bottom:18px;background:var(--bg-card);border:1px solid var(--border);border-left:4px solid {% if sync_status.is_filtered %}var(--warning){% else %}var(--primary-light){% endif %};">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:18px;">⚡</span>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <strong style="font-size:13.5px;color:var(--text-main);">Data Ingestion & Store Status:</strong>
+          <span class="badge badge-success" style="font-size:11px;">Active</span>
+          {% if sync_status.is_filtered %}
+            <span class="badge badge-warning" style="font-size:11px;">Filtered View Active</span>
+          {% else %}
+            <span class="badge badge-neutral" style="font-size:11px;">Showing All Records</span>
+          {% endif %}
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+          Last Ingestion: <strong>{{ sync_status.last_sync_time }}</strong> &nbsp;|&nbsp; File: <code>{{ sync_status.last_sync_file }}</code> &nbsp;|&nbsp; 
+          Showing <strong>{{ sync_status.filtered_count }}</strong> of <strong>{{ sync_status.all_time_records }}</strong> total records
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      {% if sync_status.is_filtered %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-sm" style="color:var(--danger);border-color:var(--danger);">Clear Active Filters</a>
+      {% endif %}
+      <button type="button" onclick="toggleFilterPanel()" class="btn btn-secondary btn-sm">
+        <span>⚙️</span> <span id="filterPanelToggleText">Toggle Filter Panel</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Quick Action Toolbar -->
+<div class="card" style="padding:12px 16px;margin-bottom:18px;background:var(--bg-card-subtle);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <span style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+      <span>🚀</span> Quick Actions:
+    </span>
+    <div class="action-buttons" style="gap:8px;">
+      <a href="{{ url_for('audits_view', dept='Inbound') }}" class="btn btn-secondary btn-sm" title="View Inbound Call Audits">📞 Inbound Calls</a>
+      <a href="{{ url_for('audits_view', dept='Outbound') }}" class="btn btn-secondary btn-sm" title="View Outbound Call Audits">📱 Outbound Calls</a>
+      <a href="{{ url_for('fatal_calls') }}" class="btn btn-danger btn-sm" title="View Critical Fatal Errors">⚠️ Fatal Calls</a>
+      <a href="{{ url_for('score_reports') }}" class="btn btn-secondary btn-sm" title="Score Category Breakdowns">🎯 Score Reports</a>
+      <a href="{{ url_for('warnings') }}" class="btn btn-secondary btn-sm" title="Manage Warnings & PIP Notices">✉️ Warnings & PIP</a>
+      <a href="{{ url_for('export_combined', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-success btn-sm" title="Download Master Excel Workbook">📑 Export Excel</a>
+      <a href="{{ url_for('export_zip', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-primary btn-sm" title="Download All 12 Reports in ZIP">🗜️ Download ZIP</a>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Advanced Multi-Criteria Filter Panel -->
+<div class="filter-bar" id="advancedFilterPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--border-light);padding-bottom:8px;">
+    <h3 style="font-size:14.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+      <span>🔍</span> Advanced Audit Filters & Scope
+    </h3>
+    <span style="font-size:11.5px;color:var(--text-muted);">Adjust parameters to refresh metrics and charts</span>
+  </div>
+  <form method="get" action="{{ url_for('dashboard') }}" class="filter-grid" id="dashFilterForm" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
+    
     <div class="filter-group">
       <label>Department</label>
-      <select name="department" class="form-control" onchange="this.form.submit()">
+      <select name="department" class="form-control">
         <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
         <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound Only</option>
         <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound Only</option>
       </select>
     </div>
+
     <div class="filter-group">
       <label>Start Date</label>
-      <input type="date" name="start" value="{{ start }}" class="form-control">
+      <input type="date" name="start" value="{{ start }}" class="form-control" id="filterStart">
     </div>
+
     <div class="filter-group">
       <label>End Date</label>
-      <input type="date" name="end" value="{{ end }}" class="form-control">
+      <input type="date" name="end" value="{{ end }}" class="form-control" id="filterEnd">
     </div>
+
     <div class="filter-group">
-      <label>Auditor Filter</label>
+      <label>Evaluator / Auditor</label>
       <select name="auditor" class="form-control">
         <option value="">All Evaluators</option>
         {% for a in auditors_list %}
@@ -31,6 +91,31 @@
         {% endfor %}
       </select>
     </div>
+
+    <div class="filter-group">
+      <label>Search Advisor / Employee ID</label>
+      <input type="text" name="advisor_q" value="{{ advisor_query }}" placeholder="Name or ID..." class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label>Quality Score Band</label>
+      <select name="score_bracket" class="form-control">
+        <option value="All" {{ 'selected' if score_bracket=='All' else '' }}>All Scores</option>
+        <option value="low" {{ 'selected' if score_bracket=='low' else '' }}>Low (&lt; 80%)</option>
+        <option value="mid" {{ 'selected' if score_bracket=='mid' else '' }}>Average (80% - 90%)</option>
+        <option value="good" {{ 'selected' if score_bracket=='good' else '' }}>Good (&gt; 90%)</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Fatal Call Status</label>
+      <select name="fatal_status" class="form-control">
+        <option value="All" {{ 'selected' if fatal_status=='All' else '' }}>All Interactions</option>
+        <option value="fatal" {{ 'selected' if fatal_status=='fatal' else '' }}>Fatal Calls Only</option>
+        <option value="non_fatal" {{ 'selected' if fatal_status=='non_fatal' else '' }}>Non-Fatal Only</option>
+      </select>
+    </div>
+
     <div style="display:flex;gap:8px;">
       <button type="submit" class="btn btn-primary" style="flex:1;">Apply Filters</button>
       <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Reset</a>
@@ -38,56 +123,96 @@
   </form>
 </div>
 
-<!-- Primary Metric KPI Cards -->
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-label">Total Audited Calls</div>
+<!-- 4. Primary KPI Summary Cards (Color-Coded & Interactive) -->
+<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+  
+  <!-- 1. Total Audited Calls -->
+  <a href="{{ url_for('audits_view') }}" class="stat-card" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Total Audited Calls</div>
+      <span style="font-size:18px;">📞</span>
+    </div>
     <div class="stat-val primary">{{ metrics.total_audits }}</div>
     <div class="stat-sub">Inbound: {{ metrics.inbound_count }} | Outbound: {{ metrics.outbound_count }}</div>
-  </div>
+  </a>
 
-  <div class="stat-card fatal">
-    <div class="stat-label">Fatal Call Errors</div>
+  <!-- 2. Fatal Call Errors -->
+  <a href="{{ url_for('fatal_calls') }}" class="stat-card fatal" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Fatal Errors</div>
+      <span style="font-size:18px;">⚠️</span>
+    </div>
     <div class="stat-val danger">{{ metrics.fatal_count }}</div>
     <div class="stat-sub">{{ "%.1f"|format(metrics.fatal_rate) }}% of total audited interactions</div>
-  </div>
+  </a>
 
-  <div class="stat-card low">
-    <div class="stat-label">Low Score (&lt; 80%)</div>
+  <!-- 3. Low Score Calls (<80%) -->
+  <a href="{{ url_for('score_reports') }}" class="stat-card low" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Low Score (&lt; 80%)</div>
+      <span style="font-size:18px;">🔻</span>
+    </div>
     <div class="stat-val warn">{{ metrics.low_score_count }}</div>
-    <div class="stat-sub">Requires active coaching</div>
-  </div>
+    <div class="stat-sub">Immediate coaching required</div>
+  </a>
 
-  <div class="stat-card info">
-    <div class="stat-label">Average Score (80-90%)</div>
+  <!-- 4. Average Score (80-90%) -->
+  <a href="{{ url_for('score_reports') }}" class="stat-card info" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Average (80-90%)</div>
+      <span style="font-size:18px;">🔷</span>
+    </div>
     <div class="stat-val" style="color:var(--info);">{{ metrics.avg_score_count }}</div>
     <div class="stat-sub">Acceptable quality band</div>
-  </div>
+  </a>
 
-  <div class="stat-card good">
-    <div class="stat-label">Good Calls (&gt; 90%)</div>
+  <!-- 5. Good Calls (>90%) -->
+  <a href="{{ url_for('score_reports') }}" class="stat-card good" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Good Calls (&gt; 90%)</div>
+      <span style="font-size:18px;">⭐</span>
+    </div>
     <div class="stat-val good">{{ metrics.good_score_count }}</div>
-    <div class="stat-sub">Benchmark performers</div>
-  </div>
+    <div class="stat-sub">Benchmark high performers</div>
+  </a>
 
+  <!-- 6. Overall Average Score -->
   <div class="stat-card avg">
-    <div class="stat-label">Average Quality Score</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Average Quality</div>
+      <span style="font-size:18px;">🎯</span>
+    </div>
     <div class="stat-val">{{ metrics.overall_avg }}%</div>
-    <div class="stat-sub">Aggregated weighted quality</div>
+    <div class="stat-sub">Target quality score: 90.0%</div>
   </div>
 
-  <div class="stat-card info">
-    <div class="stat-label">Warnings & PIPs</div>
-    <div class="stat-val" style="color:#6366f1;">{{ metrics.total_warnings }}</div>
-    <div class="stat-sub">Open: {{ metrics.open_warnings }} | PIPs: {{ metrics.active_pips }}</div>
-  </div>
+  <!-- 7. Open Warnings -->
+  <a href="{{ url_for('warnings') }}" class="stat-card fatal" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Open Warnings</div>
+      <span style="font-size:18px;">✉️</span>
+    </div>
+    <div class="stat-val danger">{{ metrics.open_warnings }}</div>
+    <div class="stat-sub">Of {{ metrics.total_warnings }} total issued notices</div>
+  </a>
+
+  <!-- 8. Active PIPs -->
+  <a href="{{ url_for('warnings') }}" class="stat-card info" style="text-decoration:none;display:block;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="stat-label">Active PIP Plans</div>
+      <span style="font-size:18px;">📈</span>
+    </div>
+    <div class="stat-val" style="color:#8b5cf6;">{{ metrics.active_pips }}</div>
+    <div class="stat-sub">14-day improvement plans</div>
+  </a>
 </div>
 
-<!-- Charts Row 1: Score Category Counts & Fatal Ratio & Inbound vs Outbound -->
+<!-- 5. Analytics Charts Row 1: Score Distribution, Fatal Ratio, Inbound vs Outbound -->
 <div class="charts-grid-3">
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Score Category Distribution</h3>
+      <span class="card-subtitle">Non-fatal score bands</span>
     </div>
     <div class="chart-container">
       <canvas id="scoreDistChart"></canvas>
@@ -97,6 +222,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Fatal vs Non-Fatal Ratio</h3>
+      <span class="card-subtitle">Critical compliance integrity</span>
     </div>
     <div class="chart-container">
       <canvas id="fatalRatioChart"></canvas>
@@ -106,6 +232,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Inbound vs Outbound Audits</h3>
+      <span class="card-subtitle">Interaction volume split</span>
     </div>
     <div class="chart-container">
       <canvas id="deptRatioChart"></canvas>
@@ -113,11 +240,12 @@
   </div>
 </div>
 
-<!-- Charts Row 2: Audit Timeline Trend & Auditor Performance -->
+<!-- 6. Analytics Charts Row 2: Volume Trends & Auditor Performance -->
 <div class="charts-grid-2">
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title">Daily / Weekly Audit Volume Trend</h3>
+      <h3 class="card-title">Audit Volume Timeline Trend</h3>
+      <span class="card-subtitle">Evaluation timestamps over time</span>
     </div>
     <div class="chart-container">
       <canvas id="trendChart"></canvas>
@@ -127,6 +255,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Auditor Evaluation Activity</h3>
+      <span class="card-subtitle">Work completed per quality auditor</span>
     </div>
     <div class="chart-container">
       <canvas id="auditorChart"></canvas>
@@ -134,11 +263,12 @@
   </div>
 </div>
 
-<!-- Charts Row 3: Advisor Performance & Warnings/PIP Status -->
+<!-- 7. Analytics Charts Row 3: Advisor Performance & Warnings/PIP Status -->
 <div class="charts-grid-2">
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title">Advisor Quality Performance (Top 10 vs Bottom 10)</h3>
+      <h3 class="card-title">Top Advisor Quality Scores</h3>
+      <span class="card-subtitle">Target: 90% quality benchmark</span>
     </div>
     <div class="chart-container">
       <canvas id="advisorChart"></canvas>
@@ -148,6 +278,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Warning & PIP Action Status</h3>
+      <span class="card-subtitle">Governance action lifecycle</span>
     </div>
     <div class="chart-container">
       <canvas id="warningStatusChart"></canvas>
@@ -155,42 +286,50 @@
   </div>
 </div>
 
-<!-- Detailed Data Tables Split: Advisor-wise Performance & Critical Calls -->
+<!-- 8. Detailed Advisor Quality Performance Register -->
 <div class="card">
   <div class="card-header">
     <div>
-      <h3 class="card-title">Advisor-wise Quality Summary</h3>
-      <p class="card-subtitle">Showing performance metrics for advisors under current filter criteria</p>
+      <h3 class="card-title">Advisor-wise Quality Summary ({{ advisor_summary|length }} Advisors)</h3>
+      <p class="card-subtitle">Showing performance, error metrics, and warning triggers under active filters</p>
     </div>
-    <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Detailed Data</a>
+    <div class="action-buttons">
+      <input type="text" id="advTableSearch" oninput="filterAdvisorTable()" placeholder="🔍 Search table..." class="form-control" style="width:160px;padding:5px 8px;font-size:12px;">
+      <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Options</a>
+    </div>
   </div>
   <div class="table-responsive">
-    <table class="data-table">
+    <table class="data-table" id="advisorSummaryTable">
       <thead>
         <tr>
           <th>Employee ID</th>
           <th>Advisor Name</th>
           <th>Department</th>
-          <th>Total Calls</th>
+          <th>Audits</th>
           <th>Average Score</th>
           <th>Fatal Calls</th>
           <th>Low (&lt;80%)</th>
           <th>Mid (80-90%)</th>
           <th>Good (&gt;90%)</th>
-          <th>Action</th>
+          <th>Target Met</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for r in advisor_summary %}
-        <tr>
-          <td><span class="badge badge-neutral">{{ r.advisor_id or 'N/A' }}</span></td>
+        <tr class="adv-row" data-name="{{ r.advisor_name|lower }}" data-id="{{ (r.advisor_id or '')|lower }}" data-dept="{{ r.department|lower }}">
+          <td><span class="badge badge-neutral" style="font-family:monospace;">{{ r.advisor_id or '—' }}</span></td>
           <td><strong>{{ r.advisor_name }}</strong></td>
-          <td>{{ r.department }}</td>
-          <td>{{ r.calls }}</td>
-          <td><strong>{{ r.avg_score }}%</strong></td>
+          <td><span class="badge badge-neutral">{{ r.department }}</span></td>
+          <td><strong>{{ r.calls }}</strong></td>
+          <td>
+            <strong style="font-size:13.5px;{% if r.avg_score < 80 %}color:var(--danger);{% elif r.avg_score >= 90 %}color:var(--success);{% else %}color:var(--info);{% endif %}">
+              {{ r.avg_score }}%
+            </strong>
+          </td>
           <td>
             {% if r.fatals > 0 %}
-              <span class="badge badge-danger">{{ r.fatals }}</span>
+              <span class="badge badge-danger">⚠️ {{ r.fatals }}</span>
             {% else %}
               <span class="badge badge-neutral">0</span>
             {% endif %}
@@ -205,11 +344,25 @@
           <td>{{ r.mid_calls }}</td>
           <td><span class="badge badge-success">{{ r.good_calls }}</span></td>
           <td>
-            <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="btn btn-secondary btn-sm">Drilldown</a>
+            {% if r.avg_score >= 90 and r.fatals == 0 %}
+              <span class="badge badge-success">✓ Benchmark</span>
+            {% elif r.fatals > 0 %}
+              <span class="badge badge-danger">⚠️ Fatal Alert</span>
+            {% else %}
+              <span class="badge badge-warning">Under Target</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="action-buttons">
+              <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="btn btn-secondary btn-sm" title="Drilldown to advisor history">🔍 Inspect</a>
+              {% if user.role not in ('viewer', 'advisor') and (r.fatals > 0 or r.low_calls > 0 or r.avg_score < 90) %}
+                <a href="{{ url_for('warnings') }}" class="btn btn-primary btn-sm" title="Issue Warning or PIP notice">✉️ PIP</a>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-muted);">No advisor records match your filter criteria.</td></tr>
+        <tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text-muted);">No advisor records match your current filter criteria.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -217,28 +370,52 @@
 </div>
 
 <script>
+function toggleFilterPanel() {
+  const panel = document.getElementById('advancedFilterPanel');
+  if (panel) {
+    panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+  }
+}
+
+function filterAdvisorTable() {
+  const q = (document.getElementById('advTableSearch').value || '').trim().toLowerCase();
+  const rows = document.querySelectorAll('#advisorSummaryTable tbody tr.adv-row');
+  rows.forEach(r => {
+    const name = r.getAttribute('data-name') || '';
+    const id = r.getAttribute('data-id') || '';
+    const dept = r.getAttribute('data-dept') || '';
+    r.style.display = (!q || name.includes(q) || id.includes(q) || dept.includes(q)) ? '' : 'none';
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const chartData = {{ chart_data|tojson }};
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
 
   // 1. Score Categories Doughnut
   new Chart(document.getElementById('scoreDistChart'), {
     type: 'doughnut',
     data: {
-      labels: ['Low (<80%)', 'Average (80-90%)', 'Good (>90%)'],
+      labels: ['Low Score (<80%)', 'Average Band (80-90%)', 'Benchmark Good (>90%)'],
       datasets: [{
         data: [chartData.low_scores, chartData.mid_scores, chartData.good_scores],
         backgroundColor: ['#f59e0b', '#0284c7', '#10b981'],
-        borderWidth: 2
+        borderWidth: 2,
+        borderColor: isDark ? '#131c2e' : '#ffffff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } }
+      }
     }
   });
 
-  // 2. Fatal vs Non-Fatal Pie
+  // 2. Fatal vs Non-Fatal Ratio
   new Chart(document.getElementById('fatalRatioChart'), {
     type: 'pie',
     data: {
@@ -246,13 +423,16 @@ document.addEventListener('DOMContentLoaded', function() {
       datasets: [{
         data: [chartData.fatal_count, chartData.non_fatal_count],
         backgroundColor: ['#ef4444', '#3b82f6'],
-        borderWidth: 2
+        borderWidth: 2,
+        borderColor: isDark ? '#131c2e' : '#ffffff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } }
+      }
     }
   });
 
@@ -260,17 +440,20 @@ document.addEventListener('DOMContentLoaded', function() {
   new Chart(document.getElementById('deptRatioChart'), {
     type: 'doughnut',
     data: {
-      labels: ['Inbound', 'Outbound'],
+      labels: ['Inbound Calls', 'Outbound Calls'],
       datasets: [{
         data: [chartData.inbound_count, chartData.outbound_count],
         backgroundColor: ['#6366f1', '#0d9488'],
-        borderWidth: 2
+        borderWidth: 2,
+        borderColor: isDark ? '#131c2e' : '#ffffff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } }
+      }
     }
   });
 
@@ -278,21 +461,26 @@ document.addEventListener('DOMContentLoaded', function() {
   new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: {
-      labels: chartData.dates,
+      labels: chartData.dates.length ? chartData.dates : ['No Data'],
       datasets: [{
-        label: 'Audit Count',
-        data: chartData.date_counts,
-        borderColor: '#1e3a8a',
-        backgroundColor: 'rgba(30, 58, 138, 0.1)',
-        tension: 0.3,
-        fill: true
+        label: 'Audited Calls',
+        data: chartData.date_counts.length ? chartData.date_counts : [0],
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 4,
+        pointHoverRadius: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }
+      }
     }
   });
 
@@ -300,19 +488,22 @@ document.addEventListener('DOMContentLoaded', function() {
   new Chart(document.getElementById('auditorChart'), {
     type: 'bar',
     data: {
-      labels: chartData.auditor_names,
+      labels: chartData.auditor_names.length ? chartData.auditor_names : ['None Recorded'],
       datasets: [{
-        label: 'Evaluations Completed',
-        data: chartData.auditor_counts,
+        label: 'Audits Completed',
+        data: chartData.auditor_counts.length ? chartData.auditor_counts : [0],
         backgroundColor: '#0284c7',
-        borderRadius: 4
+        borderRadius: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }
+      }
     }
   });
 
@@ -320,12 +511,12 @@ document.addEventListener('DOMContentLoaded', function() {
   new Chart(document.getElementById('advisorChart'), {
     type: 'bar',
     data: {
-      labels: chartData.top_advisors,
+      labels: chartData.top_advisors.length ? chartData.top_advisors : ['None'],
       datasets: [{
         label: 'Avg Score %',
-        data: chartData.top_scores,
+        data: chartData.top_scores.length ? chartData.top_scores : [0],
         backgroundColor: '#10b981',
-        borderRadius: 4
+        borderRadius: 6
       }]
     },
     options: {
@@ -333,7 +524,10 @@ document.addEventListener('DOMContentLoaded', function() {
       maintainAspectRatio: false,
       indexAxis: 'y',
       plugins: { legend: { display: false } },
-      scales: { x: { min: 0, max: 100 } }
+      scales: {
+        x: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: textColor } },
+        y: { grid: { display: false }, ticks: { color: textColor } }
+      }
     }
   });
 
@@ -341,19 +535,22 @@ document.addEventListener('DOMContentLoaded', function() {
   new Chart(document.getElementById('warningStatusChart'), {
     type: 'bar',
     data: {
-      labels: ['Open', 'In Progress', 'Closed', 'Active PIPs'],
+      labels: ['Open Notices', 'In Progress', 'Closed/Resolved', 'Active PIPs'],
       datasets: [{
-        label: 'Record Count',
+        label: 'Notice Count',
         data: [chartData.open_warnings, chartData.in_progress_warnings, chartData.closed_warnings, chartData.active_pips],
-        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#6366f1'],
-        borderRadius: 4
+        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#8b5cf6'],
+        borderRadius: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor } },
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }
+      }
     }
   });
 });
