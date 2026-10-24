@@ -45,13 +45,48 @@
   </form>
 </div>
 
-<!-- Registered Users Table -->
+<!-- Registered Users Table with Interactive Filter -->
 <div class="card">
   <div class="card-header">
-    <h3 class="card-title">Registered Accounts ({{ users|length }})</h3>
+    <div>
+      <h3 class="card-title">Registered Accounts (<span id="userCount">{{ users|length }}</span>)</h3>
+      <p class="card-subtitle">Manage user roles, access statuses, and security credentials</p>
+    </div>
   </div>
+
+  <!-- Live Client-Side Filter Bar -->
+  <div style="background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;">
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));gap:10px;">
+      <div class="filter-group">
+        <label>🔍 Search User / Name / Email</label>
+        <input type="text" id="userFilterSearch" oninput="filterUserTable()" placeholder="Type to search..." class="form-control" style="padding:7px 10px;font-size:12.5px;">
+      </div>
+      <div class="filter-group">
+        <label>Filter by Role</label>
+        <select id="userFilterRole" onchange="filterUserTable()" class="form-control" style="padding:7px 10px;font-size:12.5px;">
+          <option value="all">All Roles</option>
+          <option value="admin">Administrator</option>
+          <option value="quality">Quality Team</option>
+          <option value="manager">Manager</option>
+          <option value="viewer">Advisor / Viewer</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Filter by Status</label>
+        <select id="userFilterStatus" onchange="filterUserTable()" class="form-control" style="padding:7px 10px;font-size:12.5px;">
+          <option value="all">All Statuses</option>
+          <option value="active">Active Accounts</option>
+          <option value="inactive">Disabled Accounts</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button type="button" onclick="resetUserFilters()" class="btn btn-secondary btn-sm" style="width:100%;height:35px;">Reset Filters</button>
+      </div>
+    </div>
+  </div>
+
   <div class="table-responsive">
-    <table class="data-table">
+    <table class="data-table" id="usersTable">
       <thead>
         <tr>
           <th>ID</th>
@@ -67,7 +102,7 @@
       </thead>
       <tbody>
         {% for u in users %}
-        <tr>
+        <tr class="user-row" data-username="{{ u.username|lower }}" data-name="{{ (u.full_name or '')|lower }}" data-email="{{ (u.email or '')|lower }}" data-role="{{ u.role|lower }}" data-status="{{ 'active' if u.active else 'inactive' }}">
           <td>#{{ u.id }}</td>
           <td><strong>{{ u.username }}</strong></td>
           <td>
@@ -153,6 +188,45 @@ function openPasswordModal(id, username) {
 }
 function closePasswordModal() {
   document.getElementById('pwdModal').classList.remove('open');
+}
+
+// Live interactive filtering for registered accounts
+function filterUserTable() {
+  const query = (document.getElementById('userFilterSearch').value || '').trim().toLowerCase();
+  const role = (document.getElementById('userFilterRole').value || 'all').toLowerCase();
+  const status = (document.getElementById('userFilterStatus').value || 'all').toLowerCase();
+
+  const rows = document.querySelectorAll('#usersTable tbody tr.user-row');
+  let visibleCount = 0;
+
+  rows.forEach(row => {
+    const username = row.getAttribute('data-username') || '';
+    const name = row.getAttribute('data-name') || '';
+    const email = row.getAttribute('data-email') || '';
+    const r = row.getAttribute('data-role') || '';
+    const s = row.getAttribute('data-status') || '';
+
+    const matchesQuery = !query || username.includes(query) || name.includes(query) || email.includes(query);
+    const matchesRole = (role === 'all') || (r === role);
+    const matchesStatus = (status === 'all') || (s === status);
+
+    if (matchesQuery && matchesRole && matchesStatus) {
+      row.style.display = '';
+      visibleCount++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+
+  const countBadge = document.getElementById('userCount');
+  if (countBadge) countBadge.innerText = visibleCount;
+}
+
+function resetUserFilters() {
+  document.getElementById('userFilterSearch').value = '';
+  document.getElementById('userFilterRole').value = 'all';
+  document.getElementById('userFilterStatus').value = 'all';
+  filterUserTable();
 }
 </script>
 {% endblock %}

@@ -55,7 +55,8 @@
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 12px 20px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Dark Theme Overrides */
@@ -97,10 +98,11 @@
 html {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background-color: var(--bg-body);
   color: var(--text-main);
   line-height: 1.5;
@@ -114,17 +116,17 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
   z-index: 95;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-smooth);
 }
 .sidebar-overlay.active {
   display: block;
 }
 
 /* ==========================================================================
-   Sidebar Navigation
+   Sidebar Navigation (Modern Glassmorphism & Animations)
    ========================================================================== */
 .app-sidebar {
   width: var(--sidebar-w);
@@ -137,8 +139,8 @@ body {
   bottom: 0;
   left: 0;
   z-index: 100;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.25);
-  transition: width var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
+  transition: width var(--transition-smooth), transform var(--transition-smooth);
   overflow-x: hidden;
 }
 
@@ -218,7 +220,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 12px;
+  padding: 10px 14px;
   color: #cbd5e1;
   text-decoration: none;
   font-size: 13px;
@@ -226,19 +228,44 @@ body {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   white-space: nowrap;
+  position: relative;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  background: var(--primary-light);
+  border-radius: 0 4px 4px 0;
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: all var(--transition-fast);
 }
 
 .nav-item:hover {
   background: var(--bg-sidebar-hover);
   color: #ffffff;
-  transform: translateX(3px);
+  transform: translateX(4px);
+}
+
+.nav-item:hover::before {
+  opacity: 0.8;
+  transform: scaleY(1);
 }
 
 .nav-item.active {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), #2563eb);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 12px var(--primary-glow);
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.nav-item.active::before {
+  opacity: 1;
+  transform: scaleY(1);
 }
 
 .nav-item .icon {
@@ -246,10 +273,15 @@ body {
   width: 22px;
   min-width: 22px;
   text-align: center;
+  transition: transform var(--transition-fast);
+}
+
+.nav-item:hover .icon {
+  transform: scale(1.15);
 }
 
 .sidebar-footer {
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-top: 1px solid var(--border);
   background: var(--bg-sidebar-header);
   font-size: 12px;
@@ -297,11 +329,15 @@ body.sidebar-collapsed .user-info {
 
 body.sidebar-collapsed .nav-item {
   justify-content: center;
-  padding: 11px;
+  padding: 12px;
+}
+
+body.sidebar-collapsed .nav-item:hover {
+  transform: translateY(-2px);
 }
 
 body.sidebar-collapsed .nav-item .icon {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 body.sidebar-collapsed .user-badge {
@@ -313,7 +349,7 @@ body.sidebar-collapsed .app-main {
 }
 
 /* ==========================================================================
-   Main Content Area & Topbar
+   Main Content Area & Modern Glass Topbar
    ========================================================================== */
 .app-main {
   margin-left: var(--sidebar-w);
@@ -321,12 +357,14 @@ body.sidebar-collapsed .app-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  transition: margin-left var(--transition-fast);
+  transition: margin-left var(--transition-smooth);
 }
 
 .app-topbar {
   min-height: var(--header-h);
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   padding: 10px 24px;
   display: flex;
@@ -337,6 +375,11 @@ body.sidebar-collapsed .app-main {
   z-index: 90;
   box-shadow: var(--shadow-xs);
   gap: 16px;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+[data-theme="dark"] .app-topbar {
+  background: rgba(19, 28, 46, 0.88);
 }
 
 .topbar-left {
@@ -353,21 +396,31 @@ body.sidebar-collapsed .app-main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.2px;
 }
 
 .sidebar-toggle-btn {
   background: var(--bg-card-subtle);
   border: 1px solid var(--border);
   color: var(--text-main);
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all var(--transition-fast);
+  font-size: 16px;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
   font-size: 16px;
 }
 
