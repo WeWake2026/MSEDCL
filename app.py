@@ -111,7 +111,9 @@ def inject_global_data():
     return {
         "user": getattr(request, "current_user", None),
         "app_name": get_setting("company_name", "MSEDCL Quality Audit"),
-        "import_enabled": get_setting("enable_excel_import", "true") == "true"
+        "import_enabled": get_setting("enable_excel_import", "true") == "true",
+        "max": max,
+        "min": min
     }
 
 # --- Column Detection & Cleaning ---

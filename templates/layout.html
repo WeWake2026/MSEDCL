@@ -9,11 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
-  <!-- Initialize theme before body renders to avoid white flash -->
+  
+  <!-- Check saved theme (default to light matching screenshot, supports night mode) -->
   <script>
     (function() {
       const savedTheme = localStorage.getItem('msedcl_theme');
-      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
       } else {
         document.documentElement.setAttribute('data-theme', 'light');
@@ -25,18 +26,13 @@
       }
     })();
   </script>
-  <style>
-    .preload-collapsed body {
-      /* Prevents layout shift during loading */
-    }
-  </style>
 </head>
 <body>
 
-  <!-- Mobile Backdrop Overlay -->
+  <!-- Mobile Overlay Backdrop -->
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
 
-  <!-- Navigation Sidebar -->
+  <!-- Navigation Sidebar (Deep Navy Theme matching Reference) -->
   <aside class="app-sidebar" id="appSidebar">
     <div class="sidebar-brand">
       <a href="{{ url_for('dashboard') }}" class="brand-wrapper">
@@ -53,41 +49,8 @@
       {% if user.role in ('viewer', 'advisor') %}
         <!-- Dedicated Advisor Workspace Menu (Strictly Personal Data Only) -->
         <div class="nav-section-title">My Workspace</div>
-        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}" title="My Performance Dashboard">
-          <span class="icon">📊</span>
-          <span>My Dashboard</span>
-        </a>
-        <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}" title="My Inbound Calls">
-          <span class="icon">📞</span>
-          <span>My Inbound Calls</span>
-        </a>
-        <a href="{{ url_for('audits_view', dept='Outbound') }}" class="nav-item {{ 'active' if page=='outbound_audits' else '' }}" title="My Outbound Calls">
-          <span class="icon">📱</span>
-          <span>My Outbound Calls</span>
-        </a>
-        <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}" title="My Fatal Calls">
-          <span class="icon">⚠️</span>
-          <span>My Fatal Calls</span>
-        </a>
-        <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}" title="My Score Breakdown">
-          <span class="icon">🎯</span>
-          <span>My Score Breakdown</span>
-        </a>
-
-        <div class="nav-section-title">My Actions & Records</div>
-        <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}" title="My Warnings & PIP">
-          <span class="icon">✉️</span>
-          <span>My Warnings & PIP</span>
-        </a>
-        <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}" title="Export My Records">
-          <span class="icon">📥</span>
-          <span>Export My Records</span>
-        </a>
-      {% else %}
-        <!-- Full Operations Menu for Management & Quality Team -->
-        <div class="nav-section-title">Core Operations</div>
         <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}" title="Dashboard">
-          <span class="icon">📊</span>
+          <span class="icon">🏠</span>
           <span>Dashboard</span>
         </a>
         <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}" title="Inbound Audits">
@@ -95,7 +58,7 @@
           <span>Inbound Audits</span>
         </a>
         <a href="{{ url_for('audits_view', dept='Outbound') }}" class="nav-item {{ 'active' if page=='outbound_audits' else '' }}" title="Outbound Audits">
-          <span class="icon">📱</span>
+          <span class="icon">➡️</span>
           <span>Outbound Audits</span>
         </a>
         <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}" title="Fatal Calls">
@@ -103,13 +66,46 @@
           <span>Fatal Calls</span>
         </a>
         <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}" title="Score Reports">
-          <span class="icon">🎯</span>
+          <span class="icon">📊</span>
           <span>Score Reports</span>
         </a>
 
-        <div class="nav-section-title">Analysis & Search</div>
+        <div class="nav-section-title">My Actions & Records</div>
+        <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}" title="Warnings & PIP">
+          <span class="icon">✉️</span>
+          <span>Warnings & PIP</span>
+        </a>
+        <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}" title="Export Center">
+          <span class="icon">📥</span>
+          <span>Export Center</span>
+        </a>
+      {% else %}
+        <!-- Full Operations Menu for Management & Quality Team -->
+        <div class="nav-section-title">CORE OPERATIONS</div>
+        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}" title="Dashboard">
+          <span class="icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}" title="Inbound Audits">
+          <span class="icon">📞</span>
+          <span>Inbound Audits</span>
+        </a>
+        <a href="{{ url_for('audits_view', dept='Outbound') }}" class="nav-item {{ 'active' if page=='outbound_audits' else '' }}" title="Outbound Audits">
+          <span class="icon">➡️</span>
+          <span>Outbound Audits</span>
+        </a>
+        <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}" title="Fatal Calls">
+          <span class="icon">⚠️</span>
+          <span>Fatal Calls</span>
+        </a>
+        <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}" title="Score Reports">
+          <span class="icon">📊</span>
+          <span>Score Reports</span>
+        </a>
+
+        <div class="nav-section-title">ANALYSIS & SEARCH</div>
         <a href="{{ url_for('auditors_view') }}" class="nav-item {{ 'active' if page=='auditors' else '' }}" title="Auditor Reports">
-          <span class="icon">👥</span>
+          <span class="icon">👤</span>
           <span>Auditor Reports</span>
         </a>
         <a href="{{ url_for('advisor_search') }}" class="nav-item {{ 'active' if page=='advisor_search' else '' }}" title="Advisor Search">
@@ -117,35 +113,33 @@
           <span>Advisor Search</span>
         </a>
 
-        <div class="nav-section-title">Governance & Actions</div>
+        <div class="nav-section-title">GOVERNANCE & ACTIONS</div>
         <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}" title="Warnings & PIP">
-          <span class="icon">✉️</span>
+          <span class="icon">➕</span>
           <span>Warnings & PIP</span>
         </a>
         <a href="{{ url_for('email_history') }}" class="nav-item {{ 'active' if page=='email_history' else '' }}" title="Email History">
-          <span class="icon">📬</span>
+          <span class="icon">✉️</span>
           <span>Email History</span>
         </a>
         <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}" title="Export Center">
           <span class="icon">📥</span>
           <span>Export Center</span>
         </a>
-
-        <div class="nav-section-title">Administration</div>
         <a href="{{ url_for('upload') }}" class="nav-item {{ 'active' if page=='upload' else '' }}" title="Import Files">
           <span class="icon">📤</span>
           <span>Import Files</span>
         </a>
         {% if user.role in ('admin', 'manager') %}
         <a href="{{ url_for('user_management') }}" class="nav-item {{ 'active' if page=='users' else '' }}" title="User Management">
-          <span class="icon">👤</span>
+          <span class="icon">👥</span>
           <span>User Management</span>
         </a>
         {% endif %}
         {% if user.role == 'admin' %}
-        <a href="{{ url_for('settings_page') }}" class="nav-item {{ 'active' if page=='settings' else '' }}" title="Admin Settings">
+        <a href="{{ url_for('settings_page') }}" class="nav-item {{ 'active' if page=='settings' else '' }}" title="Settings">
           <span class="icon">⚙️</span>
-          <span>Admin Settings</span>
+          <span>Settings</span>
         </a>
         <a href="{{ url_for('audit_logs') }}" class="nav-item {{ 'active' if page=='audit_logs' else '' }}" title="Audit Logs">
           <span class="icon">📋</span>
@@ -155,14 +149,16 @@
       {% endif %}
     </nav>
 
-    <div class="sidebar-footer">
-      <div class="user-badge">
-        <div class="user-info">
-          <strong>{{ user.username }}</strong>
-          <span>{{ user.role|title }}</span>
+    <!-- Bottom MSEDCL Transmission Graphic Footer from Screenshot -->
+    <div class="sidebar-footer-brand">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">🏢</span>
+        <div>
+          <strong>MSEDCL</strong>
+          <span style="font-size:10.5px;color:#64748b;">Powering a Brighter Tomorrow</span>
         </div>
-        <a href="{{ url_for('logout') }}" title="Sign out" style="color:var(--danger);text-decoration:none;font-size:16px;">🚪</a>
       </div>
+      <a href="{{ url_for('logout') }}" title="Sign Out" style="color:var(--brand-red);text-decoration:none;font-size:15px;">🚪</a>
     </div>
   </aside>
 
@@ -170,109 +166,80 @@
   <main class="app-main">
     <header class="app-topbar">
       <div class="topbar-left">
-        <!-- Sidebar Toggle Hamburger Button (Works for both mobile drawer & desktop collapse) -->
-        <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle Sidebar Menu">
+        <!-- Sidebar Toggle Hamburger Button -->
+        <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle Sidebar Menu" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-main);">
           <span>☰</span>
         </button>
-        <h1 class="topbar-title">{% block heading %}MSEDCL Quality Audit Management System{% endblock %}</h1>
+        
+        <!-- Header Badge Icon & Title matching Reference Screenshot -->
+        <div class="topbar-header-badge">⚡</div>
+        <div class="topbar-title-block">
+          <h1>{% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}</h1>
+          <p>
+            Better Quality <span>|</span> Better Service <span>|</span> Brighter Maharashtra
+          </p>
+        </div>
       </div>
       
       <div class="topbar-right">
-        <!-- Quick Refresh Button with confirmation/feedback -->
-        <button type="button" class="btn btn-secondary btn-sm" onclick="handleDashboardRefresh()" title="Refresh Dashboard Data" style="padding:6px 10px;display:flex;align-items:center;gap:4px;">
-          <span id="refreshIcon">🔄</span>
-          <span class="hide-mobile">Refresh</span>
-        </button>
-
-        <!-- Notification Bell with Active Indicator -->
+        <!-- Notification Bell with Count Badge (Screenshot shows red 3 badge) -->
         <div class="notification-wrapper" style="position:relative;">
-          <button type="button" class="sidebar-toggle-btn" onclick="toggleNotifications()" id="notifBellBtn" title="System Notifications" style="position:relative;">
+          <button type="button" onclick="toggleNotifications()" id="notifBellBtn" title="Notifications" style="background:none;border:none;cursor:pointer;position:relative;font-size:18px;display:flex;align-items:center;">
             <span>🔔</span>
-            <span class="notif-badge" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:2px solid var(--bg-card);"></span>
+            <span style="position:absolute;top:-4px;right:-4px;background:var(--brand-red);color:#fff;font-size:9.5px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">3</span>
           </button>
           
-          <!-- Notification Dropdown Panel -->
-          <div id="notifDropdown" class="notif-dropdown" style="display:none;position:absolute;top:46px;right:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;padding:12px;">
+          <!-- Dropdown -->
+          <div id="notifDropdown" class="notif-dropdown" style="display:none;position:absolute;top:38px;right:0;width:290px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light);padding-bottom:8px;margin-bottom:8px;">
-              <strong style="font-size:13px;color:var(--text-main);">Notifications</strong>
-              <span class="badge badge-info" style="font-size:10px;">Live Audits</span>
+              <strong style="font-size:12.5px;color:var(--text-main);">Notifications</strong>
+              <span class="badge badge-info" style="font-size:10px;">Live QA</span>
             </div>
-            <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:8px;">
-              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--success);">
+            <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;">
+              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--brand-green);">
                 <strong style="color:var(--text-main);display:block;">Data Store Connected</strong>
-                <span>Database engine active with SQLite journaling.</span>
+                <span>SQLite database online and syncing.</span>
               </div>
-              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--warning);">
-                <strong style="color:var(--text-main);display:block;">Audit Threshold Alert</strong>
-                <span>Calls under 80% automatically flagged for PIP review.</span>
+              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--brand-amber);">
+                <strong style="color:var(--text-main);display:block;">Quality Alerts</strong>
+                <span>Threshold monitoring active for calls below 80%.</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Theme Mode Toggle Button -->
-        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light/Dark Mode">
-          <span id="themeIcon">🌓</span>
-          <span id="themeText" style="display:none;">Theme</span>
-        </button>
-
-        {% if user.role not in ('viewer', 'advisor') %}
-        <!-- Quick Global Search for Employee ID (Desktop) -->
-        <form action="{{ url_for('advisor_search') }}" method="get" class="topbar-search-form hide-mobile" style="display:flex;gap:4px;">
-          <input type="text" name="emp_id" placeholder="🔍 Search Emp ID..." class="form-control" style="width:140px;padding:5px 8px;font-size:12px;" value="{{ request.args.get('emp_id','') }}">
-          <button class="btn btn-secondary btn-sm" type="submit">Go</button>
+        <!-- Global Search Field with Go Button matching Reference -->
+        <form action="{{ url_for('advisor_search') }}" method="get" class="topbar-search-box hide-mobile">
+          <span>🔍</span>
+          <input type="text" name="emp_id" placeholder="Search Emp ID / Advisor / Dept..." value="{{ request.args.get('emp_id','') }}">
+          <button type="submit">Go</button>
         </form>
-        {% endif %}
 
-        {% if user.role == 'admin' %}
-        <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger btn-sm" title="Restart Application Server (Admin Only)" style="display:flex;align-items:center;gap:4px;">
-          <span>⚡</span> <span class="hide-mobile">Restart</span>
+        <!-- Day / Night Mode Switcher Button -->
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Day Light Mode / Night Dark Mode" style="border-radius:var(--radius-pill);padding:6px 12px;">
+          <span id="themeIcon">🌓</span>
+          <span id="themeText" class="hide-mobile" style="font-size:11.5px;">Mode</span>
         </button>
-        {% endif %}
 
-        <!-- User Profile Pill -->
-        <div class="user-profile-pill hide-mobile" style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-pill);font-size:12px;">
-          <span style="width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;">{{ user.username[0]|upper }}</span>
-          <span style="font-weight:600;color:var(--text-main);">{{ user.username }}</span>
-          <span class="badge {% if user.role=='admin' %}badge-danger{% elif user.role=='quality' %}badge-info{% elif user.role=='manager' %}badge-warning{% else %}badge-neutral{% endif %}" style="font-size:10px;padding:2px 6px;">{{ user.role|upper }}</span>
+        <!-- Admin / User Profile Menu matching Reference Screenshot -->
+        <div class="user-profile-menu">
+          <div class="user-avatar-circle">{{ (user.full_name or user.username)[0]|upper }}</div>
+          <div class="user-profile-details hide-mobile">
+            <strong>{{ user.full_name or user.username }}</strong>
+            <small>{{ user.role|title }} QA</small>
+          </div>
+          <span style="font-size:10px;color:var(--text-muted);">▼</span>
         </div>
       </div>
     </header>
 
     {% if user.role not in ('viewer', 'advisor') %}
-    <!-- Mobile-Only Quick Search Sub-Bar -->
+    <!-- Mobile Search Bar (Only shown on small screens) -->
     <div class="mobile-search-bar show-mobile" style="padding:8px 14px;background:var(--bg-card);border-bottom:1px solid var(--border);">
       <form action="{{ url_for('advisor_search') }}" method="get" style="display:flex;gap:6px;">
-        <input type="text" name="emp_id" placeholder="🔍 Search Advisor / Employee ID..." class="form-control" style="font-size:13px;padding:8px 12px;" value="{{ request.args.get('emp_id','') }}">
+        <input type="text" name="emp_id" placeholder="🔍 Search Emp ID / Advisor..." class="ref-input-control" style="font-size:12.5px;padding:8px 12px;" value="{{ request.args.get('emp_id','') }}">
         <button class="btn btn-primary btn-sm" type="submit">Search</button>
       </form>
-    </div>
-    {% endif %}
-
-    {% if user.role == 'admin' %}
-    <!-- Admin Full Restart Confirmation Modal -->
-    <div id="systemRestartModal" class="modal-overlay">
-      <div class="modal-box" style="max-width:440px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <h3 style="font-size:16px;color:var(--danger);display:flex;align-items:center;gap:6px;">
-            <span>⚠️</span> Confirm System Restart
-          </h3>
-          <button onclick="closeSystemRestartModal()" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--text-muted);">&times;</button>
-        </div>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
-          This action will safely flush memory, log an audit record, and perform a full restart of the <strong>MSEDCL Quality Audit System</strong> server.
-        </p>
-        <form method="post" action="{{ url_for('admin_restart_system') }}">
-          <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Administrator Password *</label>
-            <input type="password" name="admin_password" class="form-control" required placeholder="Enter login password to authorize">
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
-            <button type="button" onclick="closeSystemRestartModal()" class="btn btn-secondary">Cancel</button>
-            <button type="submit" class="btn btn-danger">Authorize & Restart</button>
-          </div>
-        </form>
-      </div>
     </div>
     {% endif %}
 
@@ -281,22 +248,22 @@
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            <div class="alert alert-{{ 'success' if category=='success' else ('danger' if category=='error' else 'warning') }}">
-              <span>{{ message }}</span>
-              <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:inherit;line-height:1;">&times;</button>
+            <div class="card" style="padding:10px 14px;margin-bottom:16px;border-left:4px solid {% if category=='success' %}var(--brand-green){% elif category=='error' %}var(--brand-red){% else %}var(--brand-amber){% endif %};display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;color:var(--text-main);">{{ message }}</span>
+              <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">&times;</button>
             </div>
           {% endfor %}
         {% endif %}
       {% endwith %}
 
-      <!-- Page Content -->
+      <!-- Page Content Block -->
       {% block content %}{% endblock %}
     </div>
   </main>
 
   <style>
     .show-mobile { display: none !important; }
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
       .hide-mobile { display: none !important; }
       .show-mobile { display: block !important; }
       #mobileCloseBtn { display: block !important; }
@@ -304,14 +271,13 @@
   </style>
 
   <script>
-    // --- Sidebar Toggle Handler (Desktop Collapse & Mobile Drawer) ---
+    // --- Sidebar Toggle Handler (Desktop & Mobile) ---
     function toggleSidebar(forcedState) {
       const isMobile = window.innerWidth <= 768;
       const body = document.body;
       const overlay = document.getElementById('sidebarOverlay');
 
       if (isMobile) {
-        // Mobile Drawer toggle
         if (forcedState === false) {
           body.classList.remove('mobile-sidebar-open');
           if (overlay) overlay.classList.remove('active');
@@ -323,7 +289,6 @@
           if (overlay) overlay.classList.toggle('active');
         }
       } else {
-        // Desktop collapse toggle
         if (forcedState === false) {
           body.classList.remove('sidebar-collapsed');
           localStorage.setItem('msedcl_sidebar_collapsed', 'false');
@@ -338,31 +303,26 @@
       }
     }
 
-    // Apply saved desktop sidebar state on load
-    document.addEventListener('DOMContentLoaded', function() {
-      const savedSidebar = localStorage.getItem('msedcl_sidebar_collapsed');
-      if (savedSidebar === 'true' && window.innerWidth > 768) {
-        document.body.classList.add('sidebar-collapsed');
-      }
-      updateThemeIcon();
-    });
-
-    // --- Dark / Light Mode Handler ---
+    // --- Night Mode / Day Mode Handler ---
     function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('msedcl_theme', newTheme);
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('msedcl_theme', next);
       updateThemeIcon();
+      
+      // Update chart colors if chart instances exist
+      if (window.dispatchEvent) {
+        window.dispatchEvent(new Event('resize'));
+      }
     }
 
     function updateThemeIcon() {
-      const theme = document.documentElement.getAttribute('data-theme');
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       const icon = document.getElementById('themeIcon');
-      if (icon) {
-        icon.innerText = theme === 'dark' ? '☀️' : '🌙';
-        icon.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
-      }
+      const text = document.getElementById('themeText');
+      if (icon) icon.innerText = isDark ? '☀️' : '🌙';
+      if (text) text.innerText = isDark ? 'Day' : 'Night';
     }
 
     // --- Notification Dropdown Handler ---
@@ -380,22 +340,13 @@
       }
     });
 
-    // --- Dashboard Refresh Handler ---
-    function handleDashboardRefresh() {
-      const icon = document.getElementById('refreshIcon');
-      if (icon) icon.style.transform = 'rotate(360deg)';
-      window.location.reload();
-    }
-
-    // --- Admin Restart Modal Handlers ---
-    function openSystemRestartModal() {
-      const m = document.getElementById('systemRestartModal');
-      if (m) m.classList.add('open');
-    }
-    function closeSystemRestartModal() {
-      const m = document.getElementById('systemRestartModal');
-      if (m) m.classList.remove('open');
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedSidebar = localStorage.getItem('msedcl_sidebar_collapsed');
+      if (savedSidebar === 'true' && window.innerWidth > 768) {
+        document.body.classList.add('sidebar-collapsed');
+      }
+      updateThemeIcon();
+    });
   </script>
 
 </body>
