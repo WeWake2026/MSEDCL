@@ -127,7 +127,7 @@
 <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
   
   <!-- 1. Total Audited Calls -->
-  <a href="{{ url_for('audits_view') }}" class="stat-card" style="text-decoration:none;display:block;">
+  <a href="{{ url_for('audits_view', dept='Inbound') }}" class="stat-card" style="text-decoration:none;display:block;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div class="stat-label">Total Audited Calls</div>
       <span style="font-size:18px;">📞</span>

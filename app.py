@@ -463,9 +463,10 @@ def dashboard():
                            dept=dept, start=start, end=end)
 
 # --- Routes: Audits Views (Inbound, Outbound, Fatal, Scores) ---
+@app.route("/audits")
 @app.route("/audits/<dept>")
 @login_required
-def audits_view(dept):
+def audits_view(dept="Inbound"):
     if dept not in ("Inbound", "Outbound"):
         dept = "Inbound"
     q = request.args.get("q", "").strip()
