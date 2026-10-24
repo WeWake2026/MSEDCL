@@ -175,19 +175,19 @@
       </div>
       
       <div class="topbar-right">
-        {% if user.role not in ('viewer', 'advisor') %}
-        <!-- Quick Global Search for Employee ID -->
-        <form action="{{ url_for('advisor_search') }}" method="get" class="topbar-search-form" style="display:flex;gap:6px;">
-          <input type="text" name="emp_id" placeholder="🔍 Search Emp ID..." class="form-control" style="width:160px;padding:6px 10px;font-size:12px;" value="{{ request.args.get('emp_id','') }}">
-          <button class="btn btn-secondary btn-sm" type="submit">Go</button>
-        </form>
-        {% endif %}
-
         <!-- Theme Mode Toggle Button -->
         <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light/Dark Mode">
           <span id="themeIcon">🌓</span>
           <span id="themeText" style="display:none;">Theme</span>
         </button>
+
+        {% if user.role not in ('viewer', 'advisor') %}
+        <!-- Quick Global Search for Employee ID (Desktop) -->
+        <form action="{{ url_for('advisor_search') }}" method="get" class="topbar-search-form hide-mobile" style="display:flex;gap:4px;">
+          <input type="text" name="emp_id" placeholder="🔍 Search Emp ID..." class="form-control" style="width:150px;padding:5px 8px;font-size:12px;" value="{{ request.args.get('emp_id','') }}">
+          <button class="btn btn-secondary btn-sm" type="submit">Go</button>
+        </form>
+        {% endif %}
 
         {% if user.role == 'admin' %}
         <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger btn-sm" title="Restart Application Server (Admin Only)" style="display:flex;align-items:center;gap:4px;">
@@ -198,6 +198,16 @@
         <span class="badge badge-info hide-mobile">{{ user.role|upper }}</span>
       </div>
     </header>
+
+    {% if user.role not in ('viewer', 'advisor') %}
+    <!-- Mobile-Only Quick Search Sub-Bar -->
+    <div class="mobile-search-bar show-mobile" style="padding:8px 14px;background:var(--bg-card);border-bottom:1px solid var(--border);">
+      <form action="{{ url_for('advisor_search') }}" method="get" style="display:flex;gap:6px;">
+        <input type="text" name="emp_id" placeholder="🔍 Search Advisor / Employee ID..." class="form-control" style="font-size:13px;padding:8px 12px;" value="{{ request.args.get('emp_id','') }}">
+        <button class="btn btn-primary btn-sm" type="submit">Search</button>
+      </form>
+    </div>
+    {% endif %}
 
     {% if user.role == 'admin' %}
     <!-- Admin Full Restart Confirmation Modal -->
@@ -245,8 +255,10 @@
   </main>
 
   <style>
+    .show-mobile { display: none !important; }
     @media (max-width: 640px) {
       .hide-mobile { display: none !important; }
+      .show-mobile { display: block !important; }
       #mobileCloseBtn { display: block !important; }
     }
   </style>

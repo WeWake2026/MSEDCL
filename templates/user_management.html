@@ -96,7 +96,7 @@
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_login or 'Never' }}</td>
           <td>
-            <div style="display:flex;gap:6px;align-items:center;">
+            <div class="action-buttons">
               <!-- Toggle Active / Inactive (Enable / Disable) -->
               {% if u.id != user.id %}
               <form method="post" action="{{ url_for('user_toggle_status', user_id=u.id) }}">
@@ -107,12 +107,12 @@
               {% endif %}
 
               <!-- Password Reset Trigger -->
-              <button onclick="openPasswordModal('{{ u.id }}', '{{ u.username }}')" class="btn btn-secondary btn-sm">Reset Pwd</button>
+              <button onclick="openPasswordModal('{{ u.id }}', '{{ u.username }}')" class="btn btn-secondary btn-sm" title="Change password">🔑 Reset</button>
 
               <!-- Safe Delete -->
               {% if u.id != user.id %}
               <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" onsubmit="return confirm('Permanently remove user {{ u.username }}? Historical audits and reports will be preserved.')">
-                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                <button type="submit" class="btn btn-danger btn-sm" title="Remove account">🗑️ Delete</button>
               </form>
               {% endif %}
             </div>
