@@ -399,13 +399,12 @@ def dashboard():
             ORDER BY fatals DESC, low_calls DESC LIMIT 20
         """, params).fetchall()
 
-        # Top Advisors for Chart
+        # Top Advisors for Chart (Ranked by quality score)
         top_advisors_query = con.execute("""
-            SELECT advisor_name, ROUND(AVG(quality_score), 2) as avg_score
+            SELECT advisor_name, ROUND(AVG(quality_score), 2) as avg_score, COUNT(*) as cnt
             """ + sql_base + """
             GROUP BY COALESCE(advisor_id, advisor_name)
-            HAVING COUNT(*) >= 2
-            ORDER BY avg_score DESC LIMIT 8
+            ORDER BY avg_score DESC, cnt DESC LIMIT 8
         """, params).fetchall()
 
     metrics = {
@@ -443,9 +442,27 @@ def dashboard():
         "active_pips": active_pips
     }
 
+    now_dt = datetime.now()
+    if last_sync_time and len(last_sync_time) >= 10:
+        try:
+            # Parse ISO or SQLite datetime string
+            clean_time_str = last_sync_time.replace("T", " ")[:19]
+            parsed_dt = datetime.fromisoformat(clean_time_str)
+            display_date = parsed_dt.strftime("%d %b %Y")
+            display_time = parsed_dt.strftime("%I:%M %p")
+        except Exception:
+            display_date = now_dt.strftime("%d %b %Y")
+            display_time = now_dt.strftime("%I:%M %p")
+    else:
+        # Default to real-time current date & clock
+        display_date = now_dt.strftime("%d %b %Y")
+        display_time = now_dt.strftime("%I:%M %p")
+
     sync_status = {
-        "last_sync_time": last_sync_time or "No batches ingested",
-        "last_sync_file": last_sync_file or "—",
+        "display_date": display_date,
+        "display_time": display_time,
+        "last_sync_time": last_sync_time or "Live Database",
+        "last_sync_file": last_sync_file or "Connected",
         "all_time_records": all_time_records,
         "filtered_count": total_audits,
         "is_filtered": bool(dept != "All" or start or end or selected_auditor or advisor_query or score_bracket != "All" or fatal_status != "All")

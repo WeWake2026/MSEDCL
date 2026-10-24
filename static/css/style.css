@@ -684,6 +684,16 @@ body.sidebar-collapsed .app-main {
   z-index: 1;
 }
 
+[data-theme="dark"] .banner-tower-svg {
+  stroke: #60a5fa !important;
+}
+
+@keyframes pulseLive {
+  0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
 /* ==========================================================================
    Reference Analytics & Charts Row
    ========================================================================== */
@@ -923,12 +933,225 @@ table.data-table th {
 .btn-secondary:hover { background: var(--bg-card-subtle); }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
 
+/* ==========================================================================
+   Full Page Compatibility: Card Headers, Form Controls, Stat Grids & Modals
+   Ensures advisor_search, user_management, settings, warnings & audit_logs work seamlessly
+   ========================================================================== */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.2px;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Forms & Filter Groups */
+.filter-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-card);
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.form-control, select.form-control, input.form-control, textarea.form-control {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+[data-theme="dark"] .form-control {
+  background-color: var(--bg-card-subtle);
+}
+
+.form-control:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* Stat Grid & Stat Card Components for other pages */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3.5px;
+  background: var(--brand-blue);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.stat-card.fatal::before { background: var(--brand-red); }
+.stat-card.low::before { background: var(--brand-amber); }
+.stat-card.good::before { background: var(--brand-green); }
+.stat-card.avg::before { background: var(--brand-purple); }
+.stat-card.info::before { background: var(--brand-cyan); }
+
+.stat-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.stat-val {
+  font-size: 26px;
+  font-weight: 800;
+  margin-top: 6px;
+  color: var(--text-main);
+  line-height: 1.1;
+}
+
+.stat-val.danger { color: var(--brand-red); }
+.stat-val.warn { color: var(--brand-amber); }
+.stat-val.good { color: var(--brand-green); }
+.stat-val.primary { color: var(--brand-blue); }
+
+.stat-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Modals & Dialogs */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 18, 0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 540px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Chart Grids */
+.charts-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.charts-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.chart-container {
+  position: relative;
+  height: 270px;
+  width: 100%;
+}
+
+/* Alerts */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid transparent;
+  gap: 12px;
+}
+.alert-success { background: var(--kpi-green-bg); border-color: var(--kpi-green-border); color: #065f46; }
+.alert-danger { background: var(--kpi-red-bg); border-color: var(--kpi-red-border); color: #991b1b; }
+.alert-warning { background: var(--kpi-amber-bg); border-color: var(--kpi-amber-border); color: #92400e; }
+.alert-info { background: var(--kpi-blue-bg); border-color: var(--kpi-blue-border); color: #075985; }
+
 /* Responsive Grid Breakdowns */
 @media (max-width: 1200px) {
   .ref-kpi-row-1 { grid-template-columns: repeat(3, 1fr); }
   .ref-kpi-row-2 { grid-template-columns: 1fr 1fr; }
   .ref-charts-row { grid-template-columns: 1fr; }
   .ref-filter-grid { grid-template-columns: repeat(2, 1fr); }
+  .charts-grid-2, .charts-grid-3 { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -945,4 +1168,11 @@ table.data-table th {
   .ref-filter-grid { grid-template-columns: 1fr; }
   .ref-quick-links-bar { flex-direction: column; align-items: stretch; }
   .topbar-search-box { width: 100%; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .filter-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr; }
+}
+
