@@ -62,12 +62,12 @@
       <div style="max-height: 480px; overflow-y: auto; display:flex; flex-direction:column; gap:2px;">
         {% for tbl in overview.tables_summary %}
           <a href="{{ url_for('db_explorer_view', table=tbl.name, schema=tbl.schema) }}" 
-             style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-radius:5px; text-decoration:none; font-size:12.5px; font-weight:{{ '700' if active_table == tbl.name else '500' }}; background:{{ '#eff6ff' if active_table == tbl.name else 'transparent' }}; color:{{ '#1d4ed8' if active_table == tbl.name else 'var(--text-main)' }}; border:1px solid {{ '#bfdbfe' if active_table == tbl.name else 'transparent' }}; transition:all 0.15s ease;">
+             class="db-tbl-nav-item {{ 'active' if active_table == tbl.name else '' }}">
             <div style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
               <span style="font-size:12px;">{{ '📋' if tbl.type == 'Table' else '👁️' }}</span>
               <span style="overflow:hidden; text-overflow:ellipsis;">{{ tbl.name }}</span>
             </div>
-            <span class="badge" style="font-size:10px; padding:1px 6px; background:{{ '#dbeafe' if active_table == tbl.name else '#f1f5f9' }}; color:{{ '#1e40af' if active_table == tbl.name else '#64748b' }};">
+            <span class="db-tbl-badge">
               {{ tbl.row_count }}
             </span>
           </a>
