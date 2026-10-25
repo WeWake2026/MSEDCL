@@ -1583,3 +1583,120 @@ table.data-table th {
   border-left: 4px solid var(--brand-blue);
 }
 
+/* ==========================================================================
+   Comprehensive Mobile & Tablet Responsive Media Queries
+   Fixes for Mobile Audit (Viewport < 768px & < 480px)
+   ========================================================================== */
+
+@media (max-width: 992px) {
+  .ref-kpi-row-1 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .ref-kpi-row-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ref-kpi-row-2 .ref-kpi-card:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Dashboard KPI Card Stacking */
+  .ref-kpi-row-1 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .ref-kpi-row-2 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .ref-kpi-row-2 .ref-kpi-card:last-child {
+    grid-column: span 1;
+  }
+
+  /* General Form & Filter Grids */
+  .filter-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* Stats Summary Grids (Warnings, Dashboard) */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* Observation Modal: Mobile Bottom Sheet Transformation */
+  .obs-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .obs-modal-dialog {
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    animation: sheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .obs-modal-header {
+    padding: 14px 16px;
+  }
+  .obs-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .obs-modal-footer {
+    padding: 12px 16px;
+  }
+
+  /* Audio Widget Touch Target */
+  .audio-pill-widget {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+  .audio-play-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  /* Notification Bell Dropdown Mobile Centering & Clamping */
+  .notif-dropdown {
+    width: min(320px, calc(100vw - 20px)) !important;
+    right: -10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 1-column KPI on very small devices */
+  .ref-kpi-row-1 {
+    grid-template-columns: 1fr;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Topbar compacting */
+  .topbar-title-block h1 {
+    font-size: 13.5px;
+    line-height: 1.2;
+  }
+  .topbar-title-block p {
+    display: none;
+  }
+  
+  /* Buttons touch sizing */
+  .btn {
+    min-height: 38px;
+  }
+}
+
+

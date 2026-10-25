@@ -31,7 +31,7 @@
     <span class="card-subtitle">Send urgent updates, coaching guidance, or system announcements to specific users or all users</span>
   </div>
   <form method="post" action="{{ url_for('notification_send') }}">
-    <div class="filter-grid" style="grid-template-columns: 2fr 1fr 1fr;">
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
       <div class="filter-group">
         <label>Recipient Target Scope *</label>
         <select name="target_scope" id="targetScopeSelect" class="form-control" onchange="handleTargetScopeChange(this.value)" required>
