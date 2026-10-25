@@ -151,10 +151,12 @@ This automatically verifies:
 
 ## 📚 Documentation Index
 
-- [SETUP_GUIDE.md](file:///SETUP_GUIDE.md) - Complete Windows setup guide with exact CMD commands.
-- [DATABASE_GUIDE.md](file:///DATABASE_GUIDE.md) - Database schema, ownership rules, and least privilege roles.
-- [SECURITY_AUDIT.md](file:///SECURITY_AUDIT.md) - Security audit, threat model, and vulnerability fixes.
-- [CHANGELOG.md](file:///CHANGELOG.md) - Version history and upgrade log.
-- [DATABASE_SETUP.md](file:///DATABASE_SETUP.md) - PostgreSQL setup, permissions, and Docker setup.
-- [MIGRATION_GUIDE.md](file:///MIGRATION_GUIDE.md) - SQLite to PostgreSQL migration, reconciliation, and rollback.
+- [SETUP_GUIDE.md](file:///docs/SETUP_GUIDE.md) - Complete Windows setup guide with exact CMD commands.
+- [DATABASE_GUIDE.md](file:///docs/DATABASE_GUIDE.md) - Database schema, ownership rules, and least privilege roles.
+- [SECURITY_AUDIT.md](file:///docs/SECURITY_AUDIT.md) - Security audit, threat model, and vulnerability fixes.
+- [CHANGELOG.md](file:///docs/CHANGELOG.md) - Version history and upgrade log.
+- [DATABASE_SETUP.md](file:///docs/DATABASE_SETUP.md) - PostgreSQL setup, permissions, and Docker setup.
+- [MIGRATION_GUIDE.md](file:///docs/MIGRATION_GUIDE.md) - SQLite to PostgreSQL migration, reconciliation, and rollback.
+- [MOBILE_BUGS_AUDIT.md](file:///docs/MOBILE_BUGS_AUDIT.md) - Mobile view responsive bug analysis and UI overhaul audit.
+- [SECURITY.md](file:///docs/SECURITY.md) - Security policy and vulnerability reporting.
 - [.env.example](file:///.env.example) - Environment variables reference template.

@@ -167,14 +167,16 @@ class TestMsedclSystem(unittest.TestCase):
     def test_11_migration_script_dry_run(self):
         """Test migrate_sqlite_to_postgres dry run executes without errors."""
         import subprocess
+        script_path = os.path.join("scripts", "migrate_sqlite_to_postgres.py")
+        report_path = os.path.join("scripts", "migration_report.json")
         result = subprocess.run(
-            [os.path.join(".venv", "Scripts", "python.exe"), "migrate_sqlite_to_postgres.py", "--dry-run"],
+            [os.path.join(".venv", "Scripts", "python.exe"), script_path, "--dry-run", "--report-file", report_path],
             capture_output=True,
             text=True
         )
         self.assertEqual(result.returncode, 0)
         self.assertIn("Migration completed with status: SUCCESS", result.stdout)
-        self.assertTrue(os.path.exists("migration_report.json"))
+        self.assertTrue(os.path.exists(report_path))
 
 if __name__ == "__main__":
     unittest.main()

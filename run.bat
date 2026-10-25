@@ -52,7 +52,7 @@ if not exist ".env" (
 
 :: 5. Run database schema migrations
 echo [*] Checking database tables and running schema migrations...
-call .venv\Scripts\python.exe -c "import migrate_db; migrate_db.run_migrations('quality_audit.db')" >nul 2>nul
+call .venv\Scripts\python.exe -c "import sys; sys.path.insert(0, 'scripts'); import migrate_db; migrate_db.run_migrations('quality_audit.db')" >nul 2>nul
 
 :: 6. Launch Application Server
 echo.

@@ -29,7 +29,7 @@ This guide explains how to migrate all existing data (audits, users, warnings, i
 
 Test the migration pipeline without executing database writes:
 ```bash
-python migrate_sqlite_to_postgres.py --dry-run
+python scripts/migrate_sqlite_to_postgres.py --dry-run
 ```
 
 Review the printed summary:
@@ -49,12 +49,12 @@ Migration completed with status: SUCCESS
 
 Run the migration script with your PostgreSQL connection string:
 ```bash
-python migrate_sqlite_to_postgres.py --postgres-url "postgresql://msedcl_user:YourPassword@localhost:5432/msedcl_qa"
+python scripts/migrate_sqlite_to_postgres.py --postgres-url "postgresql://msedcl_user:YourPassword@localhost:5432/msedcl_qa"
 ```
 
 *Or simply ensure `DATABASE_URL` is set in `.env` and run:*
 ```bash
-python migrate_sqlite_to_postgres.py
+python scripts/migrate_sqlite_to_postgres.py
 ```
 
 ---
