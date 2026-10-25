@@ -236,29 +236,30 @@ def init_db(db_path=None):
             except Exception:
                 pass
 
-        # Seed default users if empty
-        cur.execute("SELECT COUNT(*) AS cnt FROM users")
-        row = cur.fetchone()
-        count = row["cnt"] if row and "cnt" in row else (row[0] if row else 0)
+        # Ensure default seed users exist
+        admin_user = os.environ.get("ADMIN_USERNAME", "qaadmin")
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "Msedcl@123")
+        quality_user = os.environ.get("QUALITY_USERNAME", "quality1")
+        quality_pass = os.environ.get("QUALITY_PASSWORD", "Msedcl@1234")
+        manager_user = os.environ.get("MANAGER_USERNAME", "manager1")
+        manager_pass = os.environ.get("MANAGER_PASSWORD", "Msedcl@1235")
 
-        if count == 0:
-            admin_user = os.environ.get("ADMIN_USERNAME", "qaadmin")
-            admin_pass = os.environ.get("ADMIN_PASSWORD", "Msedcl@123")
-            quality_user = os.environ.get("QUALITY_USERNAME", "quality1")
-            quality_pass = os.environ.get("QUALITY_PASSWORD", "Msedcl@1234")
-            manager_user = os.environ.get("MANAGER_USERNAME", "manager1")
-            manager_pass = os.environ.get("MANAGER_PASSWORD", "Msedcl@1235")
+        seed_users = [
+            (admin_user, admin_pass, 'admin', 'MSEDCL QA Administrator', 'admin.qa@msedcl.in'),
+            (quality_user, quality_pass, 'quality', 'Quality Lead', 'quality@msedcl.in'),
+            (manager_user, manager_pass, 'manager', 'Operations Manager', 'manager@msedcl.in'),
+        ]
 
-            seed_users = [
-                (admin_user, generate_password_hash(admin_pass), 'admin', 'MSEDCL QA Administrator', 'admin.qa@msedcl.in'),
-                (quality_user, generate_password_hash(quality_pass), 'quality', 'Quality Lead', 'quality@msedcl.in'),
-                (manager_user, generate_password_hash(manager_pass), 'manager', 'Operations Manager', 'manager@msedcl.in'),
-            ]
-            for u in seed_users:
+        for uname, pwd, role, fname, email in seed_users:
+            cur.execute("SELECT id FROM users WHERE username = ?", (uname,))
+            existing = cur.fetchone()
+            if not existing:
+                pwd_hash = generate_password_hash(pwd)
                 cur.execute("""
                     INSERT INTO users (username, password_hash, role, full_name, email, active)
                     VALUES (?, ?, ?, ?, ?, 1)
-                """, u)
+                """, (uname, pwd_hash, role, fname, email))
+                print(f"[*] Seeded user account: {uname} ({role})")
 
         conn.commit()
     engine_name = "PostgreSQL" if is_postgres() else "SQLite"

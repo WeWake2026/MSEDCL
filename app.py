@@ -303,15 +303,28 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        with db() as con:
-            user = con.execute("SELECT * FROM users WHERE username=? AND active=1", (username,)).fetchone()
+        user = None
+        try:
+            with db() as con:
+                user = con.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND active = 1", (username,)).fetchone()
+        except Exception as e:
+            print(f"[ERROR] Database error during login query: {e}", file=sys.stderr)
+            flash("Database temporarily unavailable. Please try again in a few moments.", "error")
+            return render_template("login.html")
+
         if user and check_password_hash(user["password_hash"], password):
             session.clear()
             session["user_id"] = user["id"]
-            with db() as con:
-                con.execute("UPDATE users SET last_login=datetime('now') WHERE id=?", (user["id"],))
+            session["role"] = user["role"]
+            session["username"] = user["username"]
+            try:
+                with db() as con:
+                    con.execute("UPDATE users SET last_login=datetime('now') WHERE id=?", (user["id"],))
+            except Exception:
+                pass
             log_audit("LOGIN_SUCCESS", username, "User logged in")
             return redirect(url_for("dashboard"))
+
         log_audit("LOGIN_FAILED", username, "Invalid login credentials")
         flash("Invalid username or password.", "error")
     return render_template("login.html")

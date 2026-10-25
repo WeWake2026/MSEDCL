@@ -117,6 +117,14 @@ class RowWrapper:
             return list(self._data.values())[key]
         return self._data.get(key)
 
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    def __getattr__(self, name):
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'RowWrapper' object has no attribute '{name}'")
+
     def get(self, key, default=None):
         return self._data.get(key, default)
 
