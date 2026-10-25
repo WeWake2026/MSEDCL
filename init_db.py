@@ -164,6 +164,25 @@ def init_sqlite(conn):
         updated_by TEXT NOT NULL
     )
     """)
+
+    # Notifications
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        target_role TEXT,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        notif_type TEXT DEFAULT 'info',
+        link_url TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        is_read INTEGER DEFAULT 0,
+        created_by TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications (user_id, is_read)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_notifications_role_read ON notifications (target_role, is_read)")
     conn.commit()
 
 def init_db(db_path=None):
