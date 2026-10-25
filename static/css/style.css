@@ -1541,3 +1541,45 @@ table.data-table th {
   background: var(--bg-card-subtle);
 }
 
+/* --- Notification Dropdown Items --- */
+.notif-item {
+  text-decoration: none;
+  padding: 6px 8px;
+  background: var(--bg-card-subtle);
+  border-radius: 6px;
+  display: block;
+}
+.notif-item-urgent {
+  border-left: 3px solid var(--brand-red);
+}
+.notif-item-warning {
+  border-left: 3px solid var(--brand-amber);
+}
+.notif-item-success {
+  border-left: 3px solid var(--brand-green);
+}
+.notif-item-info {
+  border-left: 3px solid var(--brand-blue);
+}
+
+/* --- Flash Alert Banners --- */
+.flash-alert-card {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.flash-alert-success {
+  border-left: 4px solid var(--brand-green);
+}
+.flash-alert-error {
+  border-left: 4px solid var(--brand-red);
+}
+.flash-alert-warning {
+  border-left: 4px solid var(--brand-amber);
+}
+.flash-alert-info {
+  border-left: 4px solid var(--brand-blue);
+}
+

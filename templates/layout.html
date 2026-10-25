@@ -231,8 +231,7 @@
             <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;">
               {% if topbar_notifications %}
                 {% for n in topbar_notifications %}
-                {% set border_col = 'var(--brand-red)' if n.notif_type == 'urgent' else ('var(--brand-amber)' if n.notif_type == 'warning' else ('var(--brand-green)' if n.notif_type == 'success' else 'var(--brand-blue)')) %}
-                <a href="{{ url_for('notifications_view') }}" class="notif-item-link" style="text-decoration:none;padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid {{ border_col }};display:block;">
+                <a href="{{ url_for('notifications_view') }}" class="notif-item notif-item-{{ n.notif_type or 'info' }}">
                   <div style="display:flex;justify-content:space-between;align-items:baseline;">
                     <strong style="color:var(--text-main);font-size:12px;">{{ n.title }}</strong>
                     {% if not n.is_read %}<span style="color:var(--brand-red);font-size:9px;font-weight:700;">●</span>{% endif %}
@@ -292,8 +291,7 @@
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            {% set flash_border = 'var(--brand-green)' if category=='success' else ('var(--brand-red)' if category=='error' else 'var(--brand-amber)') %}
-            <div class="card" style="padding:10px 14px;margin-bottom:16px;border-left:4px solid {{ flash_border }};display:flex;justify-content:space-between;align-items:center;">
+            <div class="card flash-alert-card flash-alert-{{ category }}">
               <span style="font-size:13px;color:var(--text-main);">{{ message }}</span>
               <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">&times;</button>
             </div>
