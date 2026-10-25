@@ -1673,6 +1673,15 @@ table.data-table th {
     width: min(320px, calc(100vw - 20px)) !important;
     right: -10px !important;
   }
+
+  /* Database Explorer Mobile Stacking */
+  .db-explorer-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .db-explorer-tables-card {
+    max-height: 220px;
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 480px) {

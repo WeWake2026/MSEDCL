@@ -1537,6 +1537,8 @@ def db_explorer_view():
     active_table = request.args.get("table", "").strip()
     active_schema = request.args.get("schema", "public").strip()
     search = request.args.get("search", "").strip()
+    filter_col = request.args.get("filter_col", "").strip() or None
+    filter_val = request.args.get("filter_val", "").strip()
     sort_col = request.args.get("sort", "").strip() or None
     sort_dir = request.args.get("dir", "ASC").strip()
     page = request.args.get("page", 1, type=int)
@@ -1558,7 +1560,9 @@ def db_explorer_view():
                 per_page=per_page,
                 search=search,
                 sort_col=sort_col,
-                sort_dir=sort_dir
+                sort_dir=sort_dir,
+                filter_col=filter_col,
+                filter_val=filter_val
             )
         except Exception as e:
             flash(f"Error reading table '{active_table}': {str(e)}", "error")
@@ -1578,12 +1582,14 @@ def db_explorer_export_csv():
     table = request.args.get("table", "").strip()
     schema = request.args.get("schema", "public").strip()
     search = request.args.get("search", "").strip()
+    filter_col = request.args.get("filter_col", "").strip() or None
+    filter_val = request.args.get("filter_val", "").strip()
 
     if not table:
         abort(400, "Table name required")
 
     try:
-        csv_data = db_explorer_service.export_table_csv(table_name=table, schema_name=schema, search=search)
+        csv_data = db_explorer_service.export_table_csv(table_name=table, schema_name=schema, search=search, filter_col=filter_col, filter_val=filter_val)
         log_audit("EXPORT_TABLE_CSV", table, f"Exported CSV for schema: {schema}")
         clean_filename = f"{table}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         return Response(

@@ -52,10 +52,10 @@
   </div>
 
   <!-- Layout: Left Sidebar (Table List) + Right Content (Records & Schema) -->
-  <div style="display: grid; grid-template-columns: 240px 1fr; gap: 12px; align-items: start;">
+  <div class="db-explorer-grid" style="display: grid; grid-template-columns: 240px 1fr; gap: 12px; align-items: start;">
     
     <!-- Table Navigator Panel -->
-    <div class="card" style="padding: 12px;">
+    <div class="card db-explorer-tables-card" style="padding: 12px;">
       <h4 style="font-size:11.5px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:8px; font-weight:700;">
         Accessible Tables ({{ overview.tables_summary|length }})
       </h4>
@@ -98,25 +98,41 @@
           </div>
 
           <!-- Search and Filter Bar -->
-          <div style="padding: 8px 14px; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+          <div style="padding: 10px 14px; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
             <form method="get" action="{{ url_for('db_explorer_view') }}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <input type="hidden" name="table" value="{{ active_table }}">
               <input type="hidden" name="schema" value="{{ records_data.schema }}">
-              <div style="flex:1; min-width:180px;">
-                <input type="text" name="search" value="{{ records_data.search }}" placeholder="Search across all columns..." class="form-control" style="font-size:12px; padding:5px 10px;">
+              
+              <!-- Global text search -->
+              <div style="flex:1; min-width:160px;">
+                <input type="text" name="search" value="{{ records_data.search }}" placeholder="🔍 Search across all fields..." class="form-control" style="font-size:12px; padding:6px 10px;">
               </div>
+
+              <!-- Specific Column Filter Dropdown & Value -->
+              <div style="display:flex; gap:4px; align-items:center;">
+                <select name="filter_col" class="form-control" style="font-size:12px; padding:6px 8px; max-width:140px;">
+                  <option value="">-- All Columns --</option>
+                  {% for c in records_data.columns %}
+                    <option value="{{ c.name }}" {{ 'selected' if records_data.filter_col == c.name else '' }}>{{ c.name }}</option>
+                  {% endfor %}
+                </select>
+                <input type="text" name="filter_val" value="{{ records_data.filter_val }}" placeholder="Value..." class="form-control" style="font-size:12px; padding:6px 8px; width:100px;">
+              </div>
+
+              <!-- Pagination Limit -->
               <div style="display:flex; align-items:center; gap:5px;">
-                <label style="font-size:11px; color:var(--text-muted); margin:0;">Rows/page:</label>
-                <select name="per_page" class="form-control" style="width:75px; font-size:12px; padding:4px 6px;" onchange="this.form.submit()">
+                <label style="font-size:11px; color:var(--text-muted); margin:0; white-space:nowrap;">Rows:</label>
+                <select name="per_page" class="form-control" style="width:70px; font-size:12px; padding:5px 6px;" onchange="this.form.submit()">
                   <option value="15" {{ 'selected' if records_data.per_page == 15 else '' }}>15</option>
                   <option value="25" {{ 'selected' if records_data.per_page == 25 else '' }}>25</option>
                   <option value="50" {{ 'selected' if records_data.per_page == 50 else '' }}>50</option>
                   <option value="100" {{ 'selected' if records_data.per_page == 100 else '' }}>100</option>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary btn-sm" style="font-size:12px;">Filter</button>
-              {% if records_data.search %}
-                <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema) }}" class="btn btn-secondary btn-sm" style="font-size:12px;">Clear</a>
+
+              <button type="submit" class="btn btn-primary btn-sm" style="font-size:12px; padding:6px 12px; font-weight:600;">Apply Filter</button>
+              {% if records_data.search or records_data.filter_col or records_data.filter_val %}
+                <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema) }}" class="btn btn-secondary btn-sm" style="font-size:12px; padding:6px 10px;">✕ Clear</a>
               {% endif %}
             </form>
           </div>

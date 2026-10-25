@@ -234,9 +234,9 @@ def get_table_schema(table_name, schema_name="public"):
 
     return {"table": table_name, "schema": schema_name, "columns": columns, "indexes": indexes}
 
-def get_table_records(table_name, schema_name="public", page=1, per_page=25, search="", sort_col=None, sort_dir="ASC"):
+def get_table_records(table_name, schema_name="public", page=1, per_page=25, search="", sort_col=None, sort_dir="ASC", filter_col=None, filter_val=""):
     """
-    Fetches paginated records with safe filtering and sorting.
+    Fetches paginated records with safe filtering, column-specific filters, and sorting.
     Masks sensitive columns.
     """
     if table_name.lower() in BLOCKED_TABLES:
@@ -276,6 +276,15 @@ def get_table_records(table_name, schema_name="public", page=1, per_page=25, sea
                 params.append(f"%{search}%")
         where_clauses.append("(" + " OR ".join(search_terms) + ")")
 
+    # Column-specific targeted filter
+    if filter_col and filter_col in columns and filter_val:
+        if is_pg:
+            where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
+            params.append(f"%{filter_val}%")
+        else:
+            where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
+            params.append(f"%{filter_val}%")
+
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
     tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
@@ -314,10 +323,12 @@ def get_table_records(table_name, schema_name="public", page=1, per_page=25, sea
         "total_pages": total_pages,
         "sort_col": sort_col,
         "sort_dir": sort_dir,
-        "search": search
+        "search": search,
+        "filter_col": filter_col,
+        "filter_val": filter_val
     }
 
-def export_table_csv(table_name, schema_name="public", search="", max_limit=10000):
+def export_table_csv(table_name, schema_name="public", search="", filter_col=None, filter_val="", max_limit=10000):
     """
     Streams CSV data for the requested table.
     Enforces row limits, masks sensitive fields, and prevents CSV formula injection.
@@ -343,6 +354,14 @@ def export_table_csv(table_name, schema_name="public", search="", max_limit=1000
                 search_terms.append(f'CAST("{col_name}" AS TEXT) LIKE ?')
                 params.append(f"%{search}%")
         where_clauses.append("(" + " OR ".join(search_terms) + ")")
+
+    if filter_col and filter_col in columns and filter_val:
+        if is_pg:
+            where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
+            params.append(f"%{filter_val}%")
+        else:
+            where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
+            params.append(f"%{filter_val}%")
 
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
