@@ -28,11 +28,32 @@ DbIntegrityError = (sqlite3.IntegrityError, PgIntegrityError) if HAS_PSYCOPG2 el
 _pg_pool = None
 _pool_lock = threading.Lock()
 
+def _load_env_if_present():
+    """Ensure .env is read into os.environ if present."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        # Always set or update from local .env if not set by system
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+_load_env_if_present()
+
 def build_database_uri_from_env():
     """
     Construct connection URI from DATABASE_URL or individual parameters:
     DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
     """
+    _load_env_if_present()
     direct_url = os.environ.get("DATABASE_URL", "").strip()
     if direct_url:
         return direct_url
@@ -190,6 +211,10 @@ class UniversalConnection:
         self._conn = raw_conn
         self._is_pg = is_pg
         self._pool_ref = pool_ref
+
+    @property
+    def is_pg(self):
+        return self._is_pg
 
     def cursor(self):
         if self._is_pg:

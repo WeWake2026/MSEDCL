@@ -53,6 +53,8 @@ def get_db_overview():
             cur = conn.execute("SELECT 1 AS ok")
             cur.fetchone()
             overview["connected"] = True
+            is_pg = getattr(conn, "is_pg", False)
+            overview["engine"] = "PostgreSQL" if is_pg else "SQLite"
 
             if is_pg:
                 # PostgreSQL metadata
@@ -174,6 +176,7 @@ def get_table_schema(table_name, schema_name="public"):
         raise ValueError("Invalid schema name")
 
     with get_db() as conn:
+        is_pg = getattr(conn, "is_pg", False)
         if is_pg:
             col_cur = conn.execute("""
                 SELECT 
@@ -262,34 +265,35 @@ def get_table_records(table_name, schema_name="public", page=1, per_page=25, sea
 
     sort_dir = "DESC" if str(sort_dir).upper() == "DESC" else "ASC"
 
-    # Build search clause parameterized
-    where_clauses = []
-    params = []
-    if search:
-        search_terms = []
-        for col_name in columns:
-            if is_pg:
-                search_terms.append(f'CAST("{col_name}" AS TEXT) ILIKE %s')
-                params.append(f"%{search}%")
-            else:
-                search_terms.append(f'CAST("{col_name}" AS TEXT) LIKE ?')
-                params.append(f"%{search}%")
-        where_clauses.append("(" + " OR ".join(search_terms) + ")")
-
-    # Column-specific targeted filter
-    if filter_col and filter_col in columns and filter_val:
-        if is_pg:
-            where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
-            params.append(f"%{filter_val}%")
-        else:
-            where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
-            params.append(f"%{filter_val}%")
-
-    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
-
-    tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
-
     with get_db() as conn:
+        is_pg = getattr(conn, "is_pg", False)
+
+        # Build search clause parameterized
+        where_clauses = []
+        params = []
+        if search:
+            search_terms = []
+            for col_name in columns:
+                if is_pg:
+                    search_terms.append(f'CAST("{col_name}" AS TEXT) ILIKE %s')
+                    params.append(f"%{search}%")
+                else:
+                    search_terms.append(f'CAST("{col_name}" AS TEXT) LIKE ?')
+                    params.append(f"%{search}%")
+            where_clauses.append("(" + " OR ".join(search_terms) + ")")
+
+        # Column-specific targeted filter
+        if filter_col and filter_col in columns and filter_val:
+            if is_pg:
+                where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
+                params.append(f"%{filter_val}%")
+            else:
+                where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
+                params.append(f"%{filter_val}%")
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+        tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
+
         # Total count for pagination
         count_sql = f'SELECT COUNT(1) AS total FROM {tbl_qualified} {where_sql}'
         count_res = conn.execute(count_sql, tuple(params)).fetchone()
@@ -341,36 +345,36 @@ def export_table_csv(table_name, schema_name="public", search="", filter_col=Non
     if not columns:
         raise ValueError(f"Table '{table_name}' not found.")
 
-    is_pg = is_postgres()
-    where_clauses = []
-    params = []
-    if search:
-        search_terms = []
-        for col_name in columns:
-            if is_pg:
-                search_terms.append(f'CAST("{col_name}" AS TEXT) ILIKE %s')
-                params.append(f"%{search}%")
-            else:
-                search_terms.append(f'CAST("{col_name}" AS TEXT) LIKE ?')
-                params.append(f"%{search}%")
-        where_clauses.append("(" + " OR ".join(search_terms) + ")")
-
-    if filter_col and filter_col in columns and filter_val:
-        if is_pg:
-            where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
-            params.append(f"%{filter_val}%")
-        else:
-            where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
-            params.append(f"%{filter_val}%")
-
-    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
-    tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(columns)
-
     with get_db() as conn:
+        is_pg = getattr(conn, "is_pg", False)
+        where_clauses = []
+        params = []
+        if search:
+            search_terms = []
+            for col_name in columns:
+                if is_pg:
+                    search_terms.append(f'CAST("{col_name}" AS TEXT) ILIKE %s')
+                    params.append(f"%{search}%")
+                else:
+                    search_terms.append(f'CAST("{col_name}" AS TEXT) LIKE ?')
+                    params.append(f"%{search}%")
+            where_clauses.append("(" + " OR ".join(search_terms) + ")")
+
+        if filter_col and filter_col in columns and filter_val:
+            if is_pg:
+                where_clauses.append(f'CAST("{filter_col}" AS TEXT) ILIKE %s')
+                params.append(f"%{filter_val}%")
+            else:
+                where_clauses.append(f'CAST("{filter_col}" AS TEXT) LIKE ?')
+                params.append(f"%{filter_val}%")
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+        tbl_qualified = f'"{schema_name}"."{table_name}"' if is_pg else f'"{table_name}"'
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(columns)
+
         query = f'SELECT * FROM {tbl_qualified} {where_sql} LIMIT {int(max_limit)}'
         cur = conn.execute(query, tuple(params))
         for r in cur.fetchall():

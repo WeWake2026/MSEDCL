@@ -19,7 +19,7 @@ if os.path.exists(env_file):
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
+                os.environ.setdefault(k.strip(), v.strip().strip("'\""))
 
 APP_SECRET = os.environ.get("APP_SECRET_KEY")
 if not APP_SECRET:
