@@ -23,7 +23,8 @@ if os.path.exists(env_file):
 
 APP_SECRET = os.environ.get("APP_SECRET_KEY")
 if not APP_SECRET:
-    APP_SECRET = secrets.token_hex(32)
+    # Use consistent static secret fallback so multiple gunicorn workers can decode each other's session cookies
+    APP_SECRET = "msedcl-qa-audit-secret-key-2026-production-render"
     os.environ["APP_SECRET_KEY"] = APP_SECRET
 
 DB_PATH = os.environ.get("DATABASE_PATH", "quality_audit.db")

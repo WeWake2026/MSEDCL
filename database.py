@@ -86,6 +86,12 @@ def _init_pg_pool(uri):
             # Handle postgres:// vs postgresql://
             if uri.startswith("postgres://"):
                 uri = "postgresql://" + uri[len("postgres://"):]
+            
+            # Ensure sslmode is present for external cloud hosts like Render
+            if "sslmode=" not in uri and ("render.com" in uri or "aws" in uri or "supabase" in uri or "neon" in uri):
+                delimiter = "&" if "?" in uri else "?"
+                uri = f"{uri}{delimiter}sslmode=require"
+
             min_conn = int(os.environ.get("DB_POOL_MIN", "1"))
             max_conn = int(os.environ.get("DB_POOL_MAX", "10"))
             timeout_sec = int(os.environ.get("DB_TIMEOUT", "15"))
