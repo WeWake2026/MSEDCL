@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>Sign In · MSEDCL Quality Audit</title>
+  <title>Sign In · MSEDCL Quality Assurance & Governance Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     (function() {
@@ -16,143 +19,510 @@
     })();
   </script>
   <style>
+    :root {
+      --login-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
-      background: radial-gradient(circle at top right, #1e3a8a, #0b1120);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-family: var(--login-font);
+      background: radial-gradient(120% 120% at 50% 10%, #0a172c 0%, #040914 100%);
+      color: #f8fafc;
       min-height: 100vh;
       margin: 0;
-      padding: 16px;
-    }
-    .login-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-      width: 100%;
-      max-width: 420px;
-      padding: 32px 28px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       position: relative;
+      overflow-x: hidden;
     }
-    .brand-logo {
+
+    /* Ambient Glowing Mesh Background */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .ambient-orb-1 {
+      position: absolute;
+      top: -10%;
+      left: 15%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.28) 0%, transparent 70%);
+      filter: blur(80px);
+      animation: floatOrb 14s ease-in-out infinite alternate;
+    }
+    .ambient-orb-2 {
+      position: absolute;
+      bottom: -15%;
+      right: 15%;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(239, 68, 68, 0.08) 50%, transparent 70%);
+      filter: blur(90px);
+      animation: floatOrb 18s ease-in-out infinite alternate-reverse;
+    }
+    .ambient-grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 20%, transparent 80%);
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.08); }
+    }
+
+    /* Main Container Card */
+    .login-wrapper {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 440px;
+      margin: auto;
+    }
+
+    .login-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 36px 32px 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6),
+                  0 0 0 1px rgba(255, 255, 255, 0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      transition: all 0.3s ease;
+    }
+
+    /* Brand Header */
+    .brand-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 22px;
+      gap: 14px;
+      margin-bottom: 24px;
     }
-    .brand-logo .icon {
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, #f59e0b, #ef4444);
-      border-radius: 10px;
+    .brand-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      font-size: 26px;
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
+      flex-shrink: 0;
     }
-    .brand-logo h2 {
-      font-size: 18px;
-      color: var(--text-main);
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
       line-height: 1.2;
-      font-weight: 700;
+      margin: 0;
     }
-    .brand-logo p {
-      font-size: 11.5px;
-      color: var(--text-muted);
+    .brand-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 3px 0 0 0;
+      font-weight: 500;
     }
-    .theme-corner-btn {
+
+    /* Security Notice Pill */
+    .gov-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      background: rgba(2, 132, 199, 0.12);
+      border: 1px solid rgba(2, 132, 199, 0.3);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #38bdf8;
+      margin-bottom: 22px;
+      letter-spacing: 0.02em;
+    }
+    .gov-pill .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: #38bdf8;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 7px;
+    }
+    .input-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-icon {
       position: absolute;
-      top: 18px;
-      right: 18px;
-      background: var(--bg-card-subtle);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 10px;
+      left: 14px;
+      font-size: 15px;
+      color: #64748b;
+      pointer-events: none;
+      transition: color 0.2s ease;
+    }
+    .form-input {
+      width: 100%;
+      height: 46px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0 14px 0 42px;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: #ffffff;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .form-input:focus {
+      background: rgba(15, 23, 42, 0.9);
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+    }
+    .form-input:focus + .input-icon {
+      color: #38bdf8;
+    }
+    .toggle-pwd-btn {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #94a3b8;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 16px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      outline: none;
+      transition: color 0.2s ease;
+    }
+    .toggle-pwd-btn:hover {
+      color: #ffffff;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      height: 48px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 14.5px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.45);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 25px -4px rgba(2, 132, 199, 0.6);
+      background: linear-gradient(135deg, #0396e6 0%, #1d4ed8 100%);
+    }
+    .submit-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 6px 12px -3px rgba(2, 132, 199, 0.4);
+    }
+
+    /* Fast Test Account Switcher Pills */
+    .fast-access-box {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .fast-access-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fast-access-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .quick-account-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9px;
+      padding: 8px 6px;
+      cursor: pointer;
+      text-align: center;
+      color: #cbd5e1;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    .quick-account-btn:hover {
+      background: rgba(2, 132, 199, 0.15);
+      border-color: rgba(2, 132, 199, 0.4);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .quick-account-btn .acc-role {
+      font-size: 11.5px;
+      font-weight: 700;
+      display: block;
+      color: #f8fafc;
+    }
+    .quick-account-btn .acc-user {
+      font-size: 10px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+      display: block;
+    }
+
+    /* Flash Message Alert */
+    .login-alert {
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      line-height: 1.4;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid;
+      animation: fadeIn 0.3s ease;
+    }
+    .login-alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+    .login-alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #86efac;
+    }
+
+    /* Footer Meta */
+    .login-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .login-footer a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
 
-<div class="login-container">
-  <button type="button" class="theme-corner-btn" onclick="toggleTheme()" id="themeIcon" title="Toggle Theme">🌓</button>
+  <!-- Ambient Light Effects -->
+  <div class="ambient-bg">
+    <div class="ambient-orb-1"></div>
+    <div class="ambient-orb-2"></div>
+    <div class="ambient-grid"></div>
+  </div>
 
-  <div class="brand-logo">
-    <div class="icon">⚡</div>
-    <div>
-      <h2>MSEDCL Quality Audit</h2>
-      <p>Maharashtra State Electricity Distribution</p>
+  <div class="login-wrapper">
+    <div class="login-card">
+      
+      <!-- Brand & Organization Header -->
+      <div class="brand-header">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <h1 class="brand-title">MSEDCL QA Portal</h1>
+          <p class="brand-subtitle">Maharashtra State Electricity Distribution</p>
+        </div>
+      </div>
+
+      <!-- Government Badge -->
+      <div class="gov-pill">
+        <span class="pulse-dot"></span>
+        Enterprise Quality & Performance Analytics
+      </div>
+
+      <!-- Flash Notification Container -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="login-alert {% if category == 'success' %}login-alert-success{% else %}login-alert-error{% endif %}">
+              <span>⚠️</span>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Sign In Form -->
+      <form method="post" action="{{ url_for('login') }}" id="loginForm" autocomplete="on">
+        
+        <div class="form-group">
+          <label class="form-label" for="usernameInput">
+            <span>Username</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">Case-insensitive</span>
+          </label>
+          <div class="input-box">
+            <span class="input-icon">👤</span>
+            <input 
+              type="text" 
+              name="username" 
+              id="usernameInput" 
+              class="form-input" 
+              placeholder="Enter your system username" 
+              required 
+              autofocus 
+              autocomplete="username"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPasswordInput">
+            <span>Password</span>
+            <span style="font-size:11px;color:#64748b;font-weight:400;">Encrypted & Protected</span>
+          </label>
+          <div class="input-box">
+            <span class="input-icon">🔒</span>
+            <input 
+              type="password" 
+              name="password" 
+              id="loginPasswordInput" 
+              class="form-input" 
+              placeholder="••••••••••••" 
+              required 
+              autocomplete="current-password"
+              style="padding-right: 42px;"
+            >
+            <button 
+              type="button" 
+              class="toggle-pwd-btn" 
+              onclick="togglePasswordVisibility('loginPasswordInput', this)" 
+              title="Show / Hide Password"
+              id="togglePwdBtn"
+            >
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="loginSubmitBtn">
+          <span>Sign In to Dashboard</span>
+          <span>→</span>
+        </button>
+      </form>
+
+      <!-- Fast Access Account Selector for authorized credentials -->
+      <div class="fast-access-box">
+        <div class="fast-access-label">
+          <span>Quick Select Account</span>
+          <span style="font-size:10px;color:#38bdf8;">Click to autofill</span>
+        </div>
+        <div class="fast-access-grid">
+          <button type="button" class="quick-account-btn" onclick="fillCredentials('qaadmin', 'Msedcl@123')">
+            <span class="acc-role">Admin</span>
+            <span class="acc-user">qaadmin</span>
+          </button>
+          <button type="button" class="quick-account-btn" onclick="fillCredentials('quality1', 'Msedcl@1234')">
+            <span class="acc-role">Quality</span>
+            <span class="acc-user">quality1</span>
+          </button>
+          <button type="button" class="quick-account-btn" onclick="fillCredentials('manager1', 'Msedcl@1235')">
+            <span class="acc-role">Manager</span>
+            <span class="acc-user">manager1</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Security & Compliance Footer -->
+    <div class="login-footer">
+      Strict role-based governance. All IP logins & actions are audit-logged.<br/>
+      Protected by SHA-256 integrity verification & TLS encryption.
     </div>
   </div>
 
-  <h3 style="font-size:16px; margin-bottom:6px; color:var(--text-main); font-weight:700;">Sign In to Portal</h3>
-  <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:20px;">Enter your authorized system credentials to proceed.</p>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-danger" style="padding:10px 14px; font-size:12.5px; margin-bottom:16px;">
-          <span>{{ message }}</span>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <form method="post" action="{{ url_for('login') }}">
-    <div style="margin-bottom:14px;">
-      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Username</label>
-      <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus autocomplete="username">
-    </div>
-
-    <div style="margin-bottom:20px;">
-      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Password</label>
-      <div style="position:relative; display:flex; align-items:center;">
-        <input type="password" name="password" id="loginPasswordInput" class="form-control" placeholder="••••••••" required autocomplete="current-password" style="padding-right:38px;">
-        <button type="button" onclick="togglePasswordVisibility('loginPasswordInput', this)" title="Show/Hide Password" style="position:absolute; right:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; padding:2px; display:flex; align-items:center; outline:none;">
-          👁️
-        </button>
-      </div>
-    </div>
-
-    <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px; font-weight:600;">Sign In to Dashboard</button>
-  </form>
-
-  <p style="text-align:center; margin-top:22px; font-size:11.5px; color:var(--text-light);">
-    Strict role-based access. Administrative access is logged.
-  </p>
-</div>
-
-<script>
-  function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('msedcl_theme', newTheme);
-    updateThemeIcon();
-  }
-  function updateThemeIcon() {
-    const theme = document.documentElement.getAttribute('data-theme');
-    const icon = document.getElementById('themeIcon');
-    if (icon) icon.innerText = theme === 'dark' ? '☀️' : '🌙';
-  }
-  document.addEventListener('DOMContentLoaded', updateThemeIcon);
-
-  function togglePasswordVisibility(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      btn.innerText = '🙈';
-    } else {
-      input.type = 'password';
-      btn.innerText = '👁️';
+  <script>
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = '🙈';
+        btn.setAttribute('title', 'Hide Password');
+      } else {
+        input.type = 'password';
+        btn.innerText = '👁️';
+        btn.setAttribute('title', 'Show Password');
+      }
     }
-  }
-</script>
+
+    function fillCredentials(user, pass) {
+      const uField = document.getElementById('usernameInput');
+      const pField = document.getElementById('loginPasswordInput');
+      if (uField && pField) {
+        uField.value = user;
+        pField.value = pass;
+        pField.focus();
+      }
+    }
+
+    // Submit state feedback
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn = document.getElementById('loginSubmitBtn');
+      if (btn) {
+        btn.innerHTML = '<span>Verifying & Signing In...</span>';
+        btn.style.opacity = '0.85';
+        btn.style.pointerEvents = 'none';
+      }
+    });
+  </script>
 
 </body>
 </html>
