@@ -146,8 +146,7 @@
             <th class="advisor-col-score">Score</th>
             <th class="advisor-col-fatal">Fatal Status</th>
             <th class="advisor-col-fatalcat">Fatal Category</th>
-            <th class="advisor-col-errorcat">Error Categories</th>
-            <th class="advisor-col-obs">Observation &amp; Remarks</th>
+            <th class="advisor-col-errorcat" style="min-width: 220px;">Area of Improvement</th>
             <th class="advisor-col-rec">Call Recording</th>
           </tr>
         </thead>
@@ -219,16 +218,16 @@
               {% endif %}
             </td>
 
-            <!-- 9. Error Categories (Show actual categories instead of generic 'Yes', or 'Not Available') -->
+            <!-- 9. Area of Improvement (Unified Error Categories / Observations) -->
             <td class="advisor-col-errorcat">
-              {% if not a.error_categories or a.error_categories|trim == '' %}
+              {% set improvement_val = a.error_categories or a.observation %}
+              {% if not improvement_val or improvement_val|trim == '' %}
                 <span style="color:var(--text-muted); font-size:11.5px;">Not Available</span>
-              {% elif a.error_categories|trim|lower == 'yes' %}
-                <!-- Generic 'Yes' in data: display contextual coaching note rather than empty Yes -->
-                <span class="badge badge-warning" title="Generic Error Flagged in Audit Data">Coaching Required</span>
+              {% elif improvement_val|trim|lower == 'yes' %}
+                <span class="badge badge-warning" title="Flagged in Audit Data">Coaching Required</span>
               {% else %}
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                  {% for cat in a.error_categories.split(';') %}
+                  {% for cat in improvement_val.split(';') %}
                     {% set clean_cat = cat|trim %}
                     {% if clean_cat %}
                       <span class="badge badge-neutral" style="font-size:10.5px; padding:2px 6px; font-weight:500;">
@@ -237,22 +236,6 @@
                     {% endif %}
                   {% endfor %}
                 </div>
-              {% endif %}
-            </td>
-
-            <!-- 10. Observation & Remarks with 3-Line Preview and Modal Expansion -->
-            <td class="advisor-col-obs">
-              {% if a.observation and a.observation|trim != '' %}
-                <div class="obs-preview-box">
-                  <div class="obs-preview-text" id="obsPreviewText_{{ a.id }}">{{ a.observation }}</div>
-                  <button type="button" class="obs-view-btn" onclick="openObservationModal('{{ a.id }}', '{{ a.call_id or ('#' ~ a.id) }}', '{{ a.call_date or '' }}', '{{ a.auditor_name or '' }}', '{{ a.quality_score }}%')">
-                    <span>📖</span> <span>Read Full Observation</span>
-                  </button>
-                  <!-- Hidden store for safe modal population without escaping conflicts -->
-                  <div id="obsFullContent_{{ a.id }}" style="display:none;">{{ a.observation }}</div>
-                </div>
-              {% else %}
-                <span style="color:var(--text-muted); font-style:italic; font-size:12px;">No observation notes recorded</span>
               {% endif %}
             </td>
 

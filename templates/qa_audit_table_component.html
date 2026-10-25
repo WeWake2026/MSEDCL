@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSEDCL Call Center QA Audit Data Table</title>
+  <!-- Tailwind CSS via Official CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen p-4 sm:p-6 lg:p-8">
+
+  <div class="max-w-[1600px] mx-auto">
+    <!-- Header Section -->
+    <div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-sm">⚡</span>
+          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Call Center QA Audit Data Grid</h1>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Live Production</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL) · Evaluated Customer Interactions</p>
+      </div>
+
+      <!-- Action & Filter Pills -->
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-white text-slate-600 border border-slate-200 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> 5 Records Listed
+        </span>
+        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm transition-colors">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          Filter
+        </button>
+        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <!-- Scrollable Data Table Container with Sticky Header -->
+      <div class="overflow-x-auto max-h-[720px] divide-y divide-slate-200">
+        <table class="w-full text-left text-xs whitespace-nowrap border-collapse">
+          <!-- 12 Columns Sticky Table Header -->
+          <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm text-slate-600 uppercase tracking-wider text-[11px] font-semibold border-b border-slate-200">
+            <tr>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700">1. Call ID</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700">2. Date & Time</th>
+              <th scope="col" class="py-3 px-3 font-semibold text-slate-700 text-center">3. Dept</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700 min-w-[170px]">4. Advisor Name / ID</th>
+              <th scope="col" class="py-3 px-3 font-semibold text-slate-700">5. Team Leader</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700">6. Auditor</th>
+              <th scope="col" class="py-3 px-3 font-semibold text-slate-700 text-center">7. Quality Score</th>
+              <th scope="col" class="py-3 px-3 font-semibold text-slate-700 text-center">8. Fatal Status</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700">9. Fatal Category</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700 min-w-[220px]">10. Area of Improvement</th>
+              <th scope="col" class="py-3 px-3.5 font-semibold text-slate-700 min-w-[175px]">11. Call Recording</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100 bg-white">
+            <!-- Row 1: High Quality Score Outbound Call -->
+            <tr class="hover:bg-slate-50/80 transition-colors duration-150">
+              <!-- 1. Call ID -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  #20261002-881
+                </span>
+              </td>
+              <!-- 2. Date -->
+              <td class="py-2.5 px-3.5 text-slate-600 font-medium">
+                <div class="flex flex-col">
+                  <span class="text-slate-800 font-semibold">02-Oct-2026</span>
+                  <span class="text-[10px] text-slate-400">11:42:15 AM</span>
+                </div>
+              </td>
+              <!-- 3. Dept -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  Outbound
+                </span>
+              </td>
+              <!-- 4. Advisor Name / ID -->
+              <td class="py-2.5 px-3.5">
+                <div class="flex flex-col leading-tight">
+                  <span class="font-bold text-slate-900 text-xs">Rohan Suresh Nitnaware</span>
+                  <span class="text-[10px] font-mono font-medium text-slate-500 mt-0.5">EMP: M101292</span>
+                </div>
+              </td>
+              <!-- 5. Team Leader -->
+              <td class="py-2.5 px-3 text-slate-600 font-medium">
+                Siddhesh Patil
+              </td>
+              <!-- 6. Auditor -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">AS</span>
+                  <span>Akash Santoshwar</span>
+                </div>
+              </td>
+              <!-- 7. Quality Score (Green >= 90%) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+                  96.0%
+                </span>
+              </td>
+              <!-- 8. Fatal Status (Non-Fatal in green outline) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-300">
+                  ● Non-Fatal
+                </span>
+              </td>
+              <!-- 9. Fatal Category -->
+              <td class="py-2.5 px-3.5 text-slate-400 font-normal">None</td>
+              <!-- 10. Area of Improvement -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                  Avoid interruption to consumer
+                </span>
+              </td>
+              <!-- 11. Call Recording -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
+                  <button class="w-5 h-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-[9px] shadow-sm focus:outline-none" title="Play Recording">▶</button>
+                  <span class="text-[10.5px] font-mono text-slate-600">02:14</span>
+                  <a href="#" class="text-slate-400 hover:text-slate-700 ml-0.5" title="Open Stream">🔗</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 2: Fatal Outbound Interaction -->
+            <tr class="hover:bg-rose-50/40 transition-colors duration-150 bg-rose-50/15">
+              <!-- 1. Call ID -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  #20261002-749
+                </span>
+              </td>
+              <!-- 2. Date -->
+              <td class="py-2.5 px-3.5 text-slate-600 font-medium">
+                <div class="flex flex-col">
+                  <span class="text-slate-800 font-semibold">02-Oct-2026</span>
+                  <span class="text-[10px] text-slate-400">02:18:04 PM</span>
+                </div>
+              </td>
+              <!-- 3. Dept -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  Outbound
+                </span>
+              </td>
+              <!-- 4. Advisor Name / ID -->
+              <td class="py-2.5 px-3.5">
+                <div class="flex flex-col leading-tight">
+                  <span class="font-bold text-slate-900 text-xs">Pooja Dilip More</span>
+                  <span class="text-[10px] font-mono font-medium text-slate-500 mt-0.5">EMP: M100841</span>
+                </div>
+              </td>
+              <!-- 5. Team Leader -->
+              <td class="py-2.5 px-3 text-slate-600 font-medium">
+                Kavita Jadhav
+              </td>
+              <!-- 6. Auditor -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">PS</span>
+                  <span>Pooja Shinde</span>
+                </div>
+              </td>
+              <!-- 7. Quality Score (Red < 80% / 0% Fatal) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-red-100 text-red-700 border border-red-300 shadow-sm">
+                  0.0%
+                </span>
+              </td>
+              <!-- 8. Fatal Status (Solid Red Badge) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-red-600 text-white shadow-sm uppercase tracking-wider">
+                  ⚠️ FATAL
+                </span>
+              </td>
+              <!-- 9. Fatal Category -->
+              <td class="py-2.5 px-3.5 font-semibold text-red-600 text-[11px]">
+                Incomplete Verification & Abrupt Disconnect
+              </td>
+              <!-- 10. Area of Improvement -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-red-50 text-red-700 border border-red-200">
+                  Unprofessional Closing · Call Drop
+                </span>
+              </td>
+              <!-- 11. Call Recording -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
+                  <button class="w-5 h-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-[9px] shadow-sm focus:outline-none" title="Play Recording">▶</button>
+                  <span class="text-[10.5px] font-mono text-slate-600">01:05</span>
+                  <a href="#" class="text-slate-400 hover:text-slate-700 ml-0.5" title="Open Stream">🔗</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 3: Inbound Billing Query (Blue 80-89%) -->
+            <tr class="hover:bg-slate-50/80 transition-colors duration-150">
+              <!-- 1. Call ID -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  #20261003-102
+                </span>
+              </td>
+              <!-- 2. Date -->
+              <td class="py-2.5 px-3.5 text-slate-600 font-medium">
+                <div class="flex flex-col">
+                  <span class="text-slate-800 font-semibold">03-Oct-2026</span>
+                  <span class="text-[10px] text-slate-400">09:15:30 AM</span>
+                </div>
+              </td>
+              <!-- 3. Dept -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Inbound
+                </span>
+              </td>
+              <!-- 4. Advisor Name / ID -->
+              <td class="py-2.5 px-3.5">
+                <div class="flex flex-col leading-tight">
+                  <span class="font-bold text-slate-900 text-xs">Sachin Ramesh Kulkarni</span>
+                  <span class="text-[10px] font-mono font-medium text-slate-500 mt-0.5">EMP: M101405</span>
+                </div>
+              </td>
+              <!-- 5. Team Leader -->
+              <td class="py-2.5 px-3 text-slate-600 font-medium">
+                N/A
+              </td>
+              <!-- 6. Auditor -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">MK</span>
+                  <span>Mahesh Kadam</span>
+                </div>
+              </td>
+              <!-- 7. Quality Score (Blue 80-89%) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                  84.5%
+                </span>
+              </td>
+              <!-- 8. Fatal Status (Non-Fatal in green outline) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-300">
+                  ● Non-Fatal
+                </span>
+              </td>
+              <!-- 9. Fatal Category -->
+              <td class="py-2.5 px-3.5 text-slate-400 font-normal">None</td>
+              <!-- 10. Area of Improvement -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                  Hold time exceeded (65s)
+                </span>
+              </td>
+              <!-- 11. Call Recording -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
+                  <button class="w-5 h-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-[9px] shadow-sm focus:outline-none" title="Play Recording">▶</button>
+                  <span class="text-[10.5px] font-mono text-slate-600">03:45</span>
+                  <a href="#" class="text-slate-400 hover:text-slate-700 ml-0.5" title="Open Stream">🔗</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 4: Inbound Call with Missing Audio URL -->
+            <tr class="hover:bg-slate-50/80 transition-colors duration-150">
+              <!-- 1. Call ID -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  #20261003-319
+                </span>
+              </td>
+              <!-- 2. Date -->
+              <td class="py-2.5 px-3.5 text-slate-600 font-medium">
+                <div class="flex flex-col">
+                  <span class="text-slate-800 font-semibold">03-Oct-2026</span>
+                  <span class="text-[10px] text-slate-400">04:30:11 PM</span>
+                </div>
+              </td>
+              <!-- 3. Dept -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Inbound
+                </span>
+              </td>
+              <!-- 4. Advisor Name / ID -->
+              <td class="py-2.5 px-3.5">
+                <div class="flex flex-col leading-tight">
+                  <span class="font-bold text-slate-900 text-xs">Snehal Ganesh Deshmukh</span>
+                  <span class="text-[10px] font-mono font-medium text-slate-500 mt-0.5">EMP: M101188</span>
+                </div>
+              </td>
+              <!-- 5. Team Leader -->
+              <td class="py-2.5 px-3 text-slate-600 font-medium">
+                Rahul Shinde
+              </td>
+              <!-- 6. Auditor -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">AS</span>
+                  <span>Akash Santoshwar</span>
+                </div>
+              </td>
+              <!-- 7. Quality Score (Green >= 90%) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+                  92.0%
+                </span>
+              </td>
+              <!-- 8. Fatal Status (Non-Fatal in green outline) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-300">
+                  ● Non-Fatal
+                </span>
+              </td>
+              <!-- 9. Fatal Category -->
+              <td class="py-2.5 px-3.5 text-slate-400 font-normal">None</td>
+              <!-- 10. Area of Improvement -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Zero Error Call
+                </span>
+              </td>
+              <!-- 11. Call Recording (No Audio Status Pill) -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-400 border border-slate-200">
+                  No Audio
+                </span>
+              </td>
+            </tr>
+
+            <!-- Row 5: Low Quality Score (Amber/Red < 80%) -->
+            <tr class="hover:bg-slate-50/80 transition-colors duration-150">
+              <!-- 1. Call ID -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  #20261004-512
+                </span>
+              </td>
+              <!-- 2. Date -->
+              <td class="py-2.5 px-3.5 text-slate-600 font-medium">
+                <div class="flex flex-col">
+                  <span class="text-slate-800 font-semibold">04-Oct-2026</span>
+                  <span class="text-[10px] text-slate-400">05:12:40 PM</span>
+                </div>
+              </td>
+              <!-- 3. Dept -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  Outbound
+                </span>
+              </td>
+              <!-- 4. Advisor Name / ID -->
+              <td class="py-2.5 px-3.5">
+                <div class="flex flex-col leading-tight">
+                  <span class="font-bold text-slate-900 text-xs">Vikas Pandurang Mane</span>
+                  <span class="text-[10px] font-mono font-medium text-slate-500 mt-0.5">EMP: M101620</span>
+                </div>
+              </td>
+              <!-- 5. Team Leader -->
+              <td class="py-2.5 px-3 text-slate-600 font-medium">
+                N/A
+              </td>
+              <!-- 6. Auditor -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                  <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">MK</span>
+                  <span>Mahesh Kadam</span>
+                </div>
+              </td>
+              <!-- 7. Quality Score (Amber < 80%) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-amber-50 text-amber-700 border border-amber-300 shadow-sm">
+                  72.0%
+                </span>
+              </td>
+              <!-- 8. Fatal Status (Non-Fatal in green outline) -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-300">
+                  ● Non-Fatal
+                </span>
+              </td>
+              <!-- 9. Fatal Category -->
+              <td class="py-2.5 px-3.5 text-slate-400 font-normal">None</td>
+              <!-- 10. Area of Improvement -->
+              <td class="py-2.5 px-3.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                  Incomplete Probing · Weak Closing
+                </span>
+              </td>
+              <!-- 11. Call Recording -->
+              <td class="py-2.5 px-3.5">
+                <div class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
+                  <button class="w-5 h-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-[9px] shadow-sm focus:outline-none" title="Play Recording">▶</button>
+                  <span class="text-[10.5px] font-mono text-slate-600">01:48</span>
+                  <a href="#" class="text-slate-400 hover:text-slate-700 ml-0.5" title="Open Stream">🔗</a>
+                </div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination / Footer Bar -->
+      <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-600">
+        <div class="flex items-center gap-1.5">
+          <span>Showing <strong class="text-slate-800 font-semibold">1 to 5</strong> of <strong class="text-slate-800 font-semibold">500</strong> interactions</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 text-xs font-medium" disabled>&larr; Previous</button>
+          <span class="px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs">1</span>
+          <button class="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium">2</button>
+          <button class="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium">3</button>
+          <span class="px-1 text-slate-400">...</span>
+          <button class="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium">100</button>
+          <button class="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium">Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive script to toggle full observation text preview -->
+  <script>
+    function toggleObservation(id, btn) {
+      const el = document.getElementById(id);
+      if (el) {
+        if (el.classList.contains('line-clamp-2')) {
+          el.classList.remove('line-clamp-2');
+          btn.innerText = 'Collapse';
+        } else {
+          el.classList.add('line-clamp-2');
+          btn.innerText = 'Read Full Observation';
+        }
+      }
+    }
+  </script>
+</body>
+</html>

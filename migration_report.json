@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-25T14:38:44.798271",
+  "timestamp": "2026-10-25T17:20:23.193692",
   "sqlite_path": "quality_audit.db",
   "dry_run": true,
   "tables": {
@@ -16,8 +16,8 @@
       ]
     },
     "users": {
-      "source_count": 5,
-      "migrated_count": 5,
+      "source_count": 4,
+      "migrated_count": 4,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -34,8 +34,8 @@
       ]
     },
     "import_batches": {
-      "source_count": 3,
-      "migrated_count": 3,
+      "source_count": 2,
+      "migrated_count": 2,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -52,8 +52,8 @@
       ]
     },
     "audits": {
-      "source_count": 1251,
-      "migrated_count": 1251,
+      "source_count": 1294,
+      "migrated_count": 1294,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -80,42 +80,11 @@
       ]
     },
     "warnings": {
-      "source_count": 2,
-      "migrated_count": 2,
+      "source_count": 0,
+      "migrated_count": 0,
       "skipped_count": 0,
       "failed_count": 0,
-      "columns": [
-        "id",
-        "advisor_id",
-        "advisor_name",
-        "warning_type",
-        "issue_date",
-        "recipient_email",
-        "subject",
-        "body",
-        "email_status",
-        "sent_at",
-        "provider_message_id",
-        "related_audit_ids",
-        "created_by",
-        "remarks",
-        "created_at",
-        "department",
-        "fatal_count",
-        "low_score_count",
-        "avg_score",
-        "issue_category",
-        "effective_date",
-        "review_date",
-        "approved_by",
-        "delivery_status",
-        "acknowledgement_at",
-        "status",
-        "closure_date",
-        "closure_remarks",
-        "advisor_feedback",
-        "advisor_feedback_date"
-      ]
+      "columns": []
     },
     "email_history": {
       "source_count": 0,
@@ -125,8 +94,8 @@
       "columns": []
     },
     "audit_logs": {
-      "source_count": 16,
-      "migrated_count": 16,
+      "source_count": 96,
+      "migrated_count": 96,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -142,6 +111,6 @@
     }
   },
   "status": "SUCCESS",
-  "total_source_records": 1293,
+  "total_source_records": 1412,
   "total_migrated_records": 0
 }

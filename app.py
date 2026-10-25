@@ -4,11 +4,12 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 
 import pandas as pd
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, abort
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, abort, Response
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 import export_service
+import db_explorer_service
 
 # Load environment configuration
 env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -115,10 +116,36 @@ def roles(*allowed):
 # --- Context Processor for Global Template Context ---
 @app.context_processor
 def inject_global_data():
+    curr_user = getattr(request, "current_user", None)
+    unread_notifs = 0
+    topbar_notifs = []
+    
+    if curr_user:
+        try:
+            with db() as con:
+                # Count unread notifications targeted directly to user, their role, or broadcast to all
+                unread_res = con.execute("""
+                    SELECT COUNT(*) as cnt FROM notifications 
+                    WHERE is_read = 0 AND (user_id = ? OR target_role = ? OR target_role = 'all' OR (target_role IS NULL AND user_id IS NULL))
+                """, (curr_user["id"], curr_user["role"])).fetchone()
+                unread_notifs = unread_res["cnt"] if unread_res else 0
+
+                topbar_notifs = con.execute("""
+                    SELECT id, title, message, notif_type, link_url, created_at, is_read 
+                    FROM notifications 
+                    WHERE (user_id = ? OR target_role = ? OR target_role = 'all' OR (target_role IS NULL AND user_id IS NULL))
+                    ORDER BY id DESC LIMIT 5
+                """, (curr_user["id"], curr_user["role"])).fetchall()
+        except Exception:
+            unread_notifs = 0
+            topbar_notifs = []
+
     return {
-        "user": getattr(request, "current_user", None),
+        "user": curr_user,
         "app_name": get_setting("company_name", "MSEDCL Quality Audit"),
         "import_enabled": get_setting("enable_excel_import", "true") == "true",
+        "unread_notif_count": unread_notifs,
+        "topbar_notifications": topbar_notifs,
         "max": max,
         "min": min
     }
@@ -135,7 +162,7 @@ ALIASES = {
     "quality_score": ["quality score", "score", "qa score", "quality %", "quality percentage", "final score"],
     "is_fatal": ["fatal", "fatal call", "fatal status", "is fatal", "fatal error"],
     "fatal_category": ["fatal category", "fatal reason", "fatal error category", "fatal error"],
-    "error_categories": ["error categories", "error category", "error type", "major error", "error"],
+    "error_categories": ["error categories", "error category", "error type", "major error", "error", "area of improvement", "areas of improvement", "improvement areas", "improvement area"],
     "observation": ["call observation", "observation", "remarks", "auditor remarks", "feedback"],
     "location": ["location", "city", "center", "site"],
     "audio_url": ["call audio url", "audio url", "recording url", "call recording", "call audio", "audio link", "recording link", "audio"]
@@ -624,6 +651,13 @@ def auditors_view():
         """).fetchall()
     return render_template("auditors.html", page="auditors", rows=rows)
 
+# --- Routes: Mahavitaran Electricity Bill Calculator ---
+@app.route("/calculator")
+@login_required
+def bill_calculator():
+    """Mahavitaran Electricity Bill Calculator accessible to all authenticated users."""
+    return render_template("calculator.html", page="calculator")
+
 # --- Routes: Advisor 360 Search ---
 @app.route("/advisor-search")
 @roles("admin", "quality", "manager")
@@ -1090,52 +1124,230 @@ def advisor_lookup():
     if not q or len(q) < 2:
         return {"found": False}
     with db() as con:
+        # 1. Fetch advisor overall metrics
         r = con.execute("""
             SELECT advisor_id, advisor_name, department, team_leader,
                    COUNT(*) as total_calls,
                    SUM(is_fatal) as fatals,
                    SUM(CASE WHEN quality_score < 80 THEN 1 ELSE 0 END) as low_calls,
-                   ROUND(AVG(quality_score), 2) as avg_score,
-                   (SELECT call_id || ' - ' || COALESCE(fatal_category, error_categories, 'Observation: ' || SUBSTR(observation, 1, 40))
-                    FROM audits WHERE (advisor_id = ? OR advisor_name LIKE ?) AND (is_fatal=1 OR quality_score < 80)
-                    ORDER BY id DESC LIMIT 1) as recent_incident
+                   ROUND(AVG(quality_score), 2) as avg_score
             FROM audits
             WHERE advisor_id = ? OR advisor_name LIKE ?
             GROUP BY COALESCE(advisor_id, advisor_name)
             ORDER BY total_calls DESC LIMIT 1
-        """, (q, f"%{q}%", q, f"%{q}%")).fetchone()
+        """, (q, f"%{q}%")).fetchone()
 
-    if r:
-        email_prefix = (r["advisor_id"] or r["advisor_name"].split()[0]).lower().replace(" ", ".")
-        suggested_email = f"{email_prefix}@msedcl.in"
-        inc_text = r["recent_incident"] or "No recent fatal incident on record."
-        
-        # Build intelligent pre-filled notice body
+        if not r:
+            return {"found": False}
+
+        adv_id = r["advisor_id"] or ""
+        adv_name = r["advisor_name"] or ""
+
+        # 2. Check prior warning records in warnings table
+        prior_warnings = con.execute("""
+            SELECT id, warning_type, issue_date, status
+            FROM warnings
+            WHERE (advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?
+            ORDER BY id ASC
+        """, (adv_id, f"%{adv_name}%")).fetchall()
+        prior_count = len(prior_warnings)
+
+        # 3. Retrieve evaluated call interaction for evidence
+        focus_tier = request.args.get("tier", "").strip()
+        if focus_tier == "Appreciation Letter":
+            latest_audit = con.execute("""
+                SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
+                FROM audits
+                WHERE ((advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?) AND is_fatal=0 AND quality_score >= 85
+                ORDER BY id DESC LIMIT 1
+            """, (adv_id, f"%{adv_name}%")).fetchone()
+        elif focus_tier:
+            latest_audit = con.execute("""
+                SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
+                FROM audits
+                WHERE ((advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?) AND (is_fatal=1 OR quality_score < 80)
+                ORDER BY id DESC LIMIT 1
+            """, (adv_id, f"%{adv_name}%")).fetchone()
+        else:
+            # Default: If advisor has any fatal or low score call, pull that as primary evidence for notice
+            latest_audit = con.execute("""
+                SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
+                FROM audits
+                WHERE ((advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?) AND (is_fatal=1 OR quality_score < 80)
+                ORDER BY id DESC LIMIT 1
+            """, (adv_id, f"%{adv_name}%")).fetchone()
+            
+            if not latest_audit:
+                latest_audit = con.execute("""
+                    SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
+                    FROM audits
+                    WHERE (advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?
+                    ORDER BY id DESC LIMIT 1
+                """, (adv_id, f"%{adv_name}%")).fetchone()
+
+    # 4. Determine status & tier
+    call_date = (latest_audit["call_date"] if latest_audit and latest_audit["call_date"] else "Recent Evaluation")
+    score = (latest_audit["quality_score"] if latest_audit and latest_audit["quality_score"] is not None else (r["avg_score"] or 0))
+    is_fatal = bool(latest_audit and latest_audit["is_fatal"])
+    is_fail = is_fatal or (score < 80)
+
+    # Clean observation points
+    obs_raw = (latest_audit["observation"] or "") if latest_audit else ""
+    err_raw = (latest_audit["error_categories"] or "") if latest_audit else ""
+    fatal_cat = (latest_audit["fatal_category"] or "Critical Failure") if latest_audit else ""
+
+    # Generate clean observation bullet points
+    bullets = []
+    if is_fatal:
+        bullets.append(f"Fatal Violation Identified: {fatal_cat}")
+    if err_raw:
+        for err_part in err_raw.split(","):
+            part = err_part.strip().rstrip(".")
+            if part and len(part) > 3:
+                bullets.append(f"Error category noted: {part}")
+    if obs_raw:
+        # Split into short sentences
+        sentences = [s.strip() for s in obs_raw.replace("\n", ". ").split(". ") if len(s.strip()) > 15]
+        for s in sentences[:3]:
+            bullets.append(s)
+    if not bullets:
+        bullets = ["Process deviation noted during standard call audit evaluation.", "Coaching required on active listening and accurate resolution."]
+
+    bullet_text = "\n".join(f"- {b}" for b in bullets)
+
+    email_prefix = (adv_id or adv_name.split()[0]).lower().replace(" ", ".")
+    suggested_email = f"{email_prefix}@msedcl.in"
+
+    # 5. Apply the 5 Official QA Templates
+    if not is_fail and score >= 90:
+        warning_type = "Appreciation Letter"
+        suggested_subject = f"Appreciation: Call Quality Evaluation - {call_date}"
         suggested_body = (
-            f"Dear {r['advisor_name']},\n\n"
-            f"This communication serves as formal quality feedback regarding your performance on recent customer interactions in the {r['department']} department.\n\n"
-            f"• Performance Summary:\n"
-            f"  - Total Evaluated Calls: {r['total_calls']}\n"
-            f"  - Average Quality Score: {r['avg_score']}%\n"
-            f"  - Fatal Infractions Recorded: {r['fatals'] or 0}\n"
-            f"  - Low Score Interactions (<80%): {r['low_calls'] or 0}\n"
-            f"  - Key Incident Reference: {inc_text}\n\n"
-            f"Please review the recorded observations with your Team Leader ({r['team_leader'] or 'Supervisory Team'}) and initiate corrective action within 7 operational days.\n\n"
+            f"Dear {adv_name},\n\n"
+            f"The Quality Team would like to appreciate your excellent call handling observed during the evaluation of your call dated {call_date}.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Employee Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Call Date: {call_date}\n"
+            f"- Status: Pass / Exceeds Expectations (Score: {score}%)\n\n"
+            f"During the interaction, you demonstrated:\n"
+            f"- Proper opening and verification process\n"
+            f"- Clear understanding of the consumer concern\n"
+            f"- Accurate process guidance and resolution\n"
+            f"- Professional communication and active listening\n\n"
+            f"Your effort in maintaining quality standards and providing a positive customer experience is highly appreciated. Keep up the good work and continue maintaining this performance in future calls.\n\n"
             f"Regards,\n"
-            f"MSEDCL Quality Assurance Management"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
         )
-        
-        return {
-            "found": True,
-            "advisor_name": r["advisor_name"],
-            "advisor_id": r["advisor_id"] or "",
-            "department": r["department"] or "Inbound",
-            "suggested_email": suggested_email,
-            "suggested_subject": f"MSEDCL Quality Assurance Notice - {r['advisor_name']} ({r['advisor_id'] or 'Staff'})",
-            "suggested_body": suggested_body,
-            "remarks": f"Total Calls: {r['total_calls']}, Avg: {r['avg_score']}%, Fatals: {r['fatals'] or 0}, Low Scores: {r['low_calls'] or 0}"
-        }
-    return {"found": False}
+    elif prior_count == 0:
+        warning_type = "First Warning"
+        suggested_subject = f"First Warning Letter: Call Quality Performance Concern - {call_date}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This email serves as your First Warning Letter regarding performance concerns and deviation from quality parameters observed during call evaluation.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Employee Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Call Date: {call_date}\n"
+            f"- Status: Fail (Score: {score}%)\n\n"
+            f"Call Observation Summary:\n"
+            f"During the interaction, the advisor attempted to assist the consumer; however, the following concerns were observed:\n"
+            f"{bullet_text}\n\n"
+            f"These observations indicate gaps in process adherence, communication clarity, and quality compliance.\n\n"
+            f"Areas of Required Improvement:\n"
+            f"- Follow the approved opening and closing scripts.\n"
+            f"- Complete mandatory verification steps (consumer name and registered mobile number).\n"
+            f"- Follow proper hold procedure and committed hold time.\n"
+            f"- Provide accurate and clear information to the consumer.\n"
+            f"- Maintain professional communication and call ownership.\n\n"
+            f"Important Notice:\n"
+            f"This is your First Official Warning. You are expected to demonstrate immediate improvement in call handling and quality parameters. Your upcoming calls will be closely monitored by the Quality Team. Continued deviation may result in further escalation as per company policy.\n\n"
+            f"Regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif prior_count == 1:
+        warning_type = "Second Warning"
+        suggested_subject = f"Second Warning Letter: Continued Call Quality Deviation - {call_date}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This email serves as your Second Warning Letter regarding continued deviation from defined call quality standards.\n\n"
+            f"Despite previous feedback and the warning issued earlier, the Quality Team observed similar gaps during the call evaluation conducted on {call_date}.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Employee Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Call Date: {call_date}\n"
+            f"- Status: Fail (Score: {score}%)\n\n"
+            f"Key Observations:\n"
+            f"{bullet_text}\n\n"
+            f"You are advised to strictly adhere to the defined call handling guidelines and quality parameters.\n\n"
+            f"Please treat this matter with urgency and ensure immediate improvement. Further non-compliance will lead to final escalation and disciplinary proceedings.\n\n"
+            f"Regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif prior_count == 2:
+        warning_type = "Final Warning"
+        suggested_subject = f"Final Warning Letter: Repeated Quality Standard Non-Compliance - {call_date}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This email serves as your Final Warning Letter regarding repeated quality performance concerns and non-compliance observed during call evaluation.\n\n"
+            f"Despite prior warnings and coaching sessions, your recent call evaluated on {call_date} continues to show critical deviations from mandatory quality standards.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Employee Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Call Date: {call_date}\n"
+            f"- Status: Fail (Score: {score}%)\n\n"
+            f"Call Observation Summary:\n"
+            f"During the evaluated call, the following concerns were identified:\n"
+            f"{bullet_text}\n\n"
+            f"The Quality Team has identified recurring gaps in:\n"
+            f"- Process adherence\n"
+            f"- Consumer verification\n"
+            f"- Hold procedure compliance\n"
+            f"- CRM updates and call ownership\n\n"
+            f"Important Notice:\n"
+            f"This is your Final Official Warning. You must ensure strict adherence to quality parameters, provide accurate information, and maintain professional call ownership.\n\n"
+            f"Please note that any further deviation from quality standards will result in immediate formal escalation to the Human Resources Department for a Performance Improvement Plan (PIP) or further disciplinary action up to and including termination of employment.\n\n"
+            f"Regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    else:
+        warning_type = "Performance Improvement Plan (PIP)"
+        suggested_subject = f"Official Notice: Placement on Performance Improvement Plan (PIP) - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"Following repeated quality non-compliance and the issuance of your prior warning notices, your call performance remains below acceptable organizational benchmarks.\n\n"
+            f"Consequently, this communication serves as formal notification that you are being placed on a Performance Improvement Plan (PIP).\n\n"
+            f"Summary of Performance History:\n"
+            f"- Prior Formal Warnings on Record: {prior_count}\n"
+            f"- Most Recent Evaluation: {call_date} (Status: Fail - Score: {score}%)\n\n"
+            f"Call Quality Observations:\n"
+            f"{bullet_text}\n\n"
+            f"PIP Terms & Expectations:\n"
+            f"1. Target Benchmark: Maintain a minimum average call quality score of 85.0% over the PIP duration.\n"
+            f"2. Compliance: Zero tolerance for process non-adherence, verification skips, or unauthorized dead air.\n"
+            f"3. Review Schedule: Weekly quality reviews will be conducted by the Quality Team and your Team Leader ({r['team_leader'] or 'Leadership'}).\n\n"
+            f"Failure to meet and sustain the performance expectations outlined in this PIP will lead to further disciplinary actions up to and including termination of employment.\n\n"
+            f"Please sign and return an acknowledged copy of this letter to HR.\n\n"
+            f"Regards,\n"
+            f"Human Resources & Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+
+    return {
+        "found": True,
+        "advisor_name": adv_name,
+        "advisor_id": adv_id,
+        "department": r["department"] or "Inbound",
+        "warning_type": warning_type,
+        "suggested_email": suggested_email,
+        "suggested_subject": suggested_subject,
+        "suggested_body": suggested_body,
+        "remarks": f"Prior Warnings: {prior_count}, Total Audits: {r['total_calls']}, Avg Score: {r['avg_score']}%, Fatals: {r['fatals'] or 0}"
+    }
 
 # --- Routes: Admin User Management ---
 @app.route("/admin/users")
@@ -1317,6 +1529,73 @@ def audit_logs():
         logs = con.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 500").fetchall()
     return render_template("audit_logs.html", page="audit_logs", logs=logs)
 
+# --- Admin Database Explorer Routes ---
+@app.route("/admin/database-explorer")
+@roles("admin")
+def db_explorer_view():
+    overview = db_explorer_service.get_db_overview()
+    active_table = request.args.get("table", "").strip()
+    active_schema = request.args.get("schema", "public").strip()
+    search = request.args.get("search", "").strip()
+    sort_col = request.args.get("sort", "").strip() or None
+    sort_dir = request.args.get("dir", "ASC").strip()
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 25, type=int)
+
+    # Default to first table if none selected
+    if not active_table and overview.get("tables_summary"):
+        first_tbl = overview["tables_summary"][0]
+        active_table = first_tbl["name"]
+        active_schema = first_tbl["schema"]
+
+    records_data = None
+    if active_table:
+        try:
+            records_data = db_explorer_service.get_table_records(
+                table_name=active_table,
+                schema_name=active_schema,
+                page=page,
+                per_page=per_page,
+                search=search,
+                sort_col=sort_col,
+                sort_dir=sort_dir
+            )
+        except Exception as e:
+            flash(f"Error reading table '{active_table}': {str(e)}", "error")
+
+    log_audit("VIEW_DB_EXPLORER", active_table or "overview", f"Schema: {active_schema}")
+    return render_template(
+        "db_explorer.html",
+        page="db_explorer",
+        overview=overview,
+        active_table=active_table,
+        records_data=records_data
+    )
+
+@app.route("/admin/database-explorer/export-csv")
+@roles("admin")
+def db_explorer_export_csv():
+    table = request.args.get("table", "").strip()
+    schema = request.args.get("schema", "public").strip()
+    search = request.args.get("search", "").strip()
+
+    if not table:
+        abort(400, "Table name required")
+
+    try:
+        csv_data = db_explorer_service.export_table_csv(table_name=table, schema_name=schema, search=search)
+        log_audit("EXPORT_TABLE_CSV", table, f"Exported CSV for schema: {schema}")
+        clean_filename = f"{table}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return Response(
+            csv_data,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={clean_filename}"}
+        )
+    except Exception as e:
+        flash(f"Failed to export CSV: {str(e)}", "error")
+        return redirect(url_for("db_explorer_view", table=table, schema=schema))
+
+
 @app.route("/admin/audits/purge", methods=["POST"])
 @roles("admin")
 def purge_uploaded_audits():
@@ -1359,6 +1638,120 @@ def admin_restart_system():
     threading.Thread(target=delayed_restart, daemon=True).start()
     return render_template("restarting.html")
 
+# --- Notification Management & Dispatch Center ---
+@app.route("/notifications")
+@login_required
+def notifications_view():
+    curr_user = request.current_user
+    with db() as con:
+        # Fetch notifications targeted to user, role, or broadcast to all
+        notifications = con.execute("""
+            SELECT id, user_id, target_role, title, message, notif_type, link_url, created_at, is_read, created_by
+            FROM notifications
+            WHERE (user_id = ? OR target_role = ? OR target_role = 'all' OR (target_role IS NULL AND user_id IS NULL))
+            ORDER BY id DESC LIMIT 100
+        """, (curr_user["id"], curr_user["role"])).fetchall()
+
+        unread_cnt = sum(1 for n in notifications if not n["is_read"])
+
+        # For admins/managers/quality, fetch list of active users to send notifications to
+        all_users = []
+        if curr_user["role"] in ("admin", "manager", "quality"):
+            all_users = con.execute("""
+                SELECT id, username, full_name, role, advisor_id 
+                FROM users 
+                WHERE active = 1 
+                ORDER BY role ASC, full_name ASC, username ASC
+            """).fetchall()
+
+    return render_template(
+        "notifications.html",
+        page="notifications",
+        notifications=notifications,
+        unread_count=unread_cnt,
+        all_users=all_users
+    )
+
+@app.route("/notifications/send", methods=["POST"])
+@roles("admin", "manager", "quality")
+def notification_send():
+    curr_user = request.current_user
+    title = request.form.get("title", "").strip()
+    message = request.form.get("message", "").strip()
+    target_scope = request.form.get("target_scope", "all").strip()
+    notif_type = request.form.get("notif_type", "info").strip()
+    link_url = request.form.get("link_url", "").strip() or None
+
+    if not title or not message:
+        flash("Notification title and message content are required.", "error")
+        return redirect(url_for("notifications_view"))
+
+    user_id = None
+    target_role = None
+
+    if target_scope == "all":
+        target_role = "all"
+    elif target_scope.startswith("role:"):
+        target_role = target_scope.split(":", 1)[1]
+    elif target_scope == "specific":
+        specific_uid = request.form.get("specific_user_id")
+        if not specific_uid:
+            flash("Please choose a specific user recipient.", "error")
+            return redirect(url_for("notifications_view"))
+        user_id = int(specific_uid)
+    else:
+        target_role = "all"
+
+    creator_name = (curr_user["full_name"] or curr_user["username"]) if "full_name" in curr_user.keys() else curr_user["username"]
+
+    with db() as con:
+        con.execute("""
+            INSERT INTO notifications (user_id, target_role, title, message, notif_type, link_url, is_read, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+        """, (user_id, target_role, title, message, notif_type, link_url, creator_name))
+        con.commit()
+
+    audience_desc = "all users" if target_scope == "all" else (f"role: {target_role}" if target_role else f"user #{user_id}")
+    log_audit("NOTIFICATION_SENT", "Notification", f"Notification '{title}' sent by {curr_user['username']} to {audience_desc}")
+    flash(f"Notification successfully broadcasted to {audience_desc}!", "success")
+    return redirect(url_for("notifications_view"))
+
+@app.route("/notifications/<int:notif_id>/read", methods=["POST"])
+@login_required
+def notification_mark_read(notif_id):
+    curr_user = request.current_user
+    with db() as con:
+        con.execute("""
+            UPDATE notifications 
+            SET is_read = 1 
+            WHERE id = ? AND (user_id = ? OR target_role = ? OR target_role = 'all' OR (target_role IS NULL AND user_id IS NULL))
+        """, (notif_id, curr_user["id"], curr_user["role"]))
+        con.commit()
+    return redirect(request.referrer or url_for("notifications_view"))
+
+@app.route("/notifications/mark-all-read", methods=["POST"])
+@login_required
+def notifications_mark_all_read():
+    curr_user = request.current_user
+    with db() as con:
+        con.execute("""
+            UPDATE notifications 
+            SET is_read = 1 
+            WHERE is_read = 0 AND (user_id = ? OR target_role = ? OR target_role = 'all' OR (target_role IS NULL AND user_id IS NULL))
+        """, (curr_user["id"], curr_user["role"]))
+        con.commit()
+    flash("All notifications marked as read.", "info")
+    return redirect(request.referrer or url_for("notifications_view"))
+
+@app.route("/notifications/<int:notif_id>/delete", methods=["POST"])
+@roles("admin", "manager")
+def notification_delete(notif_id):
+    with db() as con:
+        con.execute("DELETE FROM notifications WHERE id = ?", (notif_id,))
+        con.commit()
+    flash("Notification deleted successfully.", "info")
+    return redirect(url_for("notifications_view"))
+
 # --- Error Handlers ---
 @app.errorhandler(403)
 def forbidden(e):
@@ -1371,6 +1764,27 @@ def not_found(e):
 @app.errorhandler(413)
 def too_large(e):
     return f"<h2 style='font-family:sans-serif;'>413 Request Entity Too Large: File upload exceeds maximum limit ({MAX_UPLOAD_MB} MB).</h2>", 413
+
+@app.errorhandler(500)
+def internal_error(e):
+    import traceback
+    orig_error = getattr(e, "original_exception", e)
+    err_trace = traceback.format_exc()
+    print(f"[ERROR 500] Internal Server Error: {orig_error}\n{err_trace}", file=sys.stderr)
+    return """
+    <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:60px auto;padding:32px;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);border:1px solid #e2e8f0;">
+      <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+      <h2 style="color:#0f172a;margin:0 0 8px 0;font-size:20px;">500 · Internal Server Error</h2>
+      <p style="color:#64748b;font-size:14px;line-height:1.5;margin-bottom:20px;">
+        An unexpected error occurred while processing your request. The incident has been recorded in the application logs.
+      </p>
+      <div style="display:flex;gap:10px;">
+        <a href="/" style="display:inline-block;padding:8px 16px;background:#0284c7;color:#fff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;">Return to Dashboard</a>
+        <a href="/login" style="display:inline-block;padding:8px 16px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;">Sign In</a>
+      </div>
+    </div>
+    """, 500
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))

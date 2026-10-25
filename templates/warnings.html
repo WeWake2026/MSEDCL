@@ -57,12 +57,13 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>Warning / Action Type *</label>
+        <label>Communication / Action Tier *</label>
         <select name="warning_type" id="f_warning_type" class="form-control" required>
           <option value="First Warning">First Warning</option>
           <option value="Second Warning">Second Warning</option>
           <option value="Final Warning">Final Warning</option>
           <option value="Performance Improvement Plan (PIP)">Performance Improvement Plan (PIP)</option>
+          <option value="Appreciation Letter">Appreciation Letter (Pass / High Performance)</option>
           <option value="Quality Feedback Email">Quality Feedback Email</option>
           <option value="Coaching Notice">Coaching Notice</option>
           <option value="Other Authorized Communication">Other Authorized Communication</option>
@@ -146,12 +147,12 @@
           <td>{{ w.recipient_email or '—' }}</td>
           <td>
             <span class="badge {% if w.status=='Closed' %}badge-success{% elif w.status=='In Progress' %}badge-warning{% else %}badge-danger{% endif %}">
-              {{ w.status or 'Open' }}
+              {% if w.status=='Closed' %}✅ Closed{% elif w.status=='In Progress' %}⏳ In Progress{% else %}⚠️ Open{% endif %}
             </span>
           </td>
           <td>
             <span class="badge {% if w.email_status=='Sent' %}badge-success{% elif w.email_status=='Failed' %}badge-danger{% else %}badge-neutral{% endif %}">
-              {{ w.email_status }}
+              {% if w.email_status=='Sent' %}✉️ Sent{% elif w.email_status=='Failed' %}❌ Failed{% else %}📝 Draft{% endif %}
             </span>
             {% if w.sent_at %}<br><small style="color:var(--text-muted);">{{ w.sent_at }}</small>{% endif %}
           </td>
@@ -192,13 +193,17 @@
 
               <!-- Advisor Feedback Input Form (Only for the recipient advisor/viewer if not already closed) -->
               {% if user.role in ('viewer', 'advisor') and w.status != 'Closed' %}
-              <div style="margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px;">
-                <p style="font-size:12.5px;color:#1e40af;font-weight:600;margin-bottom:6px;">
-                  ✍️ Submit Your Feedback / Action Plan for this Notice:
-                </p>
+              <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+                  <span style="font-size:15px;">✍️</span>
+                  <strong style="font-size:13px;color:#1e293b;">Advisor Response &amp; Corrective Action Plan</strong>
+                </div>
+                <p style="font-size:11.5px;color:#64748b;margin:0 0 10px;">Please state your explanation, root-cause analysis, and agreed coaching steps for this notice.</p>
                 <form method="post" action="{{ url_for('warning_advisor_feedback', warning_id=w.id) }}">
-                  <textarea name="feedback" rows="3" class="form-control" style="font-family:inherit;margin-bottom:8px;" placeholder="Provide your comments, explanation, or agreed corrective steps..." required>{{ w.advisor_feedback or '' }}</textarea>
-                  <button type="submit" class="btn btn-primary btn-sm">Submit Feedback</button>
+                  <textarea name="feedback" rows="3" class="form-control" style="font-family:inherit;margin-bottom:10px;font-size:12.5px;line-height:1.5;padding:8px 10px;" placeholder="Provide your comments, explanation, or agreed corrective steps..." required>{{ w.advisor_feedback or '' }}</textarea>
+                  <div style="display:flex;justify-content:flex-end;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="font-weight:600;padding:6px 16px;">Submit Feedback</button>
+                  </div>
                 </form>
               </div>
               {% endif %}
@@ -247,6 +252,7 @@ function triggerAdvisorLookup() {
         document.getElementById('f_advisor_name').value = data.advisor_name;
         if (data.advisor_id) document.getElementById('f_advisor_id').value = data.advisor_id;
         if (data.department) document.getElementById('f_department').value = data.department;
+        if (data.warning_type) document.getElementById('f_warning_type').value = data.warning_type;
         if (data.suggested_email) document.getElementById('f_recipient_email').value = data.suggested_email;
         if (data.suggested_subject) document.getElementById('f_subject').value = data.suggested_subject;
         if (data.suggested_body) document.getElementById('f_body').value = data.suggested_body;

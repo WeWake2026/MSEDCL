@@ -1,0 +1,160 @@
+{% extends "layout.html" %}
+{% block title %}Notifications & Broadcasts · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Notification Management & Broadcast Center{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 16px;">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h3 class="card-title" style="display:flex; align-items:center; gap:8px;">
+        <span>🔔</span>
+        <span>Notification Center</span>
+        {% if unread_count > 0 %}
+          <span class="badge badge-danger">{{ unread_count }} Unread</span>
+        {% endif %}
+      </h3>
+      <p class="card-subtitle">View your alerts, targeted compliance notices, and call center broadcasts</p>
+    </div>
+    {% if unread_count > 0 %}
+    <form method="post" action="{{ url_for('notifications_mark_all_read') }}">
+      <button type="submit" class="btn btn-secondary btn-sm">✓ Mark All as Read</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Send New Notification / Broadcast (Management, Quality & Admin only) -->
+{% if user.role in ('admin', 'manager', 'quality') %}
+<div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--brand-blue);">
+  <div class="card-header">
+    <h3 class="card-title">Dispatch New Notification or Broadcast</h3>
+    <span class="card-subtitle">Send urgent updates, coaching guidance, or system announcements to specific users or all users</span>
+  </div>
+  <form method="post" action="{{ url_for('notification_send') }}">
+    <div class="filter-grid" style="grid-template-columns: 2fr 1fr 1fr;">
+      <div class="filter-group">
+        <label>Recipient Target Scope *</label>
+        <select name="target_scope" id="targetScopeSelect" class="form-control" onchange="handleTargetScopeChange(this.value)" required>
+          <option value="all">📢 Broadcast to All System Users</option>
+          <option value="role:advisor">👥 All Advisors & Viewers Only</option>
+          <option value="role:quality">🔍 Quality Team Members Only</option>
+          <option value="role:manager">🏢 Call Center Managers Only</option>
+          <option value="specific">👤 Specific Individual User Account</option>
+        </select>
+      </div>
+
+      <div class="filter-group" id="specificUserGroup" style="display:none;">
+        <label>Select Specific User *</label>
+        <select name="specific_user_id" id="specificUserId" class="form-control">
+          <option value="">-- Choose Account --</option>
+          {% for u in all_users %}
+          <option value="{{ u.id }}">{{ u.full_name or u.username }} ({{ u.role }}{% if u.advisor_id %} · {{ u.advisor_id }}{% endif %})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Alert Priority / Type *</label>
+        <select name="notif_type" class="form-control" required>
+          <option value="info">ℹ️ Informational (Blue)</option>
+          <option value="warning">⚠️ Quality Warning / Action (Amber)</option>
+          <option value="urgent">🚨 Urgent Compliance Alert (Red)</option>
+          <option value="success">🎉 Appreciation / Milestone (Green)</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Action Link (Optional URL)</label>
+        <input type="text" name="link_url" class="form-control" placeholder="e.g. /warnings or /audits/Outbound">
+      </div>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Notification Title *</label>
+      <input type="text" name="title" class="form-control" placeholder="e.g. Mandatory Outage Verification Script Update" required>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Message Content *</label>
+      <textarea name="message" rows="3" class="form-control" placeholder="Type the message body or coaching directives..." required style="font-family:inherit;"></textarea>
+    </div>
+
+    <div style="margin-top: 14px; display:flex; justify-content:flex-end;">
+      <button type="submit" class="btn btn-primary" style="font-weight:600; padding:8px 20px;">
+        🚀 Send Notification
+      </button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Notification Feed List -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Your Notification Feed ({{ notifications|length }})</h3>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:10px; padding: 4px 0;">
+    {% for n in notifications %}
+    <div style="padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); background: {% if not n.is_read %}var(--bg-card){% else %}var(--bg-card-subtle){% endif %}; border-left: 4px solid {% if n.notif_type == 'urgent' %}var(--brand-red){% elif n.notif_type == 'warning' %}var(--brand-amber){% elif n.notif_type == 'success' %}var(--brand-green){% else %}var(--brand-blue){% endif %}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+      <div style="flex:1;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+          {% if not n.is_read %}
+            <span class="badge badge-primary" style="font-size:9.5px; padding:1px 6px;">NEW</span>
+          {% endif %}
+          <strong style="font-size: 13.5px; color: var(--text-main);">{{ n.title }}</strong>
+          <span style="font-size: 11px; color: var(--text-muted);">{{ n.created_at }}</span>
+          {% if n.created_by %}
+            <span style="font-size: 10.5px; color: var(--text-muted); background: var(--border-light); padding:1px 6px; border-radius:4px;">By {{ n.created_by }}</span>
+          {% endif %}
+          {% if n.target_role %}
+            <span class="badge badge-neutral" style="font-size:9.5px;">Audience: {{ n.target_role|upper }}</span>
+          {% endif %}
+        </div>
+        <p style="font-size: 12.5px; color: var(--text-main); margin: 0 0 6px; line-height: 1.5; white-space:pre-wrap;">{{ n.message }}</p>
+        
+        {% if n.link_url %}
+        <div style="margin-top:6px;">
+          <a href="{{ n.link_url }}" class="btn btn-secondary btn-sm" style="font-size:11px; padding:3px 10px; text-decoration:none;">
+            🔗 Open Related Action &rarr;
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display:flex; align-items:center; gap:6px;">
+        {% if not n.is_read %}
+        <form method="post" action="{{ url_for('notification_mark_read', notif_id=n.id) }}">
+          <button type="submit" class="btn btn-secondary btn-sm" title="Mark as Read" style="padding:4px 8px; font-size:11.5px;">✓</button>
+        </form>
+        {% endif %}
+        {% if user.role in ('admin', 'manager') %}
+        <form method="post" action="{{ url_for('notification_delete', notif_id=n.id) }}" onsubmit="return confirm('Delete this notification?');">
+          <button type="submit" class="btn btn-secondary btn-sm" title="Delete" style="color:var(--brand-red); padding:4px 8px; font-size:11.5px;">🗑️</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+      <span style="font-size:32px; display:block; margin-bottom:8px;">🔕</span>
+      <p style="font-size:13px; margin:0;">No notifications in your inbox. You are completely caught up!</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+function handleTargetScopeChange(val) {
+  const specificGroup = document.getElementById('specificUserGroup');
+  const specificInput = document.getElementById('specificUserId');
+  if (val === 'specific') {
+    specificGroup.style.display = 'block';
+    specificInput.required = true;
+  } else {
+    specificGroup.style.display = 'none';
+    specificInput.required = false;
+  }
+}
+</script>
+{% endblock %}

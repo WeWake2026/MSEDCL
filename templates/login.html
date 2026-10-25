@@ -110,10 +110,15 @@
 
     <div style="margin-bottom:20px;">
       <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px;">Password</label>
-      <input type="password" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+      <div style="position:relative; display:flex; align-items:center;">
+        <input type="password" name="password" id="loginPasswordInput" class="form-control" placeholder="••••••••" required autocomplete="current-password" style="padding-right:38px;">
+        <button type="button" onclick="togglePasswordVisibility('loginPasswordInput', this)" title="Show/Hide Password" style="position:absolute; right:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; padding:2px; display:flex; align-items:center; outline:none;">
+          👁️
+        </button>
+      </div>
     </div>
 
-    <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px;">Sign In to Dashboard</button>
+    <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px; font-weight:600;">Sign In to Dashboard</button>
   </form>
 
   <p style="text-align:center; margin-top:22px; font-size:11.5px; color:var(--text-light);">
@@ -135,6 +140,18 @@
     if (icon) icon.innerText = theme === 'dark' ? '☀️' : '🌙';
   }
   document.addEventListener('DOMContentLoaded', updateThemeIcon);
+
+  function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.innerText = '🙈';
+    } else {
+      input.type = 'password';
+      btn.innerText = '👁️';
+    }
+  }
 </script>
 
 </body>

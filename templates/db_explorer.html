@@ -1,0 +1,239 @@
+{% extends "layout.html" %}
+{% block title %}Database Explorer · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Database Explorer & Schema Browser{% endblock %}
+
+{% block content %}
+<div class="db-explorer-container">
+  
+  <!-- Top Connection Health & Engine Card -->
+  <div class="card" style="margin-bottom: 12px; padding: 12px 16px;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; padding-bottom:6px;">
+      <div>
+        <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size:14px;">
+          <span>🗄️ Database Architecture & Storage Status</span>
+          {% if overview.connected %}
+            <span class="badge" style="background:#dcfce7; color:#166534; font-size:11px; font-weight:700;">● Connected</span>
+          {% else %}
+            <span class="badge" style="background:#fee2e2; color:#991b1b; font-size:11px; font-weight:700;">● Disconnected</span>
+          {% endif %}
+        </h3>
+        <span class="card-subtitle" style="font-size:11px;">Centralized Engine, Schema Introspection & Admin Records Browser</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('db_explorer_view') }}" class="btn btn-secondary btn-sm" style="font-size:12px;">🔄 Refresh Status</a>
+      </div>
+    </div>
+
+    <!-- Diagnostic Details Grid -->
+    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); padding:10px 14px; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:6px; gap:8px;">
+      <div>
+        <small style="color:var(--text-muted); display:block; font-size:10.5px; font-weight:600; text-transform:uppercase;">Storage Engine</small>
+        <strong style="color:var(--primary); font-size:13.5px;">{{ overview.engine }}</strong>
+      </div>
+      <div>
+        <small style="color:var(--text-muted); display:block; font-size:10.5px; font-weight:600; text-transform:uppercase;">Active Database</small>
+        <strong style="font-size:13px; font-family:monospace; color:#334155;">{{ overview.database_name or 'Default' }}</strong>
+      </div>
+      <div>
+        <small style="color:var(--text-muted); display:block; font-size:10.5px; font-weight:600; text-transform:uppercase;">Server Version</small>
+        <span style="font-size:12px; color:#475569;">{{ overview.server_version }}</span>
+      </div>
+      <div>
+        <small style="color:var(--text-muted); display:block; font-size:10.5px; font-weight:600; text-transform:uppercase;">Total Tables / Views</small>
+        <span style="font-size:13px; font-weight:700; color:#0f172a;">{{ overview.total_tables }} Tables / {{ overview.total_views }} Views</span>
+      </div>
+    </div>
+
+    {% if overview.error %}
+      <div style="padding:10px 14px; background:#fff1f2; color:#9f1239; font-size:12px; border-bottom:1px solid #fecdd3; border-radius:4px; margin-top:8px;">
+        <strong>⚠️ Connection Notice:</strong> {{ overview.error }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Layout: Left Sidebar (Table List) + Right Content (Records & Schema) -->
+  <div style="display: grid; grid-template-columns: 240px 1fr; gap: 12px; align-items: start;">
+    
+    <!-- Table Navigator Panel -->
+    <div class="card" style="padding: 12px;">
+      <h4 style="font-size:11.5px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:8px; font-weight:700;">
+        Accessible Tables ({{ overview.tables_summary|length }})
+      </h4>
+      <div style="max-height: 480px; overflow-y: auto; display:flex; flex-direction:column; gap:2px;">
+        {% for tbl in overview.tables_summary %}
+          <a href="{{ url_for('db_explorer_view', table=tbl.name, schema=tbl.schema) }}" 
+             style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-radius:5px; text-decoration:none; font-size:12.5px; font-weight:{{ '700' if active_table == tbl.name else '500' }}; background:{{ '#eff6ff' if active_table == tbl.name else 'transparent' }}; color:{{ '#1d4ed8' if active_table == tbl.name else 'var(--text-main)' }}; border:1px solid {{ '#bfdbfe' if active_table == tbl.name else 'transparent' }}; transition:all 0.15s ease;">
+            <div style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span style="font-size:12px;">{{ '📋' if tbl.type == 'Table' else '👁️' }}</span>
+              <span style="overflow:hidden; text-overflow:ellipsis;">{{ tbl.name }}</span>
+            </div>
+            <span class="badge" style="font-size:10px; padding:1px 6px; background:{{ '#dbeafe' if active_table == tbl.name else '#f1f5f9' }}; color:{{ '#1e40af' if active_table == tbl.name else '#64748b' }};">
+              {{ tbl.row_count }}
+            </span>
+          </a>
+        {% else %}
+          <div style="color:var(--text-muted); font-size:13px; padding:12px; text-align:center;">No accessible tables discovered.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right Panel: Active Table Browser & Records -->
+    <div>
+      {% if active_table and records_data %}
+        <div class="card" style="margin-bottom: 12px; padding: 0; overflow:hidden;">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding: 10px 14px; margin-bottom:0;">
+            <div>
+              <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size:13.5px;">
+                <span>Table: <code>{{ active_table }}</code></span>
+                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:11px;">{{ records_data.total_rows }} Records</span>
+              </h3>
+              <span class="card-subtitle" style="font-size:10.5px;">Server-side paginated viewer with automatic sensitive-field redaction</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <a href="{{ url_for('db_explorer_export_csv', table=active_table, schema=records_data.schema, search=records_data.search) }}" 
+                 class="btn btn-secondary btn-sm" style="font-size:11.5px; display:flex; align-items:center; gap:5px;">
+                <span>📥 Export Table CSV</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Search and Filter Bar -->
+          <div style="padding: 8px 14px; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+            <form method="get" action="{{ url_for('db_explorer_view') }}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input type="hidden" name="table" value="{{ active_table }}">
+              <input type="hidden" name="schema" value="{{ records_data.schema }}">
+              <div style="flex:1; min-width:180px;">
+                <input type="text" name="search" value="{{ records_data.search }}" placeholder="Search across all columns..." class="form-control" style="font-size:12px; padding:5px 10px;">
+              </div>
+              <div style="display:flex; align-items:center; gap:5px;">
+                <label style="font-size:11px; color:var(--text-muted); margin:0;">Rows/page:</label>
+                <select name="per_page" class="form-control" style="width:75px; font-size:12px; padding:4px 6px;" onchange="this.form.submit()">
+                  <option value="15" {{ 'selected' if records_data.per_page == 15 else '' }}>15</option>
+                  <option value="25" {{ 'selected' if records_data.per_page == 25 else '' }}>25</option>
+                  <option value="50" {{ 'selected' if records_data.per_page == 50 else '' }}>50</option>
+                  <option value="100" {{ 'selected' if records_data.per_page == 100 else '' }}>100</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm" style="font-size:12px;">Filter</button>
+              {% if records_data.search %}
+                <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema) }}" class="btn btn-secondary btn-sm" style="font-size:12px;">Clear</a>
+              {% endif %}
+            </form>
+          </div>
+
+          <!-- Records Table -->
+          <div class="table-responsive" style="max-height: 400px; overflow: auto; border:none; border-radius:0;">
+            <table class="table" style="width:100%; margin:0; font-size:12px;">
+              <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                <tr>
+                  {% for col in records_data.columns %}
+                    <th style="padding:6px 10px; border-bottom:2px solid var(--border); white-space:nowrap; font-size:11px;">
+                      <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema, search=records_data.search, per_page=records_data.per_page, sort=col.name, dir='DESC' if records_data.sort_col == col.name and records_data.sort_dir == 'ASC' else 'ASC') }}" 
+                         style="color:var(--text-main); text-decoration:none; display:flex; align-items:center; gap:4px;">
+                        <span>{{ col.name }}</span>
+                        {% if col.is_pk %}
+                          <span style="font-size:9.5px; background:#dbeafe; color:#1e40af; padding:1px 3px; border-radius:3px;">PK</span>
+                        {% endif %}
+                        {% if records_data.sort_col == col.name %}
+                          <span style="font-size:10px; color:var(--primary);">{{ '▲' if records_data.sort_dir == 'ASC' else '▼' }}</span>
+                        {% endif %}
+                      </a>
+                    </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in records_data.records %}
+                  <tr>
+                    {% for col in records_data.columns %}
+                      <td style="padding:5px 10px; border-bottom:1px solid var(--border-light); white-space:nowrap; max-width:240px; overflow:hidden; text-overflow:ellipsis;">
+                        {% set val = row[col.name] %}
+                        {% if val is none %}
+                          <span style="color:#94a3b8; font-style:italic;">NULL</span>
+                        {% elif col.is_sensitive %}
+                          <span style="color:#e11d48; font-family:monospace; font-size:11px; font-weight:600;">{{ val }}</span>
+                        {% else %}
+                          <span>{{ val }}</span>
+                        {% endif %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="{{ records_data.columns|length }}" style="text-align:center; padding:20px; color:var(--text-muted);">
+                      No matching records found.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:#f8fafc; border-top:1px solid var(--border); flex-wrap:wrap; gap:8px;">
+            <div style="font-size:11.5px; color:var(--text-muted);">
+              Page <strong>{{ records_data.page }}</strong> of <strong>{{ records_data.total_pages }}</strong> ({{ records_data.total_rows }} total rows)
+            </div>
+            <div style="display:flex; gap:5px;">
+              {% if records_data.page > 1 %}
+                <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema, page=records_data.page - 1, per_page=records_data.per_page, search=records_data.search, sort=records_data.sort_col, dir=records_data.sort_dir) }}" class="btn btn-secondary btn-sm" style="font-size:11px; padding:3px 8px;">&laquo; Prev</a>
+              {% endif %}
+              
+              {% if records_data.page < records_data.total_pages %}
+                <a href="{{ url_for('db_explorer_view', table=active_table, schema=records_data.schema, page=records_data.page + 1, per_page=records_data.per_page, search=records_data.search, sort=records_data.sort_col, dir=records_data.sort_dir) }}" class="btn btn-secondary btn-sm" style="font-size:11px; padding:3px 8px;">Next &raquo;</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Column & Index Structure Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📐 Schema Structure: <code>{{ active_table }}</code></h3>
+            <span class="card-subtitle">Column datatypes, constraints, nullable flags, and indexes</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table" style="width:100%; font-size:13px; margin:0;">
+              <thead>
+                <tr style="background:#f8fafc;">
+                  <th style="padding:8px 12px;">Column Name</th>
+                  <th style="padding:8px 12px;">Data Type</th>
+                  <th style="padding:8px 12px;">Nullable</th>
+                  <th style="padding:8px 12px;">Key</th>
+                  <th style="padding:8px 12px;">Default</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for col in records_data.columns %}
+                  <tr>
+                    <td style="padding:8px 12px; font-weight:600; font-family:monospace;">{{ col.name }}</td>
+                    <td style="padding:8px 12px; color:var(--text-muted); font-family:monospace;">{{ col.type }}</td>
+                    <td style="padding:8px 12px;">{{ 'YES' if col.nullable else 'NO' }}</td>
+                    <td style="padding:8px 12px;">
+                      {% if col.is_pk %}
+                        <span class="badge" style="background:#dbeafe; color:#1e40af; font-size:11px;">PRIMARY KEY</span>
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td style="padding:8px 12px; color:var(--text-muted); font-family:monospace;">{{ col.default or '-' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="card" style="padding: 40px; text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 12px;">👈</div>
+          <h3 style="margin-bottom: 6px;">Select a Table to Inspect</h3>
+          <p style="color:var(--text-muted); max-width:440px; margin:0 auto; font-size:13.5px;">
+            Choose any database table or view from the left navigation panel to view its metadata, browse live paginated records, or export records to CSV.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

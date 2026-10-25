@@ -148,3 +148,21 @@ CREATE TABLE IF NOT EXISTS system_settings (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_by VARCHAR(100) NOT NULL
 );
+
+-- 8. Create Notifications Table (Targeted & Broadcast Alerts)
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    target_role VARCHAR(50),
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    notif_type VARCHAR(50) DEFAULT 'info',
+    link_url VARCHAR(255),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_read SMALLINT DEFAULT 0,
+    created_by VARCHAR(100)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications (user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_role_read ON notifications (target_role, is_read);
+

@@ -22,7 +22,7 @@
       
       const savedSidebar = localStorage.getItem('msedcl_sidebar_collapsed');
       if (savedSidebar === 'true' && window.innerWidth > 768) {
-        document.documentElement.classList.add('preload-collapsed');
+        document.documentElement.classList.add('sidebar-collapsed');
       }
     })();
   </script>
@@ -71,6 +71,13 @@
         </a>
 
         <div class="nav-section-title">My Actions & Records</div>
+        <a href="{{ url_for('notifications_view') }}" class="nav-item {{ 'active' if page=='notifications' else '' }}" title="Notifications">
+          <span class="icon">🔔</span>
+          <span>Notifications</span>
+          {% if unread_notif_count and unread_notif_count > 0 %}
+          <span class="badge badge-danger" style="margin-left:auto;font-size:10px;padding:1px 6px;">{{ unread_notif_count }}</span>
+          {% endif %}
+        </a>
         <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}" title="Warnings & PIP">
           <span class="icon">✉️</span>
           <span>Warnings & PIP</span>
@@ -78,6 +85,10 @@
         <a href="{{ url_for('export_center') }}" class="nav-item {{ 'active' if page=='exports' else '' }}" title="Export Center">
           <span class="icon">📥</span>
           <span>Export Center</span>
+        </a>
+        <a href="{{ url_for('bill_calculator') }}" class="nav-item {{ 'active' if page=='calculator' else '' }}" title="Bill Calculator">
+          <span class="icon">⚡</span>
+          <span>Bill Calculator</span>
         </a>
       {% else %}
         <!-- Full Operations Menu for Management & Quality Team -->
@@ -112,8 +123,19 @@
           <span class="icon">🔍</span>
           <span>Advisor Search</span>
         </a>
+        <a href="{{ url_for('bill_calculator') }}" class="nav-item {{ 'active' if page=='calculator' else '' }}" title="Bill Calculator">
+          <span class="icon">⚡</span>
+          <span>Bill Calculator</span>
+        </a>
 
         <div class="nav-section-title">GOVERNANCE & ACTIONS</div>
+        <a href="{{ url_for('notifications_view') }}" class="nav-item {{ 'active' if page=='notifications' else '' }}" title="Notifications & Broadcasts">
+          <span class="icon">🔔</span>
+          <span>Notifications</span>
+          {% if unread_notif_count and unread_notif_count > 0 %}
+          <span class="badge badge-danger" style="margin-left:auto;font-size:10px;padding:1px 6px;">{{ unread_notif_count }}</span>
+          {% endif %}
+        </a>
         <a href="{{ url_for('warnings') }}" class="nav-item {{ 'active' if page=='warnings' else '' }}" title="Warnings & PIP">
           <span class="icon">➕</span>
           <span>Warnings & PIP</span>
@@ -140,6 +162,10 @@
         <a href="{{ url_for('settings_page') }}" class="nav-item {{ 'active' if page=='settings' else '' }}" title="Settings">
           <span class="icon">⚙️</span>
           <span>Settings</span>
+        </a>
+        <a href="{{ url_for('db_explorer_view') }}" class="nav-item {{ 'active' if page=='db_explorer' else '' }}" title="Database Explorer">
+          <span class="icon">🗄️</span>
+          <span>Database Explorer</span>
         </a>
         <a href="{{ url_for('audit_logs') }}" class="nav-item {{ 'active' if page=='audit_logs' else '' }}" title="Audit Logs">
           <span class="icon">📋</span>
@@ -182,28 +208,45 @@
       </div>
       
       <div class="topbar-right">
-        <!-- Notification Bell with Count Badge (Screenshot shows red 3 badge) -->
+        <!-- Notification Bell with Dynamic Count Badge -->
         <div class="notification-wrapper" style="position:relative;">
           <button type="button" onclick="toggleNotifications()" id="notifBellBtn" title="Notifications" style="background:none;border:none;cursor:pointer;position:relative;font-size:18px;display:flex;align-items:center;">
             <span>🔔</span>
-            <span style="position:absolute;top:-4px;right:-4px;background:var(--brand-red);color:#fff;font-size:9.5px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">3</span>
+            {% if unread_notif_count and unread_notif_count > 0 %}
+            <span style="position:absolute;top:-4px;right:-4px;background:var(--brand-red);color:#fff;font-size:9.5px;font-weight:700;min-width:16px;height:16px;padding:0 3px;border-radius:50%;display:flex;align-items:center;justify-content:center;">{{ unread_notif_count if unread_notif_count < 100 else '99+' }}</span>
+            {% endif %}
           </button>
           
           <!-- Dropdown -->
-          <div id="notifDropdown" class="notif-dropdown" style="display:none;position:absolute;top:38px;right:0;width:290px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;padding:12px;">
+          <div id="notifDropdown" class="notif-dropdown" style="display:none;position:absolute;top:38px;right:0;width:310px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light);padding-bottom:8px;margin-bottom:8px;">
               <strong style="font-size:12.5px;color:var(--text-main);">Notifications</strong>
-              <span class="badge badge-info" style="font-size:10px;">Live QA</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                {% if unread_notif_count and unread_notif_count > 0 %}
+                  <span class="badge badge-danger" style="font-size:10px;">{{ unread_notif_count }} New</span>
+                {% endif %}
+                <a href="{{ url_for('notifications_view') }}" style="font-size:11px;color:var(--brand-blue);text-decoration:none;font-weight:600;">View All</a>
+              </div>
             </div>
-            <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;">
-              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--brand-green);">
-                <strong style="color:var(--text-main);display:block;">Data Store Connected</strong>
-                <span>SQLite database online and syncing.</span>
-              </div>
-              <div style="padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid var(--brand-amber);">
-                <strong style="color:var(--text-main);display:block;">Quality Alerts</strong>
-                <span>Threshold monitoring active for calls below 80%.</span>
-              </div>
+            <div style="font-size:12px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;">
+              {% if topbar_notifications %}
+                {% for n in topbar_notifications %}
+                <a href="{{ url_for('notifications_view') }}" style="text-decoration:none;padding:6px 8px;background:var(--bg-card-subtle);border-radius:6px;border-left:3px solid {% if n.notif_type == 'urgent' %}var(--brand-red){% elif n.notif_type == 'warning' %}var(--brand-amber){% elif n.notif_type == 'success' %}var(--brand-green){% else %}var(--brand-blue){% endif %};display:block;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <strong style="color:var(--text-main);font-size:12px;">{{ n.title }}</strong>
+                    {% if not n.is_read %}<span style="color:var(--brand-red);font-size:9px;font-weight:700;">●</span>{% endif %}
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ n.message }}</span>
+                </a>
+                {% endfor %}
+              {% else %}
+                <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11.5px;">
+                  No notifications yet.
+                </div>
+              {% endif %}
+            </div>
+            <div style="border-top:1px solid var(--border-light);padding-top:8px;margin-top:8px;text-align:center;">
+              <a href="{{ url_for('notifications_view') }}" class="btn btn-secondary btn-sm" style="width:100%;font-size:11px;padding:4px 0;display:block;text-align:center;">Open Notification Center</a>
             </div>
           </div>
         </div>

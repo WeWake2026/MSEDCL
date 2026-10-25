@@ -3,16 +3,17 @@
 {% block heading %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="card">
-  <form method="get" class="filter-grid">
+<!-- Compact Filter Bar -->
+<div class="card" style="margin-bottom: 12px; padding: 10px 14px;">
+  <form method="get" class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px;">
     <div class="filter-group">
-      <label>Search Advisor / Employee ID / Remarks</label>
-      <input type="text" name="q" value="{{ q }}" placeholder="Search query..." class="form-control">
+      <label>Search Advisor / Emp ID / Call ID</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Type keywords..." class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
     {% if not fixed_dept %}
     <div class="filter-group">
       <label>Department</label>
-      <select name="department" class="form-control">
+      <select name="department" class="form-control" style="padding: 5px 8px; font-size: 12px;">
         <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
         <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound</option>
         <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound</option>
@@ -22,7 +23,7 @@
     {% if show_score_filter %}
     <div class="filter-group">
       <label>Score Bracket</label>
-      <select name="score_band" class="form-control">
+      <select name="score_band" class="form-control" style="padding: 5px 8px; font-size: 12px;">
         <option value="All" {{ 'selected' if score_band=='All' else '' }}>All Scores</option>
         <option value="Low" {{ 'selected' if score_band=='Low' else '' }}>Low (&lt; 80%)</option>
         <option value="Mid" {{ 'selected' if score_band=='Mid' else '' }}>Average (80% - 90%)</option>
@@ -32,93 +33,195 @@
     {% endif %}
     <div class="filter-group">
       <label>From Date</label>
-      <input type="date" name="start" value="{{ start }}" class="form-control">
+      <input type="date" name="start" value="{{ start }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
     <div class="filter-group">
       <label>To Date</label>
-      <input type="date" name="end" value="{{ end }}" class="form-control">
+      <input type="date" name="end" value="{{ end }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
-    <div style="display:flex;gap:8px;">
-      <button type="submit" class="btn btn-primary" style="flex:1;">Filter</button>
-      <a href="?" class="btn btn-secondary">Reset</a>
+    <div style="display:flex; gap:6px; align-items:flex-end;">
+      <button type="submit" class="btn btn-primary btn-sm" style="flex:1; height: 31px; font-size: 12px;">Apply Filter</button>
+      <a href="?" class="btn btn-secondary btn-sm" style="height: 31px; font-size: 12px; line-height: 20px;">Reset</a>
     </div>
   </form>
 </div>
 
-<div class="card">
-  <div class="card-header">
+<!-- Audits Data Card -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 12px;">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding: 10px 14px; margin-bottom: 0; background: #fff; border-bottom: 1px solid var(--border);">
     <div>
-      <h3 class="card-title">Audit Records ({{ rows|length }} Matches)</h3>
-      <p class="card-subtitle">{{ subtitle }}</p>
+      <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 13.5px;">
+        <span>Audited Interactions</span>
+        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size: 11px;">{{ rows|length }} Records</span>
+      </h3>
+      <p class="card-subtitle" style="margin:1px 0 0; font-size: 11px; color:var(--text-muted);">{{ subtitle }}</p>
     </div>
-    <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Options</a>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="badge badge-neutral" style="font-size: 10.5px;">Scroll horizontally for complete metrics</span>
+      <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px;">📥 Export Reports</a>
+    </div>
   </div>
-  <div class="table-responsive">
-    <table class="data-table">
+
+  <div class="table-responsive" style="max-height: 540px; overflow: auto; border:none; border-radius:0;">
+    <table class="data-table" style="width:100%;">
       <thead>
         <tr>
-          <th>Call ID</th>
-          <th>Date</th>
-          <th>Dept</th>
-          <th>Advisor Name / ID</th>
-          <th>Team Leader</th>
-          <th>Auditor</th>
-          <th>Quality Score</th>
-          <th>Fatal Status</th>
-          <th>Fatal Category</th>
-          <th>Error Categories</th>
-          <th>Observation & Feedback</th>
-          <th>Call Recording</th>
+          <th style="width: 140px;">Call Reference</th>
+          <th style="width: 170px;">Advisor</th>
+          <th style="width: 140px;">Leadership & Audit</th>
+          <th style="width: 100px; text-align: center;">Quality Score</th>
+          <th style="width: 110px; text-align: center;">Fatal Status</th>
+          <th style="min-width: 220px;">Area of Improvement</th>
+          <th style="width: 140px;">Audio</th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
         <tr>
-          <td><strong>{{ r.call_id or '—' }}</strong></td>
-          <td>{{ r.call_date or r.evaluation_date or '—' }}</td>
-          <td><span class="badge badge-neutral">{{ r.department }}</span></td>
+          <!-- Dense Col 1: Call Reference & Dates -->
           <td>
-            <strong>{{ r.advisor_name }}</strong><br>
-            <span class="badge badge-neutral"><a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" style="text-decoration:none;color:inherit;">{{ r.advisor_id or '—' }}</a></span>
+            <div class="dense-cell">
+              <span class="dense-primary" style="font-family:monospace; color:#1e293b;">{{ r.call_id or 'ID: —' }}</span>
+              <div class="dense-secondary">
+                <span>📅 {{ r.call_date or r.evaluation_date or '—' }}</span>
+                <span class="badge badge-neutral" style="font-size:9px; padding:0 4px;">{{ r.department }}</span>
+              </div>
+            </div>
           </td>
-          <td>{{ r.team_leader or '—' }}</td>
-          <td>{{ r.auditor_name or '—' }}</td>
+
+          <!-- Dense Col 2: Advisor Name & Emp ID -->
           <td>
-            <strong style="font-size:14px; {% if r.quality_score < 80 %}color:var(--danger);{% elif r.quality_score > 90 %}color:var(--success);{% else %}color:var(--info);{% endif %}">
-              {{ r.quality_score }}%
-            </strong>
+            <div class="dense-cell">
+              <span class="dense-primary">{{ r.advisor_name }}</span>
+              <div class="dense-secondary">
+                <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="dense-pill" style="text-decoration:none;">
+                  ID: {{ r.advisor_id or '—' }}
+                </a>
+              </div>
+            </div>
           </td>
+
+          <!-- Dense Col 3: Team Leader & Evaluator -->
           <td>
-            {% if r.is_fatal %}
-              <span class="badge badge-danger">FATAL</span>
+            <div class="dense-cell">
+              <div class="dense-secondary" style="color:var(--text-main);">
+                <strong style="color:var(--text-muted); font-size:10px;">TL:</strong> {{ r.team_leader or '—' }}
+              </div>
+              <div class="dense-secondary">
+                <strong style="color:var(--text-muted); font-size:10px;">QA:</strong> {{ r.auditor_name or '—' }}
+              </div>
+            </div>
+          </td>
+
+          <!-- Dense Col 4: Quality Score -->
+          <td style="text-align: center;">
+            {% if r.quality_score is not none %}
+              {% if r.quality_score < 80 %}
+                <span class="badge badge-danger" style="font-size:11px; font-weight:700; padding:2px 8px;">{{ r.quality_score }}%</span>
+              {% elif r.quality_score >= 90 %}
+                <span class="badge badge-success" style="font-size:11px; font-weight:700; padding:2px 8px;">{{ r.quality_score }}%</span>
+              {% else %}
+                <span class="badge badge-info" style="font-size:11px; font-weight:700; padding:2px 8px;">{{ r.quality_score }}%</span>
+              {% endif %}
             {% else %}
-              <span class="badge badge-neutral">No</span>
+              <span style="color:#94a3b8;">—</span>
             {% endif %}
           </td>
-          <td><span style="color:var(--danger);font-weight:600;">{{ r.fatal_category or '—' }}</span></td>
-          <td>{{ r.error_categories or '—' }}</td>
-          <td style="max-width:320px;min-width:220px;white-space:normal;word-break:break-word;line-height:1.45;color:var(--text-main);">
-            {{ r.observation or '—' }}
+
+          <!-- Dense Col 5: Fatal Status & Category -->
+          <td style="text-align: center;">
+            <div class="dense-cell" style="align-items: center;">
+              {% if r.is_fatal %}
+                <span class="badge badge-danger" style="font-weight:700; font-size:9.5px; padding:1px 6px;">FATAL</span>
+                <span style="font-size:10px; color:var(--danger); font-weight:600; text-align:center; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  {{ r.fatal_category or 'Uncategorized' }}
+                </span>
+              {% else %}
+                <span class="badge badge-neutral" style="font-size:9.5px; color:#64748b; padding:1px 6px;">Non-Fatal</span>
+              {% endif %}
+            </div>
           </td>
+
+          <!-- Col 6: Area of Improvement -->
+          <td>
+            <span style="font-size:11px; color:#475569; display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.error_categories or r.observation or 'None' }}">
+              {{ r.error_categories or r.observation or '—' }}
+            </span>
+          </td>
+
+          <!-- Dense Col 8: Audio Player (Enterprise Audio Pill Widget) -->
           <td>
             {% if r.audio_url %}
-              <div style="display:flex;align-items:center;gap:6px;">
-                <audio controls preload="none" style="height:32px;width:170px;">
+              <div class="audio-pill-widget">
+                <audio id="audio_{{ r.id }}" preload="none">
                   <source src="{{ r.audio_url }}" type="audio/mpeg">
-                  Your browser does not support audio.
                 </audio>
-                <a href="{{ r.audio_url }}" target="_blank" title="Open audio stream in new tab" style="font-size:14px;text-decoration:none;">🔗</a>
+                <button type="button" class="audio-play-btn" onclick="toggleAudioPill('audio_{{ r.id }}', this)" title="Play / Pause Call Recording">
+                  ▶
+                </button>
+                <span class="audio-pill-time" id="time_audio_{{ r.id }}">Call Audio</span>
+                <a href="{{ r.audio_url }}" target="_blank" class="audio-pill-link" title="Open in new tab">🔗</a>
               </div>
             {% else %}
-              <span style="color:var(--text-light);font-size:11.5px;">No Audio</span>
+              <span style="color:#94a3b8; font-size:10.5px;">No Audio</span>
             {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--text-muted);">No audit interactions match the current filter criteria.</td></tr>
+        <tr>
+          <td colspan="{{ 7 if user.role in ('viewer', 'advisor') else 8 }}" style="text-align:center; padding:24px; color:var(--text-muted); font-size:12.5px;">
+            No audit interactions match the current filter criteria.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
 </div>
+
+<script>
+let activeAudio = null;
+let activeBtn = null;
+
+function toggleAudioPill(audioId, btn) {
+  const audio = document.getElementById(audioId);
+  if (!audio) return;
+
+  if (activeAudio && activeAudio !== audio) {
+    activeAudio.pause();
+    if (activeBtn) activeBtn.innerText = '▶';
+  }
+
+  const timeSpan = document.getElementById('time_' + audioId);
+
+  if (audio.paused) {
+    audio.play().then(() => {
+      btn.innerText = '⏸';
+      activeAudio = audio;
+      activeBtn = btn;
+    }).catch(err => {
+      console.warn("Audio playback failed:", err);
+      window.open(audio.querySelector('source').src, '_blank');
+    });
+
+    audio.ontimeupdate = () => {
+      if (timeSpan && audio.duration) {
+        const curM = Math.floor(audio.currentTime / 60);
+        const curS = Math.floor(audio.currentTime % 60).toString().padStart(2, '0');
+        const durM = Math.floor(audio.duration / 60);
+        const durS = Math.floor(audio.duration % 60).toString().padStart(2, '0');
+        timeSpan.innerText = `${curM}:${curS} / ${durM}:${durS}`;
+      }
+    };
+
+    audio.onended = () => {
+      btn.innerText = '▶';
+      if (timeSpan) timeSpan.innerText = 'Call Audio';
+    };
+  } else {
+    audio.pause();
+    btn.innerText = '▶';
+  }
+}
+</script>
 {% endblock %}
+

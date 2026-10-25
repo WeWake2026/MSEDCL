@@ -14,12 +14,22 @@ env/
 .env.local
 *.env
 
-# SQLite local databases and backups
+# SQLite and PostgreSQL local databases and backups
 *.db
 *.db.bak
+*.db.pre_upgrade_backup
 *.sqlite
 *.sqlite3
+*.sql.gz
+*.dump
+dump_*.sql
 quality_audit_archive.db
+
+# Secrets, certificates, and private keys
+*.pem
+*.key
+*.pfx
+*.cert
 
 # Temporary directories and exports
 exports_temp/

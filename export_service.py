@@ -205,6 +205,19 @@ def build_export_datasets(con, start_date=None, end_date=None, department=None, 
         "Import History": imports_df
     }
 
+def sanitize_for_export(df):
+    """
+    Sanitize dataframe string columns to neutralize formula injection (CWE-1236).
+    Prepends single quote if string starts with =, +, -, @, \\t, or \\r.
+    """
+    safe_df = df.copy()
+    for col in safe_df.columns:
+        if safe_df[col].dtype in (object, "string", "str") or str(safe_df[col].dtype).startswith("str"):
+            safe_df[col] = safe_df[col].apply(
+                lambda val: f"'{val}" if isinstance(val, str) and val and val[0] in ("=", "+", "-", "@", "\t", "\r") else val
+            )
+    return safe_df
+
 def create_all_reports_zip(datasets):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -212,8 +225,10 @@ def create_all_reports_zip(datasets):
         for name, df in datasets.items():
             clean_name = name.lower().replace(" ", "_").replace("(", "").replace(")", "").replace("<", "lt").replace(">", "gt").replace("-", "_").replace("%", "pct")
             
+            sanitized_df = sanitize_for_export(df)
+
             # CSV
-            csv_bytes = df.to_csv(index=False).encode('utf-8')
+            csv_bytes = sanitized_df.to_csv(index=False).encode('utf-8')
             zf.writestr(f"csv/{clean_name}.csv", csv_bytes)
             
             # Excel
