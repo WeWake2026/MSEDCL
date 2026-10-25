@@ -5,6 +5,7 @@ and SQLite (with WAL mode, timeouts, and fallback)
 """
 
 import os
+import sys
 import re
 import threading
 import sqlite3
@@ -246,19 +247,21 @@ def get_db(db_path=None):
             raw_conn = p.getconn()
             return UniversalConnection(raw_conn, is_pg=True, pool_ref=p)
         except Exception as e:
-            # In case pool or connection fails, propagate clean error
-            raise ConnectionError(f"PostgreSQL connection failed: {e}")
-    else:
-        if not db_path:
-            db_path = os.environ.get("DATABASE_PATH", "quality_audit.db")
-        conn = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        try:
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA foreign_keys=ON")
-        except Exception:
-            pass
-        return UniversalConnection(conn, is_pg=False)
+            # If PostgreSQL fails or is unreachable (e.g. Render database spinning up or paused),
+            # log warning and fall back to SQLite to keep application responsive rather than crash with 500
+            print(f"[WARNING] PostgreSQL connection failed ({e}). Falling back to local SQLite engine.", file=sys.stderr)
+            reset_pg_pool()
+
+    if not db_path:
+        db_path = os.environ.get("DATABASE_PATH", "quality_audit.db")
+    conn = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+    except Exception:
+        pass
+    return UniversalConnection(conn, is_pg=False)
 
 def check_db_health():
     """Returns database health status and details without leaking passwords."""
