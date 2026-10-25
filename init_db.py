@@ -1,19 +1,30 @@
-import os, sqlite3
+"""
+Database Initializer supporting both PostgreSQL and SQLite.
+Loads schema.sql if running against PostgreSQL, or standard SQLite tables.
+Seeds initial admin, manager, quality users, and system settings.
+"""
+
+import os
+import sys
 from werkzeug.security import generate_password_hash
+from database import get_db, is_postgres
 
-def init_db(db_path=None):
-    if not db_path:
-        db_path = os.environ.get("DATABASE_PATH", "quality_audit.db")
+def init_postgres(conn):
+    schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
+    if os.path.exists(schema_path):
+        with open(schema_path, "r", encoding="utf-8") as f:
+            sql_script = f.read()
+        cur = conn.cursor()
+        # Execute script commands
+        for cmd in sql_script.split(";"):
+            cmd = cmd.strip()
+            if cmd:
+                cur.execute(cmd)
+        conn.commit()
 
-    # Ensure parent directory exists if path includes directories
-    parent_dir = os.path.dirname(db_path)
-    if parent_dir and not os.path.exists(parent_dir):
-        os.makedirs(parent_dir, exist_ok=True)
-
-    conn = sqlite3.connect(db_path)
+def init_sqlite(conn):
     cur = conn.cursor()
-
-    # 1. Base tables
+    # Audits
     cur.execute("""
     CREATE TABLE IF NOT EXISTS audits (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +50,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # Warnings
     cur.execute("""
     CREATE TABLE IF NOT EXISTS warnings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,6 +86,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # Import batches
     cur.execute("""
     CREATE TABLE IF NOT EXISTS import_batches (
         id TEXT PRIMARY KEY,
@@ -89,6 +102,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # Users
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,6 +118,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # Email history
     cur.execute("""
     CREATE TABLE IF NOT EXISTS email_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,6 +141,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # Audit logs
     cur.execute("""
     CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,6 +155,7 @@ def init_db(db_path=None):
     )
     """)
 
+    # System settings
     cur.execute("""
     CREATE TABLE IF NOT EXISTS system_settings (
         setting_key TEXT PRIMARY KEY,
@@ -147,54 +164,86 @@ def init_db(db_path=None):
         updated_by TEXT NOT NULL
     )
     """)
-
-    # 2. Seed default system settings
-    defaults = [
-        ("company_name", "Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"),
-        ("admin_email", "admin.qa@msedcl.in"),
-        ("enable_excel_import", "true"),
-        ("default_date_range", "30"),
-        ("email_provider", "smtp"),
-        ("smtp_host", ""),
-        ("smtp_port", "587"),
-        ("smtp_username", ""),
-        ("smtp_password", ""),
-        ("smtp_from", "quality.audit@msedcl.in"),
-        ("ms_client_id", ""),
-        ("ms_tenant_id", ""),
-        ("ms_client_secret", ""),
-        ("ms_sender_email", ""),
-        ("notify_on_fatal", "false"),
-        ("notify_on_import", "false")
-    ]
-    for k, v in defaults:
-        cur.execute("INSERT OR IGNORE INTO system_settings(setting_key, setting_value, updated_at, updated_by) VALUES(?,?,datetime('now'),'system')", (k, v))
-
-    # 3. Seed default admin, quality, and manager users if table empty
-    cur.execute("SELECT COUNT(*) FROM users")
-    count = cur.fetchone()[0]
-    if count == 0:
-        admin_user = os.environ.get("ADMIN_USERNAME", "qaadmin")
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "Msedcl@123")
-        quality_user = os.environ.get("QUALITY_USERNAME", "quality1")
-        quality_pass = os.environ.get("QUALITY_PASSWORD", "Msedcl@1234")
-        manager_user = os.environ.get("MANAGER_USERNAME", "manager1")
-        manager_pass = os.environ.get("MANAGER_PASSWORD", "Msedcl@1235")
-
-        seed_users = [
-            (admin_user, generate_password_hash(admin_pass), 'admin', 'MSEDCL QA Administrator', 'admin.qa@msedcl.in'),
-            (quality_user, generate_password_hash(quality_pass), 'quality', 'Quality Lead', 'quality@msedcl.in'),
-            (manager_user, generate_password_hash(manager_pass), 'manager', 'Operations Manager', 'manager@msedcl.in'),
-        ]
-        for u in seed_users:
-            cur.execute("""
-                INSERT INTO users (username, password_hash, role, full_name, email, active, created_at)
-                VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
-            """, u)
-
     conn.commit()
-    conn.close()
-    print(f"Database initialized successfully at {db_path}.")
+
+def init_db(db_path=None):
+    if not is_postgres():
+        if not db_path:
+            db_path = os.environ.get("DATABASE_PATH", "quality_audit.db")
+        parent_dir = os.path.dirname(db_path)
+        if parent_dir and not os.path.exists(parent_dir):
+            os.makedirs(parent_dir, exist_ok=True)
+
+    with get_db(db_path) as conn:
+        if is_postgres():
+            init_postgres(conn)
+        else:
+            init_sqlite(conn)
+
+        cur = conn.cursor()
+
+        # Seed system settings
+        defaults = [
+            ("company_name", "Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"),
+            ("admin_email", "admin.qa@msedcl.in"),
+            ("enable_excel_import", "true"),
+            ("default_date_range", "30"),
+            ("email_provider", "smtp"),
+            ("smtp_host", ""),
+            ("smtp_port", "587"),
+            ("smtp_username", ""),
+            ("smtp_password", ""),
+            ("smtp_from", "quality.audit@msedcl.in"),
+            ("ms_client_id", ""),
+            ("ms_tenant_id", ""),
+            ("ms_client_secret", ""),
+            ("ms_sender_email", ""),
+            ("notify_on_fatal", "false"),
+            ("notify_on_import", "false")
+        ]
+        for k, v in defaults:
+            try:
+                if is_postgres():
+                    cur.execute("""
+                        INSERT INTO system_settings(setting_key, setting_value, updated_at, updated_by)
+                        VALUES (?, ?, NOW(), 'system')
+                        ON CONFLICT (setting_key) DO NOTHING
+                    """, (k, v))
+                else:
+                    cur.execute("""
+                        INSERT OR IGNORE INTO system_settings(setting_key, setting_value, updated_at, updated_by)
+                        VALUES(?,?,datetime('now'),'system')
+                    """, (k, v))
+            except Exception:
+                pass
+
+        # Seed default users if empty
+        cur.execute("SELECT COUNT(*) AS cnt FROM users")
+        row = cur.fetchone()
+        count = row["cnt"] if row and "cnt" in row else (row[0] if row else 0)
+
+        if count == 0:
+            admin_user = os.environ.get("ADMIN_USERNAME", "qaadmin")
+            admin_pass = os.environ.get("ADMIN_PASSWORD", "Msedcl@123")
+            quality_user = os.environ.get("QUALITY_USERNAME", "quality1")
+            quality_pass = os.environ.get("QUALITY_PASSWORD", "Msedcl@1234")
+            manager_user = os.environ.get("MANAGER_USERNAME", "manager1")
+            manager_pass = os.environ.get("MANAGER_PASSWORD", "Msedcl@1235")
+
+            seed_users = [
+                (admin_user, generate_password_hash(admin_pass), 'admin', 'MSEDCL QA Administrator', 'admin.qa@msedcl.in'),
+                (quality_user, generate_password_hash(quality_pass), 'quality', 'Quality Lead', 'quality@msedcl.in'),
+                (manager_user, generate_password_hash(manager_pass), 'manager', 'Operations Manager', 'manager@msedcl.in'),
+            ]
+            for u in seed_users:
+                cur.execute("""
+                    INSERT INTO users (username, password_hash, role, full_name, email, active)
+                    VALUES (?, ?, ?, ?, ?, 1)
+                """, u)
+
+        conn.commit()
+    engine_name = "PostgreSQL" if is_postgres() else "SQLite"
+    print(f"Database initialized successfully with {engine_name} engine.")
 
 if __name__ == "__main__":
     init_db()

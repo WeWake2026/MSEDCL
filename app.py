@@ -35,6 +35,8 @@ try:
 except Exception as _e:
     print(f"Warning initializing database: {_e}")
 
+from database import get_db, is_postgres, check_db_health, DbIntegrityError
+
 app = Flask(__name__)
 app.secret_key = APP_SECRET
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
@@ -51,11 +53,16 @@ def apply_security_headers(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
+@app.route("/healthz")
+@app.route("/api/health")
+def healthz():
+    status = check_db_health()
+    http_code = 200 if status["healthy"] else 503
+    return status, http_code
+
 # --- Database helpers ---
 def db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_db(DB_PATH)
 
 def log_audit(action, target="", details=""):
     try:
@@ -252,7 +259,7 @@ def import_dataframe(df, department, filename, username):
                  record["is_fatal"], record["fatal_category"], record["error_categories"], record["observation"],
                  record["location"], record["audio_url"], filename, batch_id, row_hash, now))
                 inserted += 1
-            except sqlite3.IntegrityError:
+            except DbIntegrityError:
                 duplicates += 1
                 
         report = {"errors": errors[:200], "mapping": mapping}
@@ -1170,7 +1177,7 @@ def user_create():
             """, (username, pwd_hash, role, advisor_id, full_name, email))
         log_audit("CREATE_USER", username, f"Role: {role}, AdvisorID: {advisor_id}, Email: {email}")
         flash(f"User '{username}' created successfully.", "success")
-    except sqlite3.IntegrityError as e:
+    except DbIntegrityError as e:
         flash(f"Could not create user: {e}", "error")
 
     return redirect(url_for("user_management"))

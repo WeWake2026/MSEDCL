@@ -9,6 +9,10 @@ services:
         value: 3.11.9
       - key: APP_SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msedcl-postgres
+          property: connectionString
       - key: DATABASE_PATH
         value: quality_audit.db
       - key: MAX_UPLOAD_MB
@@ -25,3 +29,9 @@ services:
         value: manager1
       - key: MANAGER_PASSWORD
         value: Msedcl@1235
+
+databases:
+  - name: msedcl-postgres
+    databaseName: msedcl_qa
+    user: msedcl_user
+    plan: free
