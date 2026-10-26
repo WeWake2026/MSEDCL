@@ -28,8 +28,13 @@ DbIntegrityError = (sqlite3.IntegrityError, PgIntegrityError) if HAS_PSYCOPG2 el
 _pg_pool = None
 _pool_lock = threading.Lock()
 
+_env_loaded = False
 def _load_env_if_present():
-    """Ensure .env is read into os.environ if present."""
+    """Ensure .env is read into os.environ if present (runs once initially)."""
+    global _env_loaded
+    if _env_loaded:
+        return
+    _env_loaded = True
     env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
     if os.path.exists(env_path):
         try:
@@ -40,7 +45,6 @@ def _load_env_if_present():
                         k, v = line.split("=", 1)
                         k = k.strip()
                         v = v.strip().strip("'\"")
-                        # Always set or update from local .env if not set by system
                         if k and k not in os.environ:
                             os.environ[k] = v
         except Exception:
@@ -167,6 +171,11 @@ class UniversalCursor:
         converted = re.sub(r"datetime\(\s*'now'\s*\)", "NOW()", query, flags=re.IGNORECASE)
         # 2. Convert standard sqlite '?' placeholders to psycopg2 '%s'
         converted = converted.replace("?", "%s")
+        # 3. Convert SQLite 'INSERT OR IGNORE INTO table ...' to 'INSERT INTO table ... ON CONFLICT DO NOTHING'
+        if re.search(r"\bINSERT\s+OR\s+IGNORE\s+INTO\b", converted, re.IGNORECASE):
+            converted = re.sub(r"\bINSERT\s+OR\s+IGNORE\s+INTO\b", "INSERT INTO", converted, flags=re.IGNORECASE)
+            if "ON CONFLICT" not in converted.upper():
+                converted = converted.rstrip("; \t\n") + " ON CONFLICT DO NOTHING"
         return converted
 
     def execute(self, query, params=None):
@@ -280,16 +289,23 @@ def get_db(db_path=None):
     Otherwise, returns an SQLite UniversalConnection.
     """
     uri = get_database_uri()
+    is_prod = os.environ.get("APP_ENV", "").lower() in ("production", "prod")
     if HAS_PSYCOPG2 and uri and (uri.startswith("postgres://") or uri.startswith("postgresql://")):
         try:
             p = _init_pg_pool(uri)
             raw_conn = p.getconn()
             return UniversalConnection(raw_conn, is_pg=True, pool_ref=p)
         except Exception as e:
-            # If PostgreSQL fails or is unreachable (e.g. Render database spinning up or paused),
-            # log warning and fall back to SQLite to keep application responsive rather than crash with 500
+            # In production, never silently fall back to an ephemeral SQLite database
+            if is_prod:
+                reset_pg_pool()
+                raise RuntimeError(f"CRITICAL: Production PostgreSQL connection failed: {e}") from e
+
+            # In development/test environments, log warning and fall back to SQLite to aid offline dev
             print(f"[WARNING] PostgreSQL connection failed ({e}). Falling back to local SQLite engine.", file=sys.stderr)
             reset_pg_pool()
+    elif is_prod:
+        raise RuntimeError("CRITICAL: Production requires a configured PostgreSQL database (DATABASE_URL or DB_*).")
 
     if not db_path:
         db_path = os.environ.get("DATABASE_PATH", "quality_audit.db")
@@ -314,23 +330,33 @@ def check_db_health():
     }
     try:
         with get_db() as conn:
+            actual_is_pg = getattr(conn, "is_pg", False)
+            engine_name = "PostgreSQL" if actual_is_pg else "SQLite"
+            status["engine"] = engine_name
             cur = conn.execute("SELECT 1 AS ok")
             row = cur.fetchone()
             if row and (row["ok"] == 1 or row[0] == 1):
                 status["healthy"] = True
-                if is_pg:
-                    v_row = conn.execute("SELECT version() AS v, current_database() AS db").fetchone()
+                if actual_is_pg:
+                    v_row = conn.execute("SELECT version() AS v, current_database() AS db, current_user AS u, inet_server_port() AS port").fetchone()
                     if v_row:
                         status["details"] = {
-                            "database": v_row["db"],
-                            "version": str(v_row["v"]).split(",")[0]
+                            "database": v_row.get("db"),
+                            "current_user": v_row.get("u"),
+                            "server_port": v_row.get("port"),
+                            "version": str(v_row.get("v")).split(",")[0]
                         }
+                    # Count tables in public schema
+                    t_rows = conn.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename").fetchall()
+                    status["details"]["tables"] = [r.get("tablename") for r in t_rows]
                 else:
                     v_row = conn.execute("SELECT sqlite_version() AS v").fetchone()
                     status["details"] = {
                         "database": os.environ.get("DATABASE_PATH", "quality_audit.db"),
                         "version": f"SQLite {v_row['v']}" if v_row else "SQLite 3"
                     }
+                    t_rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
+                    status["details"]["tables"] = [r["name"] if hasattr(r, "__getitem__") else r[0] for r in t_rows]
     except Exception as e:
-        status["error"] = str(e)
+        status["error"] = "Database connection error (details logged securely)"
     return status

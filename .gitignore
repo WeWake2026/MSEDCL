@@ -24,6 +24,9 @@ env/
 *.dump
 dump_*.sql
 quality_audit_archive.db
+quality_audit_backup_pre_migration.db
+pre_fix_backup/
+migration_report.json
 
 # Secrets, certificates, and private keys
 *.pem

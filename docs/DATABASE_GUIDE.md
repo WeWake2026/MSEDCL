@@ -52,11 +52,11 @@ PostgreSQL privileges must adhere to least-privilege standards:
 1. **`postgres` (Master Superuser)**:
    - Used exclusively for database initialization, role provisioning, and OS-level administration.
    - Application connections must **never** run under `postgres`.
-2. **`msedcl_user` (Application Operating Role)**:
-   - Restricted to `msedcl_qa` database.
+2. **`qa_app` (Application Operating Role)**:
+   - Restricted to `qa_dashboard` database.
    - Granted `SELECT`, `INSERT`, `UPDATE`, `DELETE` on application tables and sequences in the `public` schema.
    - Prohibited from `SUPERUSER`, `CREATEROLE`, or altering catalog tables.
-3. **`msedcl_readonly` (Optional Audit Explorer Role)**:
+3. **`qa_readonly` (Optional Audit Explorer Role)**:
    - Granted read-only (`SELECT`) privileges on public tables for external auditing or reporting tools.
 
 ---

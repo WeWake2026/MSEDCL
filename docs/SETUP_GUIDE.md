@@ -90,19 +90,17 @@ copy .env.example .env
 
 Set the database connection parameters in `.env`:
 ```ini
-# Option A: Full Connection URI
-DATABASE_URL=postgresql://msedcl_user:MsedclSecure2026!@127.0.0.1:5432/msedcl_qa
+# Option A: Full Connection URI (URL-encode reserved characters such as @ or %)
+DATABASE_URL=postgresql://qa_app:YOUR_URL_ENCODED_PASSWORD@127.0.0.1:5432/qa_dashboard
 
 # Or Option B: Discrete Parameters
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_NAME=msedcl_qa
-DB_USER=msedcl_user
-DB_PASSWORD=MsedclSecure2026!
-DB_TIMEOUT=15
+DB_NAME=qa_dashboard
+DB_USER=qa_app
+DB_PASSWORD=YOUR_PASSWORD
+DB_TIMEOUT=10
 ```
-
-*Note: If `DATABASE_URL` is omitted, the application automatically runs on the SQLite database (`quality_audit.db`).*
 
 ---
 
@@ -116,17 +114,17 @@ Initialize tables and seed administrative users in PostgreSQL:
 If you have existing SQLite data to migrate to PostgreSQL:
 ```cmd
 :: 1. Dry run reconciliation (safe test)
-.venv\Scripts\python.exe migrate_sqlite_to_postgres.py --dry-run
+.venv\Scripts\python.exe scripts\migrate_sqlite_to_postgres.py --dry-run
 
 :: 2. Execute migration with full row verification
-.venv\Scripts\python.exe migrate_sqlite_to_postgres.py
+.venv\Scripts\python.exe scripts\migrate_sqlite_to_postgres.py
 ```
 
 ---
 
 ### Step 8: Run Automated Tests
 
-Execute the automated test suite to verify database connection, role security, user-wise data isolation, and Database Explorer functionality:
+Execute the automated test suite to verify database connection, role security, user-wise data isolation, row reconciliation, and Database Explorer functionality:
 ```cmd
 .venv\Scripts\python.exe test_system.py
 ```

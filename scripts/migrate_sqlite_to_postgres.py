@@ -16,6 +16,11 @@ import sqlite3
 import argparse
 from datetime import datetime
 
+# Ensure project root is in sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 try:
     import psycopg2
     from psycopg2.extras import execute_batch
@@ -57,6 +62,11 @@ TABLES = [
         "name": "audit_logs",
         "conflict": "(id) DO NOTHING",
         "has_seq": True
+    },
+    {
+        "name": "notifications",
+        "conflict": "(id) DO NOTHING",
+        "has_seq": True
     }
 ]
 
@@ -69,9 +79,23 @@ def parse_args():
     return parser.parse_args()
 
 def run_migration():
-    args = parse_args()
+    # Ensure database environment is loaded
+    try:
+        from database import get_database_uri, _load_env_if_present
+        _load_env_if_present()
+        default_pg_url = get_database_uri()
+    except Exception:
+        default_pg_url = os.environ.get("DATABASE_URL", "")
+
+    parser = argparse.ArgumentParser(description="Migrate SQLite data to PostgreSQL for MSEDCL QA System")
+    parser.add_argument("--sqlite-path", default=os.environ.get("DATABASE_PATH", "quality_audit.db"), help="Path to SQLite database file")
+    parser.add_argument("--postgres-url", default=default_pg_url, help="PostgreSQL connection URL")
+    parser.add_argument("--dry-run", action="store_true", help="Perform verification without writing data")
+    parser.add_argument("--report-file", default="migration_report.json", help="Path to output reconciliation report JSON")
+    args = parser.parse_args()
+
     sqlite_path = args.sqlite_path
-    pg_url = args.postgres_url
+    pg_url = args.postgres_url or default_pg_url
     dry_run = args.dry_run
 
     print("================================================================================")

@@ -178,5 +178,33 @@ class TestMsedclSystem(unittest.TestCase):
         self.assertIn("Migration completed with status: SUCCESS", result.stdout)
         self.assertTrue(os.path.exists(report_path))
 
+    def test_12_postgresql_live_connection_and_health(self):
+        """Verify PostgreSQL live connection and database health diagnostics."""
+        from database import check_db_health, is_postgres
+        health = check_db_health()
+        self.assertTrue(health["healthy"])
+        self.assertEqual(health["engine"], "PostgreSQL")
+        self.assertEqual(health["details"]["database"], "qa_dashboard")
+        self.assertEqual(health["details"]["current_user"], "qa_app")
+        self.assertIn("audits", health["details"]["tables"])
+
+    def test_13_reconciliation_row_counts(self):
+        """Verify that all application tables have matching row counts between SQLite and PostgreSQL."""
+        import sqlite3
+        import database
+        with sqlite3.connect("quality_audit.db") as sq, database.get_db() as pg:
+            sq_cur = sq.cursor()
+            pg_cur = pg.cursor()
+            # Core business tables must match exactly
+            for table in ["audits", "users", "import_batches", "warnings", "email_history", "system_settings", "notifications"]:
+                sq_cnt = sq_cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                pg_cnt = pg_cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()["count"]
+                self.assertEqual(sq_cnt, pg_cnt, f"Row count mismatch for {table}: SQLite={sq_cnt}, PG={pg_cnt}")
+            # Audit logs in PostgreSQL must include all SQLite baseline logs plus any live test activity logs
+            sq_audit_cnt = sq_cur.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+            pg_audit_cnt = pg_cur.execute("SELECT COUNT(*) FROM audit_logs").fetchone()["count"]
+            self.assertGreaterEqual(pg_audit_cnt, sq_audit_cnt)
+
 if __name__ == "__main__":
     unittest.main()
+

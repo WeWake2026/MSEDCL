@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-25T18:38:16.995128",
+  "timestamp": "2026-10-26T14:47:35.259695",
   "sqlite_path": "quality_audit.db",
   "dry_run": true,
   "tables": {
@@ -16,8 +16,8 @@
       ]
     },
     "users": {
-      "source_count": 4,
-      "migrated_count": 4,
+      "source_count": 5,
+      "migrated_count": 5,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -94,8 +94,8 @@
       "columns": []
     },
     "audit_logs": {
-      "source_count": 115,
-      "migrated_count": 115,
+      "source_count": 136,
+      "migrated_count": 136,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -108,9 +108,27 @@
         "details",
         "ip_address"
       ]
+    },
+    "notifications": {
+      "source_count": 4,
+      "migrated_count": 4,
+      "skipped_count": 0,
+      "failed_count": 0,
+      "columns": [
+        "id",
+        "user_id",
+        "target_role",
+        "title",
+        "message",
+        "notif_type",
+        "link_url",
+        "created_at",
+        "is_read",
+        "created_by"
+      ]
     }
   },
   "status": "SUCCESS",
-  "total_source_records": 1431,
+  "total_source_records": 1457,
   "total_migrated_records": 0
 }
