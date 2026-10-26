@@ -91,8 +91,11 @@ def _init_pg_pool(uri):
             if uri.startswith("postgres://"):
                 uri = "postgresql://" + uri[len("postgres://"):]
             
-            # Ensure sslmode is present for external cloud hosts like Render
-            if "sslmode=" not in uri and ("render.com" in uri or "aws" in uri or "supabase" in uri or "neon" in uri):
+            # Ensure sslmode=require for external cloud connections that need TLS
+            # Render external hosts (*.render.com, aws, supabase, neon) require SSL.
+            # Internal Render hosts (e.g., dpg-xxxx-a:5432 or dpg-xxxx:5432 without .render.com) use secure VPC networking.
+            is_external_cloud = any(h in uri for h in ("render.com", "aws", "supabase", "neon"))
+            if "sslmode=" not in uri and is_external_cloud:
                 delimiter = "&" if "?" in uri else "?"
                 uri = f"{uri}{delimiter}sslmode=require"
 
@@ -163,7 +166,7 @@ class UniversalCursor:
         self.lastrowid = getattr(cursor, "lastrowid", None)
         self.description = getattr(cursor, "description", None)
 
-    def _convert_query(self, query):
+    def _convert_query(self, query, has_params=False):
         if not self._is_pg:
             return query
         # In PostgreSQL:
@@ -171,7 +174,13 @@ class UniversalCursor:
         converted = re.sub(r"datetime\(\s*'now'\s*\)", "NOW()", query, flags=re.IGNORECASE)
         # 2. Convert standard sqlite '?' placeholders to psycopg2 '%s'
         converted = converted.replace("?", "%s")
-        # 3. Convert SQLite 'INSERT OR IGNORE INTO table ...' to 'INSERT INTO table ... ON CONFLICT DO NOTHING'
+        # 3. If params are passed, psycopg2 will perform pyformat interpolation.
+        #    Literal percent signs (e.g. LIKE '%PIP%') must be escaped to '%%',
+        #    WITHOUT doubling existing '%s' placeholders.
+        if has_params:
+            converted = re.sub(r"%(?!s)", "%%", converted)
+
+        # 4. Convert SQLite 'INSERT OR IGNORE INTO table ...' to 'INSERT INTO table ... ON CONFLICT DO NOTHING'
         if re.search(r"\bINSERT\s+OR\s+IGNORE\s+INTO\b", converted, re.IGNORECASE):
             converted = re.sub(r"\bINSERT\s+OR\s+IGNORE\s+INTO\b", "INSERT INTO", converted, flags=re.IGNORECASE)
             if "ON CONFLICT" not in converted.upper():
@@ -179,7 +188,12 @@ class UniversalCursor:
         return converted
 
     def execute(self, query, params=None):
-        sql = self._convert_query(query)
+        # Normalize empty list/tuple params to None if no parameters were supplied
+        if params is not None and len(params) == 0:
+            params = None
+        has_params = params is not None and len(params) > 0
+        sql = self._convert_query(query, has_params=has_params)
+
         # If PostgreSQL and query is an INSERT into key tables and caller expects lastrowid
         if self._is_pg and re.match(r"^\s*INSERT\s+INTO\s+(warnings|users|audit_logs|email_history|audits)", sql, re.IGNORECASE):
             if "RETURNING" not in sql.upper():
