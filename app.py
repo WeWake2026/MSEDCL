@@ -494,11 +494,13 @@ def dashboard():
     }
 
     now_dt = datetime.now()
-    if last_sync_time and len(last_sync_time) >= 10:
+    if last_sync_time:
         try:
-            # Parse ISO or SQLite datetime string
-            clean_time_str = last_sync_time.replace("T", " ")[:19]
-            parsed_dt = datetime.fromisoformat(clean_time_str)
+            if isinstance(last_sync_time, datetime):
+                parsed_dt = last_sync_time
+            else:
+                clean_time_str = str(last_sync_time).replace("T", " ")[:19]
+                parsed_dt = datetime.fromisoformat(clean_time_str)
             display_date = parsed_dt.strftime("%d %b %Y")
             display_time = parsed_dt.strftime("%I:%M %p")
         except Exception:
