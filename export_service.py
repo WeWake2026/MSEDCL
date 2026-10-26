@@ -164,7 +164,7 @@ def build_export_datasets(con, start_date=None, end_date=None, department=None, 
                SUM(CASE WHEN quality_score >= 80 AND quality_score <= 90 THEN 1 ELSE 0 END) as mid_score_count,
                SUM(CASE WHEN quality_score > 90 THEN 1 ELSE 0 END) as good_score_count
         FROM audits WHERE {base_where}
-        GROUP BY COALESCE(advisor_id, advisor_name), department
+        GROUP BY advisor_id, advisor_name, department
         ORDER BY fatal_count DESC, avg_score ASC
     """, con, params=params)
 
