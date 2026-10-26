@@ -430,7 +430,7 @@ def dashboard():
         date_stats = con.execute("""
             SELECT COALESCE(call_date, evaluation_date) as dt, COUNT(*) as cnt """ + sql_base + """
             AND COALESCE(call_date, evaluation_date) IS NOT NULL
-            GROUP BY dt ORDER BY dt DESC LIMIT 14
+            GROUP BY COALESCE(call_date, evaluation_date) ORDER BY dt DESC LIMIT 14
         """, params).fetchall()
         date_stats = list(reversed(date_stats))
 
@@ -443,7 +443,7 @@ def dashboard():
                    SUM(CASE WHEN quality_score >= 80 AND quality_score <= 90 THEN 1 ELSE 0 END) as mid_calls,
                    SUM(CASE WHEN quality_score > 90 THEN 1 ELSE 0 END) as good_calls
             """ + sql_base + """
-            GROUP BY COALESCE(advisor_id, advisor_name), department
+            GROUP BY advisor_id, advisor_name, department
             ORDER BY fatals DESC, low_calls DESC LIMIT 20
         """, params).fetchall()
 
@@ -451,7 +451,7 @@ def dashboard():
         top_advisors_query = con.execute("""
             SELECT advisor_name, ROUND(AVG(quality_score), 2) as avg_score, COUNT(*) as cnt
             """ + sql_base + """
-            GROUP BY COALESCE(advisor_id, advisor_name)
+            GROUP BY advisor_name
             ORDER BY avg_score DESC, cnt DESC LIMIT 8
         """, params).fetchall()
 
@@ -1147,7 +1147,7 @@ def advisor_lookup():
                    ROUND(AVG(quality_score), 2) as avg_score
             FROM audits
             WHERE advisor_id = ? OR advisor_name LIKE ?
-            GROUP BY COALESCE(advisor_id, advisor_name)
+            GROUP BY advisor_id, advisor_name, department, team_leader
             ORDER BY total_calls DESC LIMIT 1
         """, (q, f"%{q}%")).fetchone()
 
