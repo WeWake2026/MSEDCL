@@ -279,14 +279,17 @@ def import_dataframe(df, department, filename, username):
             }
             row_hash = make_hash(department, record)
             try:
-                con.execute("""INSERT INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
+                cur = con.execute("""INSERT OR IGNORE INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
                 team_leader,auditor_name,quality_score,is_fatal,fatal_category,error_categories,observation,location,
                 audio_url,source_file,import_batch,row_hash,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (department, record["call_id"], record["call_date"], record["evaluation_date"], record["advisor_id"],
                  record["advisor_name"], record["team_leader"], record["auditor_name"], record["quality_score"],
                  record["is_fatal"], record["fatal_category"], record["error_categories"], record["observation"],
                  record["location"], record["audio_url"], filename, batch_id, row_hash, now))
-                inserted += 1
+                if getattr(cur, "rowcount", 0) > 0:
+                    inserted += 1
+                else:
+                    duplicates += 1
             except DbIntegrityError:
                 duplicates += 1
                 

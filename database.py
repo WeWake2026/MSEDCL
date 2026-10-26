@@ -83,17 +83,23 @@ def is_postgres():
     uri = get_database_uri()
     return bool(uri and (uri.startswith("postgres://") or uri.startswith("postgresql://")))
 
+_pg_pool = None
+_pool_pid = None
+_pool_lock = threading.Lock()
+
 def _init_pg_pool(uri):
-    global _pg_pool
+    global _pg_pool, _pool_pid
+    current_pid = os.getpid()
     with _pool_lock:
-        if _pg_pool is None:
+        # If running under gunicorn with multiple worker processes (pre-fork),
+        # each child process MUST have its own independent connection pool.
+        # Sharing a parent process socket across forks causes SSL decryption failed / bad record MAC.
+        if _pg_pool is None or _pool_pid != current_pid:
             # Handle postgres:// vs postgresql://
             if uri.startswith("postgres://"):
                 uri = "postgresql://" + uri[len("postgres://"):]
             
             # Ensure sslmode=require for external cloud connections that need TLS
-            # Render external hosts (*.render.com, aws, supabase, neon) require SSL.
-            # Internal Render hosts (e.g., dpg-xxxx-a:5432 or dpg-xxxx:5432 without .render.com) use secure VPC networking.
             is_external_cloud = any(h in uri for h in ("render.com", "aws", "supabase", "neon"))
             if "sslmode=" not in uri and is_external_cloud:
                 delimiter = "&" if "?" in uri else "?"
@@ -107,11 +113,12 @@ def _init_pg_pool(uri):
                 connect_timeout=timeout_sec,
                 options=f"-c statement_timeout={timeout_sec * 1000}"
             )
+            _pool_pid = current_pid
     return _pg_pool
 
 def reset_pg_pool():
     """Close and reset active connection pool (used during reconfiguration or tests)."""
-    global _pg_pool
+    global _pg_pool, _pool_pid
     with _pool_lock:
         if _pg_pool is not None:
             try:
@@ -119,6 +126,7 @@ def reset_pg_pool():
             except Exception:
                 pass
             _pg_pool = None
+            _pool_pid = None
 
 class RowWrapper:
     """Provides key-based and attribute-style access like sqlite3.Row for dict results."""
@@ -248,6 +256,7 @@ class UniversalConnection:
         self._conn = raw_conn
         self._is_pg = is_pg
         self._pool_ref = pool_ref
+        self._is_broken = False
 
     @property
     def is_pg(self):
@@ -261,23 +270,42 @@ class UniversalConnection:
         return UniversalCursor(cur, self._is_pg)
 
     def execute(self, query, params=None):
-        cur = self.cursor()
-        cur.execute(query, params)
-        return cur
+        try:
+            cur = self.cursor()
+            cur.execute(query, params)
+            return cur
+        except Exception as e:
+            # Detect connection loss or SSL decryption/bad record mac errors
+            if self._is_pg:
+                err_str = str(e).lower()
+                if "ssl" in err_str or "closed" in err_str or "terminated" in err_str or "connection" in err_str:
+                    self._is_broken = True
+            raise
 
     def commit(self):
-        self._conn.commit()
+        try:
+            self._conn.commit()
+        except Exception as e:
+            if self._is_pg:
+                self._is_broken = True
+            raise
 
     def rollback(self):
         try:
             self._conn.rollback()
         except Exception:
-            pass
+            if self._is_pg:
+                self._is_broken = True
 
     def close(self):
         if self._is_pg and self._pool_ref:
             try:
-                self._pool_ref.putconn(self._conn)
+                # If connection suffered an SSL failure or socket error, discard it completely from the pool
+                is_closed = getattr(self._conn, "closed", 0) != 0
+                if self._is_broken or is_closed:
+                    self._pool_ref.putconn(self._conn, close=True)
+                else:
+                    self._pool_ref.putconn(self._conn)
             except Exception:
                 pass
         else:
@@ -296,6 +324,19 @@ class UniversalConnection:
             self.commit()
         self.close()
 
+def _check_connection_liveness(raw_conn):
+    """Ensure raw PostgreSQL connection socket and SSL stream are healthy."""
+    if getattr(raw_conn, "closed", 0) != 0:
+        return False
+    try:
+        # Check transaction status or run a lightweight test
+        with raw_conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        raw_conn.commit()
+        return True
+    except Exception:
+        return False
+
 def get_db(db_path=None):
     """
     Get a database connection.
@@ -307,7 +348,26 @@ def get_db(db_path=None):
     if HAS_PSYCOPG2 and uri and (uri.startswith("postgres://") or uri.startswith("postgresql://")):
         try:
             p = _init_pg_pool(uri)
-            raw_conn = p.getconn()
+            # Try getting a healthy connection, discarding stale/corrupt SSL sockets up to 3 times
+            raw_conn = None
+            for _ in range(3):
+                candidate = p.getconn()
+                if _check_connection_liveness(candidate):
+                    raw_conn = candidate
+                    break
+                else:
+                    # Stale or corrupted SSL stream - close and discard from pool
+                    try:
+                        p.putconn(candidate, close=True)
+                    except Exception:
+                        pass
+            
+            if raw_conn is None:
+                # If existing pool connections were stale, reset pool and get a fresh connection
+                reset_pg_pool()
+                p = _init_pg_pool(uri)
+                raw_conn = p.getconn()
+
             return UniversalConnection(raw_conn, is_pg=True, pool_ref=p)
         except Exception as e:
             # In production, never silently fall back to an ephemeral SQLite database
