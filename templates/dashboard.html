@@ -77,6 +77,25 @@
       </a>
     </div>
   </form>
+
+  <!-- Quick Date Range Pills (7 Days, 15 Days, 30 Days, Full Month, All Recorded) -->
+  <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11.5px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+        <span>⚡ Quick Ranges:</span>
+      </span>
+      <button type="button" class="quick-range-pill" onclick="setDashboardRange('7d')">Last 7 Days</button>
+      <button type="button" class="quick-range-pill" onclick="setDashboardRange('15d')">Last 15 Days</button>
+      <button type="button" class="quick-range-pill" onclick="setDashboardRange('30d')">Last 30 Days</button>
+      <button type="button" class="quick-range-pill" onclick="setDashboardRange('31d')">Full 31 Days</button>
+      {% if available_months %}
+      <button type="button" class="quick-range-pill highlight" onclick="setDashboardMonth('{{ available_months[0] }}')">📅 Current Month ({{ available_months[0] }})</button>
+      {% endif %}
+    </div>
+    <div style="font-size:11.5px;color:var(--text-muted);">
+      Active Scope: <strong style="color:var(--brand-blue);">{{ 'Month: ' ~ selected_month if selected_month else (start ~ ' to ' ~ end if start or end else 'Cumulative (All Months)') }}</strong>
+    </div>
+  </div>
 </div>
 
 <!-- 2. Primary KPI Row 1 (5 Cards: Total Calls, Fatal Calls, Low Score, Average Score, Good Calls) -->
@@ -859,7 +878,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Modal Filter Bar -->
     <div style="padding:10px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:4px;">
           <span>🔍</span> Filter & Highlight:
         </span>
@@ -868,6 +887,16 @@ document.addEventListener('DOMContentLoaded', function() {
           <button type="button" onclick="clearModalFilter()" id="modalClearFilterBtn" style="display:none;position:absolute;right:8px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:2px;">&times;</button>
         </div>
         <span id="modalHighlightStats" style="font-size:12px;color:#2563eb;font-weight:600;display:none;"></span>
+
+        <!-- Timeline / Date Range Specific Controls (Shown when modal displays timeline or dates) -->
+        <div id="modalTimelineRangeControls" style="display:none;align-items:center;gap:6px;margin-left:6px;">
+          <span style="font-size:11.5px;color:var(--text-muted);font-weight:600;">Range:</span>
+          <button type="button" class="modal-range-pill active" id="pillRangeAll" onclick="filterModalTimelineByDays(0)">All Days</button>
+          <button type="button" class="modal-range-pill" id="pillRange7" onclick="filterModalTimelineByDays(7)">Last 7D</button>
+          <button type="button" class="modal-range-pill" id="pillRange15" onclick="filterModalTimelineByDays(15)">Last 15D</button>
+          <button type="button" class="modal-range-pill" id="pillRange30" onclick="filterModalTimelineByDays(30)">30 Days</button>
+          <button type="button" class="modal-range-pill" id="pillRange31" onclick="filterModalTimelineByDays(31)">31 Days</button>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span class="badge badge-neutral" id="modalDataCountBadge" style="font-size:11.5px;padding:5px 10px;">0 records</span>
@@ -978,6 +1007,46 @@ document.addEventListener('DOMContentLoaded', function() {
   border-color: #2563eb !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
 }
+
+.quick-range-pill {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.quick-range-pill:hover {
+  background: var(--brand-blue);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+}
+.quick-range-pill.highlight {
+  background: rgba(2, 132, 199, 0.1);
+  color: var(--brand-blue);
+  border-color: rgba(2, 132, 199, 0.3);
+}
+.modal-range-pill {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.modal-range-pill:hover,
+.modal-range-pill.active {
+  background: var(--brand-blue) !important;
+  color: #ffffff !important;
+  border-color: var(--brand-blue) !important;
+}
+
 /* Modal Dark Theme Overrides */
 [data-theme="dark"] #chartDetailModal .modal-container {
   background: #0f1929 !important;
@@ -1040,6 +1109,130 @@ let modalChartInstance = null;
 let currentModalRows = [];
 let hoverTriggerTimer = null;
 
+
+// --- Dashboard Quick Range Selectors ---
+window.setDashboardRange = function(rangeType) {
+  const form = document.getElementById('refFilterForm');
+  if (!form) return;
+  const startInput = form.querySelector('input[name="start"]');
+  const endInput = form.querySelector('input[name="end"]');
+  const monthSelect = form.querySelector('select[name="month"]');
+  
+  if (monthSelect) monthSelect.value = ''; // Clear month select when setting specific date ranges
+  
+  const today = new Date();
+  const formatYMD = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const endDateStr = formatYMD(today);
+  let daysBack = 30;
+  if (rangeType === '7d') daysBack = 7;
+  else if (rangeType === '15d') daysBack = 15;
+  else if (rangeType === '30d') daysBack = 30;
+  else if (rangeType === '31d') daysBack = 31;
+
+  const startDate = new Date();
+  startDate.setDate(today.getDate() - (daysBack - 1));
+  const startDateStr = formatYMD(startDate);
+
+  if (startInput) startInput.value = startDateStr;
+  if (endInput) endInput.value = endDateStr;
+  form.submit();
+};
+
+window.setDashboardMonth = function(monthVal) {
+  const form = document.getElementById('refFilterForm');
+  if (!form) return;
+  const monthSelect = form.querySelector('select[name="month"]');
+  const startInput = form.querySelector('input[name="start"]');
+  const endInput = form.querySelector('input[name="end"]');
+  if (startInput) startInput.value = '';
+  if (endInput) endInput.value = '';
+  if (monthSelect) monthSelect.value = monthVal;
+  form.submit();
+};
+
+// --- Modal Timeline Range Filter (Dynamic Slice & Re-render) ---
+let fullTimelineDetails = [];
+window.filterModalTimelineByDays = function(days) {
+  document.querySelectorAll('.modal-range-pill').forEach(p => p.classList.remove('active'));
+  const activeBtn = document.getElementById(days === 0 ? 'pillRangeAll' : `pillRange${days}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  if (!fullTimelineDetails || !fullTimelineDetails.length) return;
+  let filtered = fullTimelineDetails;
+  if (days > 0 && fullTimelineDetails.length > days) {
+    // Take the last 'days' entries
+    filtered = fullTimelineDetails.slice(-days);
+  }
+  currentModalRows = filtered;
+
+  // Re-populate Table
+  const tbody = document.getElementById('modalDataTableTbody');
+  const countBadge = document.getElementById('modalDataCountBadge');
+  if (countBadge) countBadge.innerText = `${filtered.length} Days Recorded`;
+  if (tbody) {
+    tbody.innerHTML = '';
+    filtered.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>📅 ${d.dt || 'Undated'}</strong></td>
+        <td style="text-align:center;"><span class="badge badge-info">${d.in_cnt || 0}</span></td>
+        <td style="text-align:center;"><span class="badge badge-success">${d.out_cnt || 0}</span></td>
+        <td style="text-align:center;"><strong>${d.total_cnt || 0}</strong></td>
+        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
+        <td>
+          <a href="/audits/Inbound?start=${d.dt}&end=${d.dt}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Audits ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Re-render Modal Chart
+  const canvas = document.getElementById('modalExpandedChart');
+  if (modalChartInstance) {
+    modalChartInstance.destroy();
+    modalChartInstance = null;
+  }
+  const isNight = document.documentElement.getAttribute('data-theme') === 'dark';
+  const mTextColor = isNight ? '#94a3b8' : '#64748b';
+  const mGridColor = isNight ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+  modalChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: filtered.map(d => d.dt),
+      datasets: [
+        {
+          label: 'Inbound Audits',
+          data: filtered.map(d => d.in_cnt),
+          backgroundColor: '#4f46e5',
+          borderRadius: 4
+        },
+        {
+          label: 'Outbound Audits',
+          data: filtered.map(d => d.out_cnt),
+          backgroundColor: '#10b981',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: mTextColor } },
+        y: { stacked: true, beginAtZero: true, grid: { color: mGridColor }, ticks: { color: mTextColor, precision: 0 } }
+      }
+    }
+  });
+};
+
 // Global chart modal trigger
 window.openChartModal = function(type) {
   const modal = document.getElementById('chartDetailModal');
@@ -1067,6 +1260,11 @@ window.openChartModal = function(type) {
   const mGridColor = isNight ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
   const mDonutBorder = isNight ? '#0f1929' : '#ffffff';
 
+  const rangeCtrls = document.getElementById('modalTimelineRangeControls');
+  if (rangeCtrls) {
+    rangeCtrls.style.display = (type === 'timeline') ? 'flex' : 'none';
+  }
+
   if (type === 'timeline') {
     icon.innerText = '📞';
     titleText.innerText = 'Inbound vs Outbound Audits Timeline';
@@ -1083,6 +1281,7 @@ window.openChartModal = function(type) {
     `;
 
     const details = cd.timeline_details || [];
+    fullTimelineDetails = details;
     currentModalRows = details;
     countBadge.innerText = `${details.length} Days Recorded`;
     tbody.innerHTML = '';
