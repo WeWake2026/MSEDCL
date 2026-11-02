@@ -496,19 +496,28 @@ def dashboard():
         # Auditor list
         auditors_list = [r[0] for r in con.execute("SELECT DISTINCT auditor_name FROM audits WHERE auditor_name IS NOT NULL AND auditor_name != '' ORDER BY auditor_name").fetchall()]
 
-        # Auditor activity
+        # Auditor activity (Top 15 with average score and fatals for deep evaluation)
         auditor_stats = con.execute("""
-            SELECT auditor_name, COUNT(*) as cnt """ + sql_base + """ AND auditor_name IS NOT NULL
-            GROUP BY auditor_name ORDER BY cnt DESC LIMIT 10
+            SELECT auditor_name, COUNT(*) as cnt,
+                   ROUND(AVG(quality_score), 2) as avg_score,
+                   SUM(is_fatal) as fatals
+            """ + sql_base + """ AND auditor_name IS NOT NULL AND auditor_name != ''
+            GROUP BY auditor_name ORDER BY cnt DESC LIMIT 15
         """, params).fetchall()
 
-        # Date timeline
-        date_stats = con.execute("""
-            SELECT COALESCE(call_date, evaluation_date) as dt, COUNT(*) as cnt """ + sql_base + """
+        # Date timeline separated by Inbound vs Outbound
+        timeline_rows = con.execute("""
+            SELECT COALESCE(call_date, evaluation_date) as dt,
+                   SUM(CASE WHEN department='Inbound' THEN 1 ELSE 0 END) as in_cnt,
+                   SUM(CASE WHEN department='Outbound' THEN 1 ELSE 0 END) as out_cnt,
+                   COUNT(*) as total_cnt,
+                   ROUND(AVG(quality_score), 1) as avg_score
+            """ + sql_base + """
             AND COALESCE(call_date, evaluation_date) IS NOT NULL
-            GROUP BY COALESCE(call_date, evaluation_date) ORDER BY dt DESC LIMIT 14
+            GROUP BY COALESCE(call_date, evaluation_date)
+            ORDER BY dt DESC LIMIT 20
         """, params).fetchall()
-        date_stats = list(reversed(date_stats))
+        timeline_rows = list(reversed(timeline_rows))
 
         # Advisor Summary Table
         advisor_summary = con.execute("""
@@ -523,12 +532,16 @@ def dashboard():
             ORDER BY fatals DESC, low_calls DESC LIMIT 20
         """, params).fetchall()
 
-        # Top Advisors for Chart (Ranked by quality score)
+        # Top Advisors for Chart (Ranked by quality score, min 1 audit)
         top_advisors_query = con.execute("""
-            SELECT advisor_name, ROUND(AVG(quality_score), 2) as avg_score, COUNT(*) as cnt
+            SELECT advisor_name,
+                   ROUND(AVG(quality_score), 2) as avg_score,
+                   COUNT(*) as cnt,
+                   SUM(is_fatal) as fatals,
+                   MIN(department) as dept
             """ + sql_base + """
             GROUP BY advisor_name
-            ORDER BY avg_score DESC, cnt DESC LIMIT 8
+            ORDER BY avg_score DESC, cnt DESC LIMIT 15
         """, params).fetchall()
 
     metrics = {
@@ -554,12 +567,17 @@ def dashboard():
         "non_fatal_count": max(0, total_audits - fatal_count),
         "inbound_count": inbound_count,
         "outbound_count": outbound_count,
-        "dates": [r["dt"] for r in date_stats],
-        "date_counts": [r["cnt"] for r in date_stats],
+        "dates": [r["dt"] for r in timeline_rows],
+        "inbound_timeline": [r["in_cnt"] for r in timeline_rows],
+        "outbound_timeline": [r["out_cnt"] for r in timeline_rows],
+        "total_timeline": [r["total_cnt"] for r in timeline_rows],
+        "timeline_details": [dict(r) for r in timeline_rows],
         "auditor_names": [r["auditor_name"] for r in auditor_stats],
         "auditor_counts": [r["cnt"] for r in auditor_stats],
+        "auditor_details": [dict(r) for r in auditor_stats],
         "top_advisors": [r["advisor_name"] for r in top_advisors_query],
-        "top_scores": [r["avg_score"] for r in top_advisors_query],
+        "top_scores": [float(r["avg_score"] or 0) for r in top_advisors_query],
+        "top_advisor_details": [dict(r) for r in top_advisors_query],
         "open_warnings": open_warnings,
         "in_progress_warnings": in_progress_warnings,
         "closed_warnings": closed_warnings,
