@@ -842,8 +842,14 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Modal Filter Bar -->
     <div style="padding:10px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:12px;font-weight:600;color:#475569;">Quick Filter:</span>
-        <input type="text" id="modalTableFilter" onkeyup="filterModalTable()" placeholder="Search in records..." class="form-control" style="width:240px;font-size:12px;padding:6px 10px;">
+        <span style="font-size:12.5px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:4px;">
+          <span>🔍</span> Filter & Highlight:
+        </span>
+        <div style="position:relative;display:flex;align-items:center;">
+          <input type="text" id="modalTableFilter" onkeyup="filterModalTable()" placeholder="Type to search & highlight graph..." class="modal-search-box">
+          <button type="button" onclick="clearModalFilter()" id="modalClearFilterBtn" style="display:none;position:absolute;right:8px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:2px;">&times;</button>
+        </div>
+        <span id="modalHighlightStats" style="font-size:12px;color:#2563eb;font-weight:600;display:none;"></span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span class="badge badge-neutral" id="modalDataCountBadge" style="font-size:11.5px;padding:5px 10px;">0 records</span>
@@ -919,6 +925,31 @@ document.addEventListener('DOMContentLoaded', function() {
   background: var(--primary) !important;
   color: #fff !important;
   transform: scale(1.05);
+}
+.search-highlight-bar {
+  background: #fef08a !important;
+  border-color: #eab308 !important;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.6) !important;
+}
+.table-highlight-cell {
+  background-color: #fef08a !important;
+  color: #854d0e !important;
+  font-weight: 700 !important;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.modal-search-box {
+  width: 280px;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.modal-search-box:focus {
+  outline: none;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
 }
 </style>
 
@@ -1322,13 +1353,94 @@ window.closeChartModal = function() {
   }
 };
 
+window.clearModalFilter = function() {
+  const input = document.getElementById('modalTableFilter');
+  if (input) {
+    input.value = '';
+    filterModalTable();
+  }
+};
+
 window.filterModalTable = function() {
-  const query = (document.getElementById('modalTableFilter').value || '').toLowerCase();
+  const input = document.getElementById('modalTableFilter');
+  const query = (input ? input.value : '').trim().toLowerCase();
+  const clearBtn = document.getElementById('modalClearFilterBtn');
+  const statsEl = document.getElementById('modalHighlightStats');
+  if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
   const rows = document.querySelectorAll('#modalDataTableTbody tr');
+  let matchCount = 0;
+  let matchingLabels = new Set();
+
   rows.forEach(r => {
-    const text = r.innerText.toLowerCase();
-    r.style.display = text.includes(query) ? '' : 'none';
+    const originalText = r.textContent || '';
+    const textLower = originalText.toLowerCase();
+    const isMatch = !query || textLower.includes(query);
+
+    r.style.display = isMatch ? '' : 'none';
+    if (isMatch) {
+      matchCount++;
+      // Extract main label from first column
+      const firstCol = r.querySelector('td:nth-child(1)');
+      if (firstCol) {
+        matchingLabels.add(firstCol.textContent.replace(/^[📅👤●🥇🥈🥉#0-9\s]+/, '').trim().toLowerCase());
+      }
+    }
   });
+
+  if (statsEl) {
+    if (query) {
+      statsEl.style.display = 'inline-block';
+      statsEl.innerText = `Matched & highlighted ${matchCount} of ${rows.length}`;
+    } else {
+      statsEl.style.display = 'none';
+    }
+  }
+
+  // Real-time highlight on the Expanded Modal Chart
+  if (modalChartInstance && modalChartInstance.data && modalChartInstance.data.labels) {
+    const labels = modalChartInstance.data.labels;
+    modalChartInstance.data.datasets.forEach(ds => {
+      // Store original colors on first search
+      if (!ds._originalBg) {
+        ds._originalBg = Array.isArray(ds.backgroundColor) ? [...ds.backgroundColor] : ds.backgroundColor;
+        ds._originalBorder = Array.isArray(ds.borderColor) ? [...ds.borderColor] : ds.borderColor;
+        ds._originalBorderWidth = ds.borderWidth || 1;
+      }
+
+      if (!query) {
+        // Restore default colors
+        ds.backgroundColor = Array.isArray(ds._originalBg) ? [...ds._originalBg] : ds._originalBg;
+        ds.borderColor = Array.isArray(ds._originalBorder) ? [...ds._originalBorder] : ds._originalBorder;
+        ds.borderWidth = ds._originalBorderWidth;
+      } else {
+        // Highlight matching bars/segments in gold (#eab308) and dim non-matching ones
+        const count = labels.length;
+        const newBg = [];
+        const newBorders = [];
+        const newWidths = [];
+
+        for (let i = 0; i < count; i++) {
+          const lbl = String(labels[i] || '').toLowerCase();
+          const isHighlighted = lbl.includes(query) || matchingLabels.has(lbl);
+
+          if (isHighlighted) {
+            newBg.push('#facc15'); // Bright gold highlight
+            newBorders.push('#ca8a04');
+            newWidths.push(3);
+          } else {
+            newBg.push('rgba(148, 163, 184, 0.25)'); // Dimmed grey
+            newBorders.push('rgba(148, 163, 184, 0.3)');
+            newWidths.push(1);
+          }
+        }
+        ds.backgroundColor = newBg;
+        ds.borderColor = newBorders;
+        ds.borderWidth = newWidths;
+      }
+    });
+    modalChartInstance.update();
+  }
 };
 
 window.exportModalTableToCSV = function() {
