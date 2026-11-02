@@ -227,9 +227,12 @@ def read_upload(file_storage):
 def make_hash(dept, row):
     key = "|".join(str(row.get(k) or "").strip().lower() for k in
                    ["call_id", "call_date", "evaluation_date", "advisor_id", "advisor_name", "quality_score", "is_fatal"])
+    # If Call ID is absent, also factor in observation and auditor to prevent distinct calls with same score on same day from hashing identically
+    if not (row.get("call_id") or "").strip():
+        key += "|" + str(row.get("auditor_name") or "").strip().lower() + "|" + str(row.get("observation") or "").strip().lower()
     return hashlib.sha256((dept.lower() + "|" + key).encode("utf-8")).hexdigest()
 
-def import_dataframe(df, department, filename, username):
+def import_dataframe(df, department, filename, username, duplicate_handling="skip"):
     mapping = detect_columns(df.columns)
     if "advisor_name" not in mapping:
         raise ValueError("Advisor Name column was not detected. Please verify your column headers.")
@@ -306,6 +309,9 @@ def import_dataframe(df, department, filename, username):
                 "audio_url": str(row.get("audio_url") or "").strip() or None
             }
             row_hash = make_hash(department, record)
+            if duplicate_handling == "force_insert":
+                row_hash = row_hash[:56] + secrets.token_hex(4)
+                
             is_dup = False
             try:
                 cur = con.execute("""INSERT OR IGNORE INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
@@ -1165,6 +1171,7 @@ def upload():
             
         file = request.files.get("file")
         department = request.form.get("department")
+        dup_handling = request.form.get("duplicate_handling", "skip")
         if not file or not file.filename:
             flash("Please choose an Excel (.xlsx, .xlsm) or CSV file.", "error")
         elif department not in ("Inbound", "Outbound"):
@@ -1172,7 +1179,7 @@ def upload():
         else:
             try:
                 filename, df = read_upload(file)
-                result = import_dataframe(df, department, filename, request.current_user["username"])
+                result = import_dataframe(df, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
                 flash(f"Workbook ingested: {result['inserted']} inserted, {result['duplicates']} duplicates skipped, {result['rejected']} rejected.", "success")
             except Exception as exc:
                 flash(f"Ingestion failed: {str(exc)}", "error")
@@ -1363,6 +1370,110 @@ def reinsert_batch_record(batch_id):
     return {
         "success": True,
         "message": f"Successfully validated and inserted audit record for '{advisor}'!",
+        "stats": {
+            "rows_inserted": new_inserted,
+            "duplicates": new_duplicates,
+            "rejected": new_rejected
+        }
+    }
+
+@app.route("/upload/batch/<batch_id>/reinsert_bulk", methods=["POST"])
+@roles("admin", "quality")
+def reinsert_batch_bulk(batch_id):
+    data = request.get_json(force=True, silent=True) or {}
+    items = data.get("items", [])
+    if not items:
+        return {"success": False, "error": "No items provided for bulk insert."}, 400
+
+    with db() as con:
+        batch = con.execute("SELECT * FROM import_batches WHERE id=?", (batch_id,)).fetchone()
+        if not batch:
+            return {"success": False, "error": "Import batch not found."}, 404
+
+        batch_dict = dict(batch)
+        department = batch_dict["department"]
+        filename = batch_dict["source_file"]
+        now = datetime.now().isoformat(timespec="seconds")
+
+        report = {}
+        if batch_dict.get("report_json"):
+            try:
+                report = json.loads(batch_dict["report_json"])
+            except Exception:
+                report = {}
+
+        inserted_count = 0
+        indices_to_remove = set()
+
+        for it in items:
+            idx = it.get("index")
+            d = it.get("data") or {}
+            advisor = str(d.get("advisor_name") or "").strip()
+            score = parse_score(d.get("quality_score"))
+            if not advisor or score is None:
+                continue
+
+            fatal_raw = str(d.get("is_fatal") or "0")
+            fatal_category = str(d.get("fatal_category") or "").strip()
+            error_categories = str(d.get("error_categories") or "").strip()
+            fatal = int(truthy_fatal(fatal_raw) or bool(fatal_category and "non fatal" not in norm(fatal_category)))
+            if fatal and not fatal_category:
+                fatal_category = "Fatal — category needs review"
+
+            record = {
+                "call_id": str(d.get("call_id") or "").strip() or None,
+                "call_date": parse_date(d.get("call_date")),
+                "evaluation_date": parse_date(d.get("evaluation_date")),
+                "advisor_id": str(d.get("advisor_id") or "").strip() or None,
+                "advisor_name": advisor,
+                "team_leader": str(d.get("team_leader") or "").strip() or None,
+                "auditor_name": str(d.get("auditor_name") or "").strip() or None,
+                "quality_score": score,
+                "is_fatal": fatal,
+                "fatal_category": fatal_category or None,
+                "error_categories": error_categories or None,
+                "observation": str(d.get("observation") or "").strip() or None,
+                "location": str(d.get("location") or "").strip() or None,
+                "audio_url": str(d.get("audio_url") or "").strip() or None
+            }
+
+            # Force unique row_hash for bulk force-insert
+            row_hash = make_hash(department, record)[:56] + secrets.token_hex(4)
+
+            try:
+                con.execute("""INSERT INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
+                team_leader,auditor_name,quality_score,is_fatal,fatal_category,error_categories,observation,location,
+                audio_url,source_file,import_batch,row_hash,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (department, record["call_id"], record["call_date"], record["evaluation_date"], record["advisor_id"],
+                 record["advisor_name"], record["team_leader"], record["auditor_name"], record["quality_score"],
+                 record["is_fatal"], record["fatal_category"], record["error_categories"], record["observation"],
+                 record["location"], record["audio_url"], filename, batch_id, row_hash, now))
+                inserted_count += 1
+                if idx is not None:
+                    indices_to_remove.add(int(idx))
+            except Exception as e:
+                print(f"[WARN] Bulk re-insert row skip: {e}")
+
+        # Update duplicate_rows in report
+        dup_rows = report.get("duplicate_rows", [])
+        updated_dup_rows = [row for i, row in enumerate(dup_rows) if i not in indices_to_remove]
+        report["duplicate_rows"] = updated_dup_rows
+
+        new_inserted = batch_dict["rows_inserted"] + inserted_count
+        new_duplicates = max(0, batch_dict["duplicates"] - inserted_count)
+        new_rejected = batch_dict["rejected"]
+
+        con.execute(
+            """UPDATE import_batches
+               SET rows_inserted=?, duplicates=?, rejected=?, report_json=?
+               WHERE id=?""",
+            (new_inserted, new_duplicates, new_rejected, json.dumps(report, default=str), batch_id)
+        )
+
+    log_audit("BULK_REINSERT_AUDITS", batch_id, f"Bulk inserted {inserted_count} duplicates as new records")
+    return {
+        "success": True,
+        "message": f"Successfully force-inserted {inserted_count} duplicate records as new audits!",
         "stats": {
             "rows_inserted": new_inserted,
             "duplicates": new_duplicates,

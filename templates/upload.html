@@ -20,7 +20,7 @@
     </div>
   {% else %}
     <form method="post" enctype="multipart/form-data">
-      <div class="filter-grid" style="grid-template-columns: 1fr 2fr;">
+      <div class="filter-grid" style="grid-template-columns: 1fr 2fr 1fr;">
         <div class="filter-group">
           <label>Department Scope *</label>
           <select name="department" class="form-control" required>
@@ -32,6 +32,13 @@
         <div class="filter-group">
           <label>Workbook File (.xlsx, .xlsm, .csv) *</label>
           <input type="file" name="file" accept=".xlsx,.xlsm,.csv" class="form-control" required>
+        </div>
+        <div class="filter-group">
+          <label>Duplicate Handling</label>
+          <select name="duplicate_handling" class="form-control">
+            <option value="skip">Skip duplicates (Default)</option>
+            <option value="force_insert">Insert All (Force insert even if duplicate)</option>
+          </select>
         </div>
       </div>
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
@@ -219,13 +226,26 @@
 
       <!-- Tab Content: Duplicates -->
       <div id="tabContentDuplicates" style="display:none;">
-        <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#92400e;">
-          💡 <strong>Duplicate Rows Detected:</strong> These records match call details or hashes already stored in the system. You can cross-check each row and click <strong>"Force Insert As New"</strong> if it is a legitimate separate call.
+        <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            💡 <strong>Duplicate Rows Detected:</strong> These records match existing entries by hash or fields. You can select specific rows or click <strong>Select All</strong> and then insert all of them as new audits at once!
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSelectAllDuplicates()" id="btnSelectAllDups">
+              ☑️ Select All (<span id="dupSelectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="submitBulkForceInsertDuplicates()" id="btnBulkInsertDups" style="font-weight:600;">
+              ➕ Force Insert Selected As New
+            </button>
+          </div>
         </div>
         <div class="table-responsive" style="max-height:480px;">
           <table class="data-table">
             <thead>
               <tr>
+                <th style="width:40px;text-align:center;">
+                  <input type="checkbox" id="masterDupCheckbox" onchange="toggleSelectAllDuplicates(this.checked)" title="Select all duplicates">
+                </th>
                 <th>Row #</th>
                 <th>Call ID</th>
                 <th>Advisor Name</th>
@@ -414,12 +434,19 @@ function renderBatchModal(data, initialTab) {
   // Render Duplicates Table
   const dupTbody = document.getElementById('duplicatesTbody');
   dupTbody.innerHTML = '';
+  const masterDupCb = document.getElementById('masterDupCheckbox');
+  if (masterDupCb) masterDupCb.checked = false;
+  updateDupSelectedCount();
+
   if (data.duplicates && data.duplicates.length > 0) {
     data.duplicates.forEach((item, index) => {
       const d = item.data || {};
       const tr = document.createElement('tr');
       tr.id = `dup-row-${index}`;
       tr.innerHTML = `
+        <td style="text-align:center;">
+          <input type="checkbox" class="dup-row-cb" value="${index}" onchange="updateDupSelectedCount()">
+        </td>
         <td><span class="badge badge-neutral">Row ${item.row || (index + 2)}</span></td>
         <td><strong>${escapeHtml(d.call_id || '-')}</strong></td>
         <td>${escapeHtml(d.advisor_name || '-')}</td>
@@ -436,7 +463,7 @@ function renderBatchModal(data, initialTab) {
       dupTbody.appendChild(tr);
     });
   } else {
-    dupTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No duplicate records recorded for this batch.</td></tr>';
+    dupTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">No duplicate records recorded for this batch.</td></tr>';
   }
 
   // Render Rejected Table
@@ -596,6 +623,69 @@ function sendReinsertRequest(batchId, payload, rowElementId) {
   })
   .catch(err => {
     showModalNotice(`❌ Re-insert failed: ${err.message}`, "error");
+  });
+}
+
+function updateDupSelectedCount() {
+  const checked = document.querySelectorAll('.dup-row-cb:checked');
+  const countEl = document.getElementById('dupSelectedCount');
+  if (countEl) countEl.innerText = checked.length;
+}
+
+function toggleSelectAllDuplicates(forceState) {
+  const cbs = document.querySelectorAll('.dup-row-cb');
+  const master = document.getElementById('masterDupCheckbox');
+  let state = forceState;
+  if (typeof state === 'undefined') {
+    const checked = document.querySelectorAll('.dup-row-cb:checked');
+    state = checked.length < cbs.length;
+  }
+  cbs.forEach(cb => { cb.checked = state; });
+  if (master) master.checked = state;
+  updateDupSelectedCount();
+}
+
+function submitBulkForceInsertDuplicates() {
+  const checked = Array.from(document.querySelectorAll('.dup-row-cb:checked'));
+  if (checked.length === 0) {
+    showModalNotice("⚠️ Please select at least one duplicate row to insert.", "error");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to force-insert ${checked.length} duplicate records as new audits?`)) {
+    return;
+  }
+
+  const items = checked.map(cb => {
+    const idx = parseInt(cb.value);
+    const item = currentBatchData.duplicates[idx];
+    return {
+      index: idx,
+      data: (item && item.data) ? item.data : {}
+    };
+  });
+
+  hideModalNotice();
+  showModalNotice(`⏳ Inserting ${items.length} records into database...`, "success");
+
+  fetch(`/upload/batch/${currentBatchId}/reinsert_bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: items })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      showModalNotice(`✅ ${res.message}`, "success");
+      setTimeout(() => {
+        openBatchModal(currentBatchId, 'duplicates');
+      }, 600);
+    } else {
+      showModalNotice(`❌ Bulk insert failed: ${res.error}`, "error");
+    }
+  })
+  .catch(err => {
+    showModalNotice(`❌ Network error during bulk insert: ${err.message}`, "error");
   });
 }
 
