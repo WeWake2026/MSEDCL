@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}MSEDCL Quality Audit & Performance Dashboard
-<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered on screen) -->
+<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered in Middle of Screen) -->
 <div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px;">
   <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 60px -15px rgba(0,0,0,0.4);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
     
@@ -103,7 +103,6 @@
 let modalChartInstance = null;
 let currentModalRows = [];
 let hoverTriggerTimer = null;
-let lastHoveredType = null;
 
 // Global chart modal trigger
 window.openChartModal = function(type) {
@@ -125,6 +124,9 @@ window.openChartModal = function(type) {
     modalChartInstance = null;
   }
 
+  // Access chartData passed from Flask
+  const cd = (typeof chartData !== 'undefined') ? chartData : {};
+
   if (type === 'timeline') {
     icon.innerText = '📞';
     titleText.innerText = 'Inbound vs Outbound Audits Timeline';
@@ -140,7 +142,7 @@ window.openChartModal = function(type) {
       </tr>
     `;
 
-    const details = (typeof chartData !== 'undefined' && chartData.timeline_details) ? chartData.timeline_details : [];
+    const details = cd.timeline_details || [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Days Recorded`;
     tbody.innerHTML = '';
@@ -207,7 +209,7 @@ window.openChartModal = function(type) {
       </tr>
     `;
 
-    const details = (typeof chartData !== 'undefined' && chartData.auditor_details) ? chartData.auditor_details : [];
+    const details = cd.auditor_details || [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Auditors Evaluated`;
     tbody.innerHTML = '';
@@ -281,7 +283,7 @@ window.openChartModal = function(type) {
       </tr>
     `;
 
-    const details = (typeof chartData !== 'undefined' && chartData.top_advisor_details) ? chartData.top_advisor_details : [];
+    const details = cd.top_advisor_details || [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Top Advisors`;
     tbody.innerHTML = '';
@@ -378,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
       hoverTriggerTimer = setTimeout(() => {
         const modal = document.getElementById('chartDetailModal');
         if (!modal || modal.style.display === 'flex') return;
-        lastHoveredType = chartType;
         openChartModal(chartType);
       }, 400);
     });
@@ -407,7 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-</script>
 
 {% endblock %}
 {% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
@@ -716,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 
   <!-- Chart 3: Inbound vs Outbound Audits Line / Timeline Chart -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="timeline" onclick="openChartModal('timeline')" title="Click or hover to inspect timeline data and view records">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="timeline" onclick="openChartModal('timeline')" title="Click or scroll to inspect timeline breakdown">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📞</span>
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span><span class="ref-legend-bullet" style="background:#4f46e5;"></span> Inbound</span>
           <span><span class="ref-legend-bullet" style="background:#10b981;"></span> Outbound</span>
         </div>
-        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('timeline')" title="Inspect Inbound vs Outbound Data">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('timeline')">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:180px;width:100%;">
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 4B. Secondary Analytics Charts Row: Auditor Evaluation Activity, Top Advisor Quality Scores, Warning & PIP Status -->
 <div class="ref-charts-row secondary-charts-row">
   <!-- Chart 4: Auditor Evaluation Activity -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="auditor" onclick="openChartModal('auditor')" title="Click or hover to inspect auditor productivity">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="auditor" onclick="openChartModal('auditor')" title="Click or scroll to inspect auditor breakdown">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-purple);">📋</span>
@@ -749,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ref-chart-subtitle">
           Auditors: <strong>{{ auditors_list|length }}</strong>
         </div>
-        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('auditor')" title="Inspect Auditor Details">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('auditor')">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:195px;width:100%;">
@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 
   <!-- Chart 5: Top Advisor Quality Scores -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="advisor" onclick="openChartModal('advisor')" title="Click or hover to inspect top advisor performance">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="advisor" onclick="openChartModal('advisor')" title="Click or scroll to inspect advisor ranking">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-cyan);">🏆</span>
@@ -768,7 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ref-chart-subtitle">
           Top Performers
         </div>
-        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('advisor')" title="Inspect Advisor Details">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('advisor')">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:195px;width:100%;">
@@ -992,80 +992,72 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // 3. Inbound vs Outbound Timeline Trend (Actual Live Data from database)
-  const dates = chartData.dates && chartData.dates.length ? chartData.dates : ['No Date Recorded'];
-  const inData = chartData.inbound_timeline && chartData.inbound_timeline.length ? chartData.inbound_timeline : [chartData.inbound_count || 0];
-  const outData = chartData.outbound_timeline && chartData.outbound_timeline.length ? chartData.outbound_timeline : [chartData.outbound_count || 0];
+  // 3. Inbound vs Outbound Timeline Trend (Live Database Data)
+  const dates = (chartData.dates && chartData.dates.length) ? chartData.dates : ['No Date'];
+  const inData = (chartData.inbound_timeline && chartData.inbound_timeline.length) ? chartData.inbound_timeline : [chartData.inbound_count || 0];
+  const outData = (chartData.outbound_timeline && chartData.outbound_timeline.length) ? chartData.outbound_timeline : [chartData.outbound_count || 0];
 
-  new Chart(document.getElementById('refDeptTrendChart'), {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [
-        {
-          label: 'Inbound',
-          data: inData,
-          borderColor: '#4f46e5',
-          backgroundColor: 'rgba(79, 70, 229, 0.12)',
-          fill: true,
-          tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 2.5
-        },
-        {
-          label: 'Outbound',
-          data: outData,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.12)',
-          fill: true,
-          tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 2.5
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
+  const deptCtx = document.getElementById('refDeptTrendChart');
+  if (deptCtx) {
+    new Chart(deptCtx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          {
+            label: 'Inbound',
+            data: inData,
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.25,
+            pointRadius: 3,
+            borderWidth: 2
+          },
+          {
+            label: 'Outbound',
+            data: outData,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.25,
+            pointRadius: 3,
+            borderWidth: 2
+          }
+        ]
       },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#0f172a',
-          titleFont: { size: 12 },
-          bodyFont: { size: 12 },
-          padding: 10,
-          callbacks: {
-            afterBody: (items) => {
-              const inVal = items[0]?.raw || 0;
-              const outVal = items[1]?.raw || 0;
-              return `Total Calls: ${Number(inVal) + Number(outVal)}`;
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterBody: function(items) {
+                const total = items.reduce((acc, it) => acc + (Number(it.raw) || 0), 0);
+                return 'Total Audits: ' + total;
+              }
             }
           }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textColor, font: { size: 10 }, maxRotation: 45 }
         },
-        y: {
-          beginAtZero: true,
-          grid: { color: gridColor },
-          ticks: { color: textColor, font: { size: 10 }, precision: 0 }
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { size: 10 }, maxRotation: 45 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 10 }, precision: 0 }
+          }
         }
       }
-    }
-  });
+    });
+  }
 
   // 4. Auditor Evaluation Activity Bar Chart
-  const auditorNames = chartData.auditor_names && chartData.auditor_names.length ? chartData.auditor_names : ['No Auditor Logged'];
-  const auditorCounts = chartData.auditor_counts && chartData.auditor_counts.length ? chartData.auditor_counts : [0];
+  const auditorNames = (chartData.auditor_names && chartData.auditor_names.length) ? chartData.auditor_names : ['No Auditor'];
+  const auditorCounts = (chartData.auditor_counts && chartData.auditor_counts.length) ? chartData.auditor_counts : [0];
   const auditorCtx = document.getElementById('refAuditorActivityChart');
   if (auditorCtx) {
     new Chart(auditorCtx, {
@@ -1115,8 +1107,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // 5. Top Advisor Quality Scores Horizontal Bar Chart
-  const topAdvisors = chartData.top_advisors && chartData.top_advisors.length ? chartData.top_advisors : ['No Advisor Logged'];
-  const topScores = chartData.top_scores && chartData.top_scores.length ? chartData.top_scores : [0];
+  const topAdvisors = (chartData.top_advisors && chartData.top_advisors.length) ? chartData.top_advisors : ['No Advisor'];
+  const topScores = (chartData.top_scores && chartData.top_scores.length) ? chartData.top_scores : [0];
   const topAdvisorCtx = document.getElementById('refTopAdvisorChart');
   if (topAdvisorCtx) {
     new Chart(topAdvisorCtx, {
@@ -1140,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => `Quality Score: ${ctx.raw}%`
+              label: (ctx) => `Score: ${ctx.raw}%`
             }
           }
         },
