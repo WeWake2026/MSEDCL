@@ -1950,7 +1950,14 @@ def advisor_lookup():
 def user_management():
     with db() as con:
         users = con.execute("SELECT * FROM users ORDER BY id ASC").fetchall()
-    return render_template("user_management.html", page="users", users=users)
+        # Fetch distinct audited advisors for autocomplete and linkage
+        audited_advisors = con.execute("""
+            SELECT DISTINCT advisor_id, advisor_name, department
+            FROM audits
+            WHERE advisor_name IS NOT NULL AND advisor_name != ''
+            ORDER BY advisor_name ASC
+        """).fetchall()
+    return render_template("user_management.html", page="users", users=users, audited_advisors=audited_advisors)
 
 @app.route("/admin/users/create", methods=["POST"])
 @roles("admin", "manager")
@@ -1960,13 +1967,15 @@ def user_create():
     email = request.form.get("email", "").strip()
     role = request.form.get("role", "quality")
     advisor_id = request.form.get("advisor_id", "").strip() or None
+    department = request.form.get("department", "All").strip()
+    location = request.form.get("location", "").strip()
     password = request.form.get("password", "")
 
     if not username or not password:
         flash("Username and password are required.", "error")
         return redirect(url_for("user_management"))
 
-    if role not in ("admin", "quality", "manager", "viewer"):
+    if role not in ("admin", "quality", "manager", "viewer", "advisor"):
         flash("Invalid role selected.", "error")
         return redirect(url_for("user_management"))
 
@@ -1979,14 +1988,43 @@ def user_create():
                 return redirect(url_for("user_management"))
 
             con.execute("""
-                INSERT INTO users (username, password_hash, role, advisor_id, active, full_name, email, created_at)
-                VALUES (?, ?, ?, ?, 1, ?, ?, datetime('now'))
-            """, (username, pwd_hash, role, advisor_id, full_name, email))
-        log_audit("CREATE_USER", username, f"Role: {role}, AdvisorID: {advisor_id}, Email: {email}")
+                INSERT INTO users (username, password_hash, role, advisor_id, active, full_name, email, department, location, created_at)
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'))
+            """, (username, pwd_hash, role, advisor_id, full_name, email, department, location))
+        log_audit("CREATE_USER", username, f"Role: {role}, AdvisorID: {advisor_id}, Dept: {department}, Email: {email}")
         flash(f"User '{username}' created successfully.", "success")
     except DbIntegrityError as e:
         flash(f"Could not create user: {e}", "error")
 
+    return redirect(url_for("user_management"))
+
+@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
+@roles("admin", "manager")
+def user_update(user_id):
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip()
+    role = request.form.get("role", "quality")
+    advisor_id = request.form.get("advisor_id", "").strip() or None
+    department = request.form.get("department", "All").strip()
+    location = request.form.get("location", "").strip()
+
+    if role not in ("admin", "quality", "manager", "viewer", "advisor"):
+        flash("Invalid role selected.", "error")
+        return redirect(url_for("user_management"))
+
+    with db() as con:
+        u = con.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if not u:
+            flash("User not found.", "error")
+            return redirect(url_for("user_management"))
+
+        con.execute("""
+            UPDATE users
+            SET full_name=?, email=?, role=?, advisor_id=?, department=?, location=?
+            WHERE id=?
+        """, (full_name, email, role, advisor_id, department, location, user_id))
+        log_audit("UPDATE_USER", u["username"], f"Updated profile: Role={role}, AdvisorID={advisor_id}, Dept={department}")
+    flash(f"Profile for '{u['username']}' updated successfully.", "success")
     return redirect(url_for("user_management"))
 
 @app.route("/admin/users/<int:user_id>/toggle", methods=["POST"])

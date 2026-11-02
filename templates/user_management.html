@@ -5,9 +5,16 @@
 {% block content %}
 <!-- Create New User ID Card -->
 <div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Provision New User Account</h3>
-    <span class="card-subtitle">Administrators can create user credentials and assign strict role permissions</span>
+  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h3 class="card-title">Provision New User Account</h3>
+      <span class="card-subtitle">Administrators can create user credentials and assign strict role permissions</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="/static/demo_users_import_template.csv" download class="btn btn-secondary btn-sm" title="Download sample import format with demo data">
+        📥 Download Demo CSV Format
+      </a>
+    </div>
   </div>
   <form method="post" action="{{ url_for('user_create') }}" class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
     <div class="filter-group">
@@ -16,7 +23,7 @@
     </div>
     <div class="filter-group">
       <label>Full Name</label>
-      <input type="text" name="full_name" class="form-control" placeholder="Staff Name">
+      <input type="text" name="full_name" id="newFullName" class="form-control" placeholder="Staff Name">
     </div>
     <div class="filter-group">
       <label>Email Address</label>
@@ -24,20 +31,41 @@
     </div>
     <div class="filter-group">
       <label>Assigned Role *</label>
-      <select name="role" class="form-control" required>
-        <option value="admin">Administrator (Full Control)</option>
+      <select name="role" id="newRole" class="form-control" required onchange="handleRoleChange(this.value)">
         <option value="quality" selected>Quality Team (Audits, Uploads, Warnings)</option>
+        <option value="advisor">Advisor (Restricted to own performance)</option>
         <option value="manager">Manager (Audits, Reports, Approvals)</option>
-        <option value="viewer">Advisor / Read-Only (Restricted to own data)</option>
+        <option value="admin">Administrator (Full Control)</option>
+        <option value="viewer">Viewer (Read-Only Portal Access)</option>
       </select>
     </div>
     <div class="filter-group">
-      <label>Linked Advisor ID / Code</label>
-      <input type="text" name="advisor_id" class="form-control" placeholder="e.g. ADV-1021 or 10425 (for advisor/viewer)">
+      <label>Department</label>
+      <select name="department" id="newDept" class="form-control">
+        <option value="All">All Departments</option>
+        <option value="Inbound">Inbound (1912 Helpline, Billing)</option>
+        <option value="Outbound">Outbound (Recovery, Feedback)</option>
+      </select>
     </div>
     <div class="filter-group">
-      <label>Initial Secure Password *</label>
-      <input type="password" name="password" class="form-control" placeholder="Strong password" required>
+      <label>Location / Circle</label>
+      <input type="text" name="location" class="form-control" placeholder="Pune / Bhandup / Kalyan">
+    </div>
+    <div class="filter-group">
+      <label>Linked Audited Advisor</label>
+      <input list="auditedAdvisorsList" name="advisor_id" id="newAdvisorId" class="form-control" placeholder="Type or select Advisor..." onchange="onAdvisorSelected(this.value)">
+      <datalist id="auditedAdvisorsList">
+        {% for a in audited_advisors %}
+        <option value="{{ a.advisor_id }}" data-name="{{ a.advisor_name }}" data-dept="{{ a.department }}">{{ a.advisor_name }} ({{ a.advisor_id }} - {{ a.department }})</option>
+        {% endfor %}
+      </datalist>
+    </div>
+    <div class="filter-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <label style="margin:0;">Password *</label>
+        <button type="button" onclick="generateRandomPassword('newPassword')" style="background:none;border:none;color:var(--brand-blue);font-size:11px;cursor:pointer;padding:0;">🎲 Generate</button>
+      </div>
+      <input type="text" name="password" id="newPassword" class="form-control" placeholder="Strong password" required style="margin-top:4px;">
     </div>
     <div style="display:flex;align-items:flex-end;">
       <button type="submit" class="btn btn-primary" style="width:100%;">Create Account</button>
@@ -132,6 +160,11 @@
           <td>{{ u.last_login or 'Never' }}</td>
           <td>
             <div class="action-buttons">
+              <!-- Edit Profile Modal Trigger -->
+              <button onclick="openEditUserModal('{{ u.id }}', '{{ u.username }}', '{{ u.full_name or '' }}', '{{ u.email or '' }}', '{{ u.role }}', '{{ u.advisor_id or '' }}', '{{ u.department or 'All' }}', '{{ u.location or '' }}')" class="btn btn-secondary btn-sm" title="Edit user details">
+                ✏️ Edit
+              </button>
+
               <!-- Toggle Active / Inactive (Enable / Disable) -->
               {% if u.id != user.id %}
               <form method="post" action="{{ url_for('user_toggle_status', user_id=u.id) }}">
@@ -159,6 +192,58 @@
   </div>
 </div>
 
+<!-- User Profile Edit Modal -->
+<div id="editUserModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:540px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:16px;">Edit Profile for <span id="editModalUsername"></span></h3>
+      <button onclick="closeEditUserModal()" style="border:none;background:none;font-size:20px;cursor:pointer;">&times;</button>
+    </div>
+    <form method="post" id="editUserForm">
+      <div class="filter-grid" style="grid-template-columns: 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="filter-group">
+          <label>Full Name</label>
+          <input type="text" name="full_name" id="editFullName" class="form-control" placeholder="Staff Name">
+        </div>
+        <div class="filter-group">
+          <label>Email Address</label>
+          <input type="email" name="email" id="editEmail" class="form-control" placeholder="user@msedcl.in">
+        </div>
+        <div class="filter-group">
+          <label>System Role *</label>
+          <select name="role" id="editRole" class="form-control" required>
+            <option value="quality">Quality Team</option>
+            <option value="advisor">Advisor</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Administrator</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Department</label>
+          <select name="department" id="editDept" class="form-control">
+            <option value="All">All Departments</option>
+            <option value="Inbound">Inbound</option>
+            <option value="Outbound">Outbound</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Location / Circle</label>
+          <input type="text" name="location" id="editLocation" class="form-control" placeholder="e.g. Pune / Kalyan">
+        </div>
+        <div class="filter-group">
+          <label>Linked Audited Advisor</label>
+          <input list="auditedAdvisorsList" name="advisor_id" id="editAdvisorId" class="form-control" placeholder="Select Advisor ID...">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button type="button" onclick="closeEditUserModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Password Reset Modal -->
 <div id="pwdModal" class="modal-overlay">
   <div class="modal-box">
@@ -169,8 +254,11 @@
     <form method="post" action="{{ url_for('user_reset_password') }}">
       <input type="hidden" name="user_id" id="modalUserId">
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">New Password</label>
-        <input type="password" name="new_password" class="form-control" required placeholder="Enter strong replacement password">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin:0;">New Password</label>
+          <button type="button" onclick="generateRandomPassword('modalNewPassword')" style="background:none;border:none;color:var(--brand-blue);font-size:11px;cursor:pointer;padding:0;">🎲 Generate</button>
+        </div>
+        <input type="text" name="new_password" id="modalNewPassword" class="form-control" required placeholder="Enter strong replacement password">
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
         <button type="button" onclick="closePasswordModal()" class="btn btn-secondary">Cancel</button>
@@ -181,6 +269,56 @@
 </div>
 
 <script>
+function openEditUserModal(id, username, fullName, email, role, advisorId, dept, location) {
+  document.getElementById('editModalUsername').innerText = username;
+  document.getElementById('editFullName').value = fullName;
+  document.getElementById('editEmail').value = email;
+  document.getElementById('editRole').value = role;
+  document.getElementById('editAdvisorId').value = advisorId;
+  document.getElementById('editDept').value = dept || 'All';
+  document.getElementById('editLocation').value = location || '';
+  document.getElementById('editUserForm').action = '/admin/users/' + id + '/update';
+  document.getElementById('editUserModal').classList.add('open');
+}
+
+function closeEditUserModal() {
+  document.getElementById('editUserModal').classList.remove('open');
+}
+
+function generateRandomPassword(targetInputId) {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*";
+  let pwd = "";
+  for (let i = 0; i < 10; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  document.getElementById(targetInputId).value = pwd;
+}
+
+function onAdvisorSelected(advisorId) {
+  if (!advisorId) return;
+  const datalist = document.getElementById('auditedAdvisorsList');
+  const opt = Array.from(datalist.options).find(o => o.value === advisorId);
+  if (opt) {
+    const advName = opt.getAttribute('data-name');
+    const dept = opt.getAttribute('data-dept');
+    const fullNameInput = document.getElementById('newFullName');
+    const deptSelect = document.getElementById('newDept');
+    if (fullNameInput && !fullNameInput.value) fullNameInput.value = advName;
+    if (deptSelect && dept) deptSelect.value = dept;
+  }
+}
+
+function handleRoleChange(role) {
+  const advInput = document.getElementById('newAdvisorId');
+  if (role === 'advisor' || role === 'viewer') {
+    advInput.setAttribute('required', 'required');
+    advInput.style.borderColor = 'var(--brand-blue)';
+  } else {
+    advInput.removeAttribute('required');
+    advInput.style.borderColor = '';
+  }
+}
+
 function openPasswordModal(id, username) {
   document.getElementById('modalUserId').value = id;
   document.getElementById('modalUsername').innerText = username;
