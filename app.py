@@ -346,10 +346,10 @@ def import_dataframe(df, department, filename, username):
                 })
                 
         report = {
-            "errors": errors[:500],
+            "errors": errors,
             "mapping": mapping,
-            "duplicate_rows": duplicate_rows[:500],
-            "rejected_rows": rejected_rows[:500]
+            "duplicate_rows": duplicate_rows,
+            "rejected_rows": rejected_rows
         }
         con.execute("""INSERT INTO import_batches(id,department,source_file,uploaded_by,uploaded_at,rows_seen,
         rows_inserted,duplicates,rejected,report_json) VALUES(?,?,?,?,?,?,?,?,?,?)""",
@@ -1219,12 +1219,12 @@ def get_batch_details(batch_id):
             except Exception:
                 report = {}
         
-        # Fetch inserted records for this batch
+        # Fetch all inserted records for this batch
         inserted_rows = con.execute(
             """SELECT id, department, call_id, call_date, evaluation_date, advisor_id, advisor_name,
                       team_leader, auditor_name, quality_score, is_fatal, fatal_category,
                       error_categories, observation, location, audio_url, imported_at
-               FROM audits WHERE import_batch=? ORDER BY id ASC LIMIT 500""",
+               FROM audits WHERE import_batch=? ORDER BY id ASC""",
             (batch_id,)
         ).fetchall()
         
