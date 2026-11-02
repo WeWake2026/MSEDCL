@@ -1,415 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}MSEDCL Quality Audit & Performance Dashboard
-<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered in Middle of Screen) -->
-<div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px;">
-  <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 60px -15px rgba(0,0,0,0.4);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
-    
-    <!-- Modal Header -->
-    <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
-      <div>
-        <h3 id="modalChartTitle" style="margin:0;font-size:18px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px;">
-          <span id="modalChartIcon">📊</span>
-          <span id="modalChartTitleText">Analytics Deep-Dive</span>
-        </h3>
-        <p id="modalChartSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">Interactive multi-dimensional evaluation with search, filter, and table view</p>
-      </div>
-      <button type="button" onclick="closeChartModal()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-size:22px;line-height:1;cursor:pointer;color:#334155;padding:4px 10px;transition:all 0.15s ease;" title="Close pop-up">&times;</button>
-    </div>
-
-    <!-- Modal Filter Bar -->
-    <div style="padding:10px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:12px;font-weight:600;color:#475569;">Quick Filter:</span>
-        <input type="text" id="modalTableFilter" onkeyup="filterModalTable()" placeholder="Search in records..." class="form-control" style="width:240px;font-size:12px;padding:6px 10px;">
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="badge badge-neutral" id="modalDataCountBadge" style="font-size:11.5px;padding:5px 10px;">0 records</span>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="exportModalTableToCSV()" style="font-size:12px;padding:5px 10px;">📥 Export CSV</button>
-      </div>
-    </div>
-
-    <!-- Modal Body: High-Res Expanded Chart + Full Data Table -->
-    <div style="padding:18px 24px;overflow-y:auto;flex:1;">
-      
-      <!-- Expanded Chart Box -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <h4 style="font-size:13px;font-weight:600;margin:0;color:#334155;">Visual Analytics Breakdown</h4>
-          <span style="font-size:11px;color:#64748b;">Hover data points for exact counts and percentages</span>
-        </div>
-        <div style="position:relative;height:240px;width:100%;">
-          <canvas id="modalExpandedChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Tabular Data View -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <h4 style="font-size:13.5px;font-weight:700;margin:0;color:#0f172a;" id="modalTableHeading">Comprehensive Records Breakdown</h4>
-        <span style="font-size:11px;color:#64748b;">Click column headers or row items to navigate</span>
-      </div>
-      <div class="table-responsive" style="max-height:300px;">
-        <table class="data-table" id="modalDataTable">
-          <thead id="modalDataTableThead"></thead>
-          <tbody id="modalDataTableTbody"></tbody>
-        </table>
-      </div>
-
-    </div>
-
-    <!-- Modal Footer -->
-    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:12px;color:#64748b;">MSEDCL Quality Audit System · Interactive Analytics Inspector</span>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="closeChartModal()">Close Inspector</button>
-    </div>
-
-  </div>
-</div>
-
-<style>
-@keyframes modalScaleUp {
-  from { transform: scale(0.92); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.interactive-chart-card {
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
-  position: relative;
-}
-.interactive-chart-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-  border-color: var(--primary) !important;
-}
-.chart-expand-btn {
-  background: rgba(79, 70, 229, 0.1);
-  border: 1px solid rgba(79, 70, 229, 0.25);
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 5;
-}
-.chart-expand-btn:hover {
-  background: var(--primary) !important;
-  color: #fff !important;
-  transform: scale(1.05);
-}
-</style>
-
-<script>
-let modalChartInstance = null;
-let currentModalRows = [];
-let hoverTriggerTimer = null;
-
-// Global chart modal trigger
-window.openChartModal = function(type) {
-  const modal = document.getElementById('chartDetailModal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  document.getElementById('modalTableFilter').value = '';
-
-  const titleText = document.getElementById('modalChartTitleText');
-  const icon = document.getElementById('modalChartIcon');
-  const subtitle = document.getElementById('modalChartSubtitle');
-  const thead = document.getElementById('modalDataTableThead');
-  const tbody = document.getElementById('modalDataTableTbody');
-  const countBadge = document.getElementById('modalDataCountBadge');
-  const canvas = document.getElementById('modalExpandedChart');
-
-  if (modalChartInstance) {
-    modalChartInstance.destroy();
-    modalChartInstance = null;
-  }
-
-  // Access chartData passed from Flask
-  const cd = (typeof chartData !== 'undefined') ? chartData : {};
-
-  if (type === 'timeline') {
-    icon.innerText = '📞';
-    titleText.innerText = 'Inbound vs Outbound Audits Timeline';
-    subtitle.innerText = 'Day-by-day comparison of evaluated interactions across Inbound and Outbound departments.';
-    thead.innerHTML = `
-      <tr>
-        <th>Evaluation Date</th>
-        <th style="text-align:center;">Inbound Audits</th>
-        <th style="text-align:center;">Outbound Audits</th>
-        <th style="text-align:center;">Total Daily Audits</th>
-        <th style="text-align:center;">Average Score</th>
-        <th>Action</th>
-      </tr>
-    `;
-
-    const details = cd.timeline_details || [];
-    currentModalRows = details;
-    countBadge.innerText = `${details.length} Days Recorded`;
-    tbody.innerHTML = '';
-
-    details.forEach(d => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>📅 ${d.dt || 'Undated'}</strong></td>
-        <td style="text-align:center;"><span class="badge" style="background:#e0e7ff;color:#4338ca;">${d.in_cnt || 0}</span></td>
-        <td style="text-align:center;"><span class="badge" style="background:#d1fae5;color:#065f46;">${d.out_cnt || 0}</span></td>
-        <td style="text-align:center;"><strong>${d.total_cnt || 0}</strong></td>
-        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
-        <td>
-          <a href="/audits/Inbound?start=${d.dt}&end=${d.dt}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Audits ↗</a>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    const dates = details.map(d => d.dt);
-    const inVals = details.map(d => d.in_cnt);
-    const outVals = details.map(d => d.out_cnt);
-
-    modalChartInstance = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: dates,
-        datasets: [
-          {
-            label: 'Inbound Audits',
-            data: inVals,
-            backgroundColor: '#4f46e5',
-            borderRadius: 4
-          },
-          {
-            label: 'Outbound Audits',
-            data: outVals,
-            backgroundColor: '#10b981',
-            borderRadius: 4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { stacked: true, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
-        }
-      }
-    });
-
-  } else if (type === 'auditor') {
-    icon.innerText = '📋';
-    titleText.innerText = 'Auditor Evaluation Activity & Productivity';
-    subtitle.innerText = 'Detailed productivity analysis, evaluation volume, and average score given per Quality Auditor.';
-    thead.innerHTML = `
-      <tr>
-        <th>Auditor Name</th>
-        <th style="text-align:center;">Total Calls Evaluated</th>
-        <th style="text-align:center;">Average Score Given</th>
-        <th style="text-align:center;">Fatal Breaches Tagged</th>
-        <th>Audit Register</th>
-      </tr>
-    `;
-
-    const details = cd.auditor_details || [];
-    currentModalRows = details;
-    countBadge.innerText = `${details.length} Auditors Evaluated`;
-    tbody.innerHTML = '';
-
-    details.forEach(d => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>👤 ${d.auditor_name || 'Unassigned'}</strong></td>
-        <td style="text-align:center;"><span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:12px;">${d.cnt || 0}</span></td>
-        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
-        <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals}</span>` : `<span class="badge badge-neutral">0</span>`}</td>
-        <td>
-          <a href="/audits/Inbound?q=${encodeURIComponent(d.auditor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Filter Audits ↗</a>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    const names = details.map(d => d.auditor_name);
-    const counts = details.map(d => d.cnt);
-    const avgScores = details.map(d => d.avg_score);
-
-    modalChartInstance = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: names,
-        datasets: [
-          {
-            label: 'Audited Calls',
-            data: counts,
-            backgroundColor: '#8b5cf6',
-            borderRadius: 6,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Avg Score %',
-            data: avgScores,
-            type: 'line',
-            borderColor: '#06b6d4',
-            backgroundColor: '#06b6d4',
-            borderWidth: 2,
-            pointRadius: 4,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, position: 'left', grid: { color: '#f1f5f9' }, title: { display: true, text: 'Total Calls' } },
-          y1: { min: 0, max: 100, position: 'right', grid: { display: false }, title: { display: true, text: 'Avg Score %' } }
-        }
-      }
-    });
-
-  } else if (type === 'advisor') {
-    icon.innerText = '🏆';
-    titleText.innerText = 'Top Advisor Quality Scores & Rankings';
-    subtitle.innerText = 'Performance ranking of top customer service representatives evaluated across all parameters.';
-    thead.innerHTML = `
-      <tr>
-        <th style="width:60px;">Rank</th>
-        <th>Advisor Name</th>
-        <th style="text-align:center;">Department</th>
-        <th style="text-align:center;">Audited Calls</th>
-        <th style="text-align:center;">Average Quality Score</th>
-        <th style="text-align:center;">Fatal Status</th>
-        <th>Action</th>
-      </tr>
-    `;
-
-    const details = cd.top_advisor_details || [];
-    currentModalRows = details;
-    countBadge.innerText = `${details.length} Top Advisors`;
-    tbody.innerHTML = '';
-
-    details.forEach((d, idx) => {
-      const tr = document.createElement('tr');
-      const rankBadge = idx === 0 ? '🥇 #1' : (idx === 1 ? '🥈 #2' : (idx === 2 ? '🥉 #3' : `#${idx + 1}`));
-      tr.innerHTML = `
-        <td><span class="badge" style="background:#f1f5f9;color:#334155;font-weight:700;">${rankBadge}</span></td>
-        <td><strong>👤 ${d.advisor_name || 'Unassigned'}</strong></td>
-        <td style="text-align:center;"><span class="badge badge-neutral">${d.dept || 'Inbound'}</span></td>
-        <td style="text-align:center;"><strong>${d.cnt || 0}</strong></td>
-        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}" style="font-size:13px;">${d.avg_score || 0}%</strong></td>
-        <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals} Fatal</span>` : `<span class="badge badge-success">Clean (0)</span>`}</td>
-        <td>
-          <a href="/advisor/search?emp_id=${encodeURIComponent(d.advisor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Advisor 360° ↗</a>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    const names = details.map(d => d.advisor_name);
-    const scores = details.map(d => d.avg_score);
-
-    modalChartInstance = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels: names,
-        datasets: [{
-          label: 'Average Score %',
-          data: scores,
-          backgroundColor: scores.map(s => s >= 90 ? '#10b981' : (s >= 80 ? '#06b6d4' : '#f59e0b')),
-          borderRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false } },
-          y: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v + '%' } }
-        }
-      }
-    });
-  }
-};
-
-window.closeChartModal = function() {
-  const modal = document.getElementById('chartDetailModal');
-  if (modal) modal.style.display = 'none';
-  if (modalChartInstance) {
-    modalChartInstance.destroy();
-    modalChartInstance = null;
-  }
-};
-
-window.filterModalTable = function() {
-  const query = (document.getElementById('modalTableFilter').value || '').toLowerCase();
-  const rows = document.querySelectorAll('#modalDataTableTbody tr');
-  rows.forEach(r => {
-    const text = r.innerText.toLowerCase();
-    r.style.display = text.includes(query) ? '' : 'none';
-  });
-};
-
-window.exportModalTableToCSV = function() {
-  const rows = Array.from(document.querySelectorAll('#modalDataTable tr'));
-  if (rows.length === 0) return;
-  const csvContent = rows.map(r => {
-    const cols = Array.from(r.querySelectorAll('th, td'));
-    return cols.map(c => `"${c.innerText.replace(/"/g, '""').trim()}"`).join(',');
-  }).join('\n');
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Analytics_Export_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-};
-
-// Mouse Hover and Wheel / Scroll Trigger to automatically Pop Up Chart in center of screen
-document.addEventListener('DOMContentLoaded', () => {
-  const cards = document.querySelectorAll('.interactive-chart-card');
-  cards.forEach(card => {
-    const chartType = card.dataset.chartType;
-    if (!chartType) return;
-
-    // Trigger pop-up on mouse hover with smooth delay (400ms)
-    card.addEventListener('mouseenter', () => {
-      clearTimeout(hoverTriggerTimer);
-      hoverTriggerTimer = setTimeout(() => {
-        const modal = document.getElementById('chartDetailModal');
-        if (!modal || modal.style.display === 'flex') return;
-        openChartModal(chartType);
-      }, 400);
-    });
-
-    card.addEventListener('mouseleave', () => {
-      clearTimeout(hoverTriggerTimer);
-    });
-
-    // Also trigger on mouse scroll wheel over the graph
-    card.addEventListener('wheel', (e) => {
-      const modal = document.getElementById('chartDetailModal');
-      if (!modal || modal.style.display !== 'flex') {
-        openChartModal(chartType);
-      }
-    }, { passive: true });
-  });
-
-  // Close modal when pressing ESC or clicking backdrop
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeChartModal();
-  });
-  const modalOverlay = document.getElementById('chartDetailModal');
-  if (modalOverlay) {
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) closeChartModal();
-    });
-  }
-});
-
-{% endblock %}
+{% block title %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
 {% block heading %}MSEDCL Quality Audit & Performance Dashboard{% endblock %}
 
 {% block content %}
@@ -1215,4 +805,415 @@ document.addEventListener('DOMContentLoaded', function() {
   setInterval(updateLiveClock, 30000);
 });
 </script>
+
+<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered in Middle of Screen) -->
+<div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 60px -15px rgba(0,0,0,0.4);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
+    
+    <!-- Modal Header -->
+    <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
+      <div>
+        <h3 id="modalChartTitle" style="margin:0;font-size:18px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px;">
+          <span id="modalChartIcon">📊</span>
+          <span id="modalChartTitleText">Analytics Deep-Dive</span>
+        </h3>
+        <p id="modalChartSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">Interactive multi-dimensional evaluation with search, filter, and table view</p>
+      </div>
+      <button type="button" onclick="closeChartModal()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-size:22px;line-height:1;cursor:pointer;color:#334155;padding:4px 10px;transition:all 0.15s ease;" title="Close pop-up">&times;</button>
+    </div>
+
+    <!-- Modal Filter Bar -->
+    <div style="padding:10px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;font-weight:600;color:#475569;">Quick Filter:</span>
+        <input type="text" id="modalTableFilter" onkeyup="filterModalTable()" placeholder="Search in records..." class="form-control" style="width:240px;font-size:12px;padding:6px 10px;">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge badge-neutral" id="modalDataCountBadge" style="font-size:11.5px;padding:5px 10px;">0 records</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="exportModalTableToCSV()" style="font-size:12px;padding:5px 10px;">📥 Export CSV</button>
+      </div>
+    </div>
+
+    <!-- Modal Body: High-Res Expanded Chart + Full Data Table -->
+    <div style="padding:18px 24px;overflow-y:auto;flex:1;">
+      
+      <!-- Expanded Chart Box -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h4 style="font-size:13px;font-weight:600;margin:0;color:#334155;">Visual Analytics Breakdown</h4>
+          <span style="font-size:11px;color:#64748b;">Hover data points for exact counts and percentages</span>
+        </div>
+        <div style="position:relative;height:240px;width:100%;">
+          <canvas id="modalExpandedChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabular Data View -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h4 style="font-size:13.5px;font-weight:700;margin:0;color:#0f172a;" id="modalTableHeading">Comprehensive Records Breakdown</h4>
+        <span style="font-size:11px;color:#64748b;">Click column headers or row items to navigate</span>
+      </div>
+      <div class="table-responsive" style="max-height:300px;">
+        <table class="data-table" id="modalDataTable">
+          <thead id="modalDataTableThead"></thead>
+          <tbody id="modalDataTableTbody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:#64748b;">MSEDCL Quality Audit System · Interactive Analytics Inspector</span>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeChartModal()">Close Inspector</button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes modalScaleUp {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.interactive-chart-card {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+.interactive-chart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  border-color: var(--primary) !important;
+}
+.chart-expand-btn {
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+.chart-expand-btn:hover {
+  background: var(--primary) !important;
+  color: #fff !important;
+  transform: scale(1.05);
+}
+</style>
+
+<script>
+let modalChartInstance = null;
+let currentModalRows = [];
+let hoverTriggerTimer = null;
+
+// Global chart modal trigger
+window.openChartModal = function(type) {
+  const modal = document.getElementById('chartDetailModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.getElementById('modalTableFilter').value = '';
+
+  const titleText = document.getElementById('modalChartTitleText');
+  const icon = document.getElementById('modalChartIcon');
+  const subtitle = document.getElementById('modalChartSubtitle');
+  const thead = document.getElementById('modalDataTableThead');
+  const tbody = document.getElementById('modalDataTableTbody');
+  const countBadge = document.getElementById('modalDataCountBadge');
+  const canvas = document.getElementById('modalExpandedChart');
+
+  if (modalChartInstance) {
+    modalChartInstance.destroy();
+    modalChartInstance = null;
+  }
+
+  // Access chartData passed from Flask
+  const cd = (typeof chartData !== 'undefined') ? chartData : {};
+
+  if (type === 'timeline') {
+    icon.innerText = '📞';
+    titleText.innerText = 'Inbound vs Outbound Audits Timeline';
+    subtitle.innerText = 'Day-by-day comparison of evaluated interactions across Inbound and Outbound departments.';
+    thead.innerHTML = `
+      <tr>
+        <th>Evaluation Date</th>
+        <th style="text-align:center;">Inbound Audits</th>
+        <th style="text-align:center;">Outbound Audits</th>
+        <th style="text-align:center;">Total Daily Audits</th>
+        <th style="text-align:center;">Average Score</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    const details = cd.timeline_details || [];
+    currentModalRows = details;
+    countBadge.innerText = `${details.length} Days Recorded`;
+    tbody.innerHTML = '';
+
+    details.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>📅 ${d.dt || 'Undated'}</strong></td>
+        <td style="text-align:center;"><span class="badge" style="background:#e0e7ff;color:#4338ca;">${d.in_cnt || 0}</span></td>
+        <td style="text-align:center;"><span class="badge" style="background:#d1fae5;color:#065f46;">${d.out_cnt || 0}</span></td>
+        <td style="text-align:center;"><strong>${d.total_cnt || 0}</strong></td>
+        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
+        <td>
+          <a href="/audits/Inbound?start=${d.dt}&end=${d.dt}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Audits ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const dates = details.map(d => d.dt);
+    const inVals = details.map(d => d.in_cnt);
+    const outVals = details.map(d => d.out_cnt);
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: dates,
+        datasets: [
+          {
+            label: 'Inbound Audits',
+            data: inVals,
+            backgroundColor: '#4f46e5',
+            borderRadius: 4
+          },
+          {
+            label: 'Outbound Audits',
+            data: outVals,
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+
+  } else if (type === 'auditor') {
+    icon.innerText = '📋';
+    titleText.innerText = 'Auditor Evaluation Activity & Productivity';
+    subtitle.innerText = 'Detailed productivity analysis, evaluation volume, and average score given per Quality Auditor.';
+    thead.innerHTML = `
+      <tr>
+        <th>Auditor Name</th>
+        <th style="text-align:center;">Total Calls Evaluated</th>
+        <th style="text-align:center;">Average Score Given</th>
+        <th style="text-align:center;">Fatal Breaches Tagged</th>
+        <th>Audit Register</th>
+      </tr>
+    `;
+
+    const details = cd.auditor_details || [];
+    currentModalRows = details;
+    countBadge.innerText = `${details.length} Auditors Evaluated`;
+    tbody.innerHTML = '';
+
+    details.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>👤 ${d.auditor_name || 'Unassigned'}</strong></td>
+        <td style="text-align:center;"><span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:12px;">${d.cnt || 0}</span></td>
+        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
+        <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals}</span>` : `<span class="badge badge-neutral">0</span>`}</td>
+        <td>
+          <a href="/audits/Inbound?q=${encodeURIComponent(d.auditor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Filter Audits ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const names = details.map(d => d.auditor_name);
+    const counts = details.map(d => d.cnt);
+    const avgScores = details.map(d => d.avg_score);
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: names,
+        datasets: [
+          {
+            label: 'Audited Calls',
+            data: counts,
+            backgroundColor: '#8b5cf6',
+            borderRadius: 6,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Avg Score %',
+            data: avgScores,
+            type: 'line',
+            borderColor: '#06b6d4',
+            backgroundColor: '#06b6d4',
+            borderWidth: 2,
+            pointRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, position: 'left', grid: { color: '#f1f5f9' }, title: { display: true, text: 'Total Calls' } },
+          y1: { min: 0, max: 100, position: 'right', grid: { display: false }, title: { display: true, text: 'Avg Score %' } }
+        }
+      }
+    });
+
+  } else if (type === 'advisor') {
+    icon.innerText = '🏆';
+    titleText.innerText = 'Top Advisor Quality Scores & Rankings';
+    subtitle.innerText = 'Performance ranking of top customer service representatives evaluated across all parameters.';
+    thead.innerHTML = `
+      <tr>
+        <th style="width:60px;">Rank</th>
+        <th>Advisor Name</th>
+        <th style="text-align:center;">Department</th>
+        <th style="text-align:center;">Audited Calls</th>
+        <th style="text-align:center;">Average Quality Score</th>
+        <th style="text-align:center;">Fatal Status</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    const details = cd.top_advisor_details || [];
+    currentModalRows = details;
+    countBadge.innerText = `${details.length} Top Advisors`;
+    tbody.innerHTML = '';
+
+    details.forEach((d, idx) => {
+      const tr = document.createElement('tr');
+      const rankBadge = idx === 0 ? '🥇 #1' : (idx === 1 ? '🥈 #2' : (idx === 2 ? '🥉 #3' : `#${idx + 1}`));
+      tr.innerHTML = `
+        <td><span class="badge" style="background:#f1f5f9;color:#334155;font-weight:700;">${rankBadge}</span></td>
+        <td><strong>👤 ${d.advisor_name || 'Unassigned'}</strong></td>
+        <td style="text-align:center;"><span class="badge badge-neutral">${d.dept || 'Inbound'}</span></td>
+        <td style="text-align:center;"><strong>${d.cnt || 0}</strong></td>
+        <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}" style="font-size:13px;">${d.avg_score || 0}%</strong></td>
+        <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals} Fatal</span>` : `<span class="badge badge-success">Clean (0)</span>`}</td>
+        <td>
+          <a href="/advisor/search?emp_id=${encodeURIComponent(d.advisor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Advisor 360° ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const names = details.map(d => d.advisor_name);
+    const scores = details.map(d => d.avg_score);
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: names,
+        datasets: [{
+          label: 'Average Score %',
+          data: scores,
+          backgroundColor: scores.map(s => s >= 90 ? '#10b981' : (s >= 80 ? '#06b6d4' : '#f59e0b')),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v + '%' } }
+        }
+      }
+    });
+  }
+};
+
+window.closeChartModal = function() {
+  const modal = document.getElementById('chartDetailModal');
+  if (modal) modal.style.display = 'none';
+  if (modalChartInstance) {
+    modalChartInstance.destroy();
+    modalChartInstance = null;
+  }
+};
+
+window.filterModalTable = function() {
+  const query = (document.getElementById('modalTableFilter').value || '').toLowerCase();
+  const rows = document.querySelectorAll('#modalDataTableTbody tr');
+  rows.forEach(r => {
+    const text = r.innerText.toLowerCase();
+    r.style.display = text.includes(query) ? '' : 'none';
+  });
+};
+
+window.exportModalTableToCSV = function() {
+  const rows = Array.from(document.querySelectorAll('#modalDataTable tr'));
+  if (rows.length === 0) return;
+  const csvContent = rows.map(r => {
+    const cols = Array.from(r.querySelectorAll('th, td'));
+    return cols.map(c => `"${c.innerText.replace(/"/g, '""').trim()}"`).join(',');
+  }).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Analytics_Export_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+// Mouse Hover and Wheel / Scroll Trigger to automatically Pop Up Chart in center of screen
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.interactive-chart-card');
+  cards.forEach(card => {
+    const chartType = card.dataset.chartType;
+    if (!chartType) return;
+
+    // Trigger pop-up on mouse hover with smooth delay (400ms)
+    card.addEventListener('mouseenter', () => {
+      clearTimeout(hoverTriggerTimer);
+      hoverTriggerTimer = setTimeout(() => {
+        const modal = document.getElementById('chartDetailModal');
+        if (!modal || modal.style.display === 'flex') return;
+        openChartModal(chartType);
+      }, 400);
+    });
+
+    card.addEventListener('mouseleave', () => {
+      clearTimeout(hoverTriggerTimer);
+    });
+
+    // Also trigger on mouse scroll wheel over the graph
+    card.addEventListener('wheel', (e) => {
+      const modal = document.getElementById('chartDetailModal');
+      if (!modal || modal.style.display !== 'flex') {
+        openChartModal(chartType);
+      }
+    }, { passive: true });
+  });
+
+  // Close modal when pressing ESC or clicking backdrop
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeChartModal();
+  });
+  const modalOverlay = document.getElementById('chartDetailModal');
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeChartModal();
+    });
+  }
+});
+</script>
+
 {% endblock %}
