@@ -603,7 +603,7 @@ function renderMainDashboardCharts() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } }
     }
-  });
+  }));
 
   // 2. Fatal vs Non-Fatal Donut
   const fatalTotal = chartData.fatal_count + chartData.non_fatal_count;
@@ -624,7 +624,7 @@ function renderMainDashboardCharts() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } }
     }
-  });
+  }));
 
   // 3. Inbound vs Outbound Timeline Trend (Live Database Data)
   const dates = (chartData.dates && chartData.dates.length) ? chartData.dates : ['No Date'];
@@ -686,7 +686,7 @@ function renderMainDashboardCharts() {
           }
         }
       }
-    });
+    }));
   }
 
   // 4. Auditor Evaluation Activity Bar Chart
@@ -737,7 +737,7 @@ function renderMainDashboardCharts() {
           }
         }
       }
-    });
+    }));
   }
 
   // 5. Top Advisor Quality Scores Horizontal Bar Chart
@@ -794,7 +794,7 @@ function renderMainDashboardCharts() {
           }
         }
       }
-    });
+    }));
   }
 
   // 6. Warning & PIP Action Status Doughnut Chart
