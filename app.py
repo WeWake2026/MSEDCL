@@ -528,7 +528,7 @@ def dashboard():
             """ + sql_base + """
             AND COALESCE(call_date, evaluation_date) IS NOT NULL
             GROUP BY COALESCE(call_date, evaluation_date)
-            ORDER BY dt DESC LIMIT 20
+            ORDER BY dt DESC LIMIT 31
         """, params).fetchall()
         timeline_rows = list(reversed(timeline_rows))
 
