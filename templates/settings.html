@@ -1,172 +1,481 @@
 {% extends "layout.html" %}
-{% block title %}System Settings · MSEDCL Quality Audit{% endblock %}
-{% block heading %}System & Security Settings{% endblock %}
+{% block title %}System & Enterprise Settings · MSEDCL Quality Audit{% endblock %}
+{% block heading %}System & Enterprise Governance Settings{% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Application & Ingestion Governance</h3>
-    <span class="card-subtitle">Global environment, email providers, and upload permissions</span>
-  </div>
-  <form method="post" action="{{ url_for('settings_page') }}">
-    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+<style>
+/* Modern Enterprise Tabbed Navigation */
+.settings-tabs-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 22px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.settings-tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.settings-tab-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-card-subtle);
+}
+.settings-tab-btn.active {
+  color: var(--brand-blue);
+  border-bottom-color: var(--brand-blue);
+  background: var(--bg-card);
+}
+.settings-tab-pane {
+  display: none;
+  animation: fadeIn 0.25s ease;
+}
+.settings-tab-pane.active {
+  display: block;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.backup-card {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+</style>
 
-      <!-- General Settings -->
-      <div class="filter-group">
-        <label>Organization / Portal Name</label>
-        <input type="text" name="company_name" value="{{ settings.company_name }}" class="form-control" required>
-      </div>
-      <div class="filter-group">
-        <label>System Administrator Email</label>
-        <input type="email" name="admin_email" value="{{ settings.admin_email }}" class="form-control" required>
-      </div>
-      <div class="filter-group">
-        <label>Default Dashboard Date Filter (Days)</label>
-        <input type="number" name="default_date_range" value="{{ settings.default_date_range }}" class="form-control" required>
-      </div>
-
-      <!-- Feature Toggle: Enable Excel Import -->
-      <div class="filter-group" style="background:#f8fafc;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <label style="color:var(--primary);font-size:13px;margin-bottom:8px;"><strong>⚡ Excel Workbook Import Switch</strong></label>
-        <select name="enable_excel_import" class="form-control" style="font-weight:600;">
-          <option value="true" {{ 'selected' if settings.enable_excel_import=='true' else '' }}>✅ Enabled (Quality & Admins may upload)</option>
-          <option value="false" {{ 'selected' if settings.enable_excel_import=='false' else '' }}>⛔ Disabled (Workbook ingestion blocked)</option>
-        </select>
-        <small style="color:var(--text-muted);display:block;margin-top:6px;">When disabled, server immediately blocks all upload endpoints. Existing audits remain untouched.</small>
-      </div>
-
-    </div>
-
-    <hr style="border:0;border-top:1px solid var(--border-light);margin:24px 0;">
-
-    <!-- Email Dispatch Provider Settings -->
-    <h4 style="font-size:15px;margin-bottom:12px;color:var(--text-main);">📧 Email Dispatch Configuration</h4>
-    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
-      <div class="filter-group">
-        <label>Selected Email Provider</label>
-        <select name="email_provider" class="form-control" id="providerSelect" onchange="toggleEmailFields()">
-          <option value="smtp" {{ 'selected' if settings.email_provider=='smtp' else '' }}>Standard Organization SMTP</option>
-          <option value="ms_graph" {{ 'selected' if settings.email_provider=='ms_graph' else '' }}>Microsoft Graph OAuth (MSEDCL Tenant)</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Sender 'From' Email Address</label>
-        <input type="email" name="smtp_from" value="{{ settings.smtp_from }}" class="form-control">
-      </div>
-    </div>
-
-    <!-- SMTP Specific Fields -->
-    <div id="smtpFields" style="margin-top:14px;">
-      <div class="filter-grid" style="grid-template-columns: 2fr 1fr 2fr 2fr;">
-        <div class="filter-group">
-          <label>SMTP Host</label>
-          <input type="text" name="smtp_host" value="{{ settings.smtp_host }}" class="form-control" placeholder="mail.msedcl.in or smtp.office365.com">
-        </div>
-        <div class="filter-group">
-          <label>Port</label>
-          <input type="number" name="smtp_port" value="{{ settings.smtp_port }}" class="form-control">
-        </div>
-        <div class="filter-group">
-          <label>SMTP Username</label>
-          <input type="text" name="smtp_username" value="{{ settings.smtp_username }}" class="form-control">
-        </div>
-        <div class="filter-group">
-          <label>SMTP Password / App Password</label>
-          <input type="password" name="smtp_password" value="{{ settings.smtp_password }}" class="form-control" placeholder="••••••••">
-        </div>
-      </div>
-    </div>
-
-    <!-- Microsoft Graph Specific Fields -->
-    <div id="msGraphFields" style="display:none;margin-top:14px;background:#f0fdf4;padding:14px;border-radius:var(--radius-sm);border:1px solid #bbf7d0;">
-      <p style="font-size:12px;color:#166534;margin-bottom:10px;"><strong>Microsoft Graph API Integration:</strong> Recommended for Microsoft 365 enterprise tenants where basic SMTP AUTH is disabled.</p>
-      <div class="filter-grid" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="filter-group">
-          <label>Client ID (Application ID)</label>
-          <input type="text" name="ms_client_id" value="{{ settings.ms_client_id }}" class="form-control">
-        </div>
-        <div class="filter-group">
-          <label>Tenant ID (Directory ID)</label>
-          <input type="text" name="ms_tenant_id" value="{{ settings.ms_tenant_id }}" class="form-control">
-        </div>
-        <div class="filter-group">
-          <label>Client Secret</label>
-          <input type="password" name="ms_client_secret" value="{{ settings.ms_client_secret }}" class="form-control">
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:24px;display:flex;justify-content:flex-end;">
-      <button type="submit" class="btn btn-primary" style="padding:10px 24px;">Save System Settings</button>
-    </div>
-  </form>
+<!-- Settings Tabs Header -->
+<div class="settings-tabs-nav">
+  <button type="button" class="settings-tab-btn active" onclick="switchSettingsTab('tabGeneral', this)">
+    <span>🏢</span> General &amp; Organization
+  </button>
+  <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabHR', this)">
+    <span>👥</span> HR &amp; Disciplinary Policy
+  </button>
+  <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabQuality', this)">
+    <span>🎯</span> Quality &amp; Calibration
+  </button>
+  <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabEmail', this)">
+    <span>📧</span> Email &amp; Dispatch Providers
+  </button>
+  <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabBackups', this)">
+    <span>🛠️</span> Backups &amp; Maintenance
+  </button>
 </div>
 
-<!-- Database Backup & Email Connectivity Test Row -->
-<div class="charts-grid-2">
+<!-- Master Settings Form -->
+<form method="post" action="{{ url_for('settings_page') }}" id="settingsMasterForm">
+
+  <!-- ================= TAB 1: General & Organization ================= -->
+  <div id="tabGeneral" class="settings-tab-pane active">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">General Portal Configuration &amp; Branding</h3>
+          <span class="card-subtitle">Global environment settings, default portal views, and ingest controls</span>
+        </div>
+      </div>
+      
+      <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+        <div class="filter-group">
+          <label>Organization / Portal Branding Name</label>
+          <input type="text" name="company_name" value="{{ settings.company_name or 'MSEDCL Quality Audit System' }}" class="form-control" required>
+        </div>
+        <div class="filter-group">
+          <label>Central IT / Administrator Email</label>
+          <input type="email" name="admin_email" value="{{ settings.admin_email or 'admin@msedcl.in' }}" class="form-control" required>
+        </div>
+        <div class="filter-group">
+          <label>Default Dashboard Date Filter (Days)</label>
+          <input type="number" name="default_date_range" value="{{ settings.default_date_range or '30' }}" class="form-control" required min="7" max="365">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Default timeline lookback for charts and score meters.</small>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:16px;background:var(--bg-card-subtle);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <label style="color:var(--primary);font-size:13.5px;font-weight:600;display:block;margin-bottom:6px;">
+          ⚡ Excel Workbook Import Master Switch
+        </label>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <select name="enable_excel_import" class="form-control" style="width:280px;font-weight:600;">
+            <option value="true" {{ 'selected' if settings.enable_excel_import=='true' else '' }}>✅ Enabled (Quality team may upload workbooks)</option>
+            <option value="false" {{ 'selected' if settings.enable_excel_import=='false' else '' }}>⛔ Disabled (Upload endpoints blocked)</option>
+          </select>
+          <span style="color:var(--text-muted);font-size:12px;">When disabled, server rejects new uploads while preserving historical audits.</span>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">Save General Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: HR & Disciplinary Policy ================= -->
+  <div id="tabHR" class="settings-tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Human Resources &amp; Disciplinary Governance</h3>
+          <span class="card-subtitle">Define formal PIP periods, warning triggers, and HR notification routing</span>
+        </div>
+      </div>
+
+      <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+        <div class="filter-group">
+          <label>HR Business Partner Notification Email (CC)</label>
+          <input type="email" name="hr_email_cc" value="{{ settings.hr_email_cc or 'hr.bpo@msedcl.in' }}" class="form-control" placeholder="hr.bpo@msedcl.in">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Central HR address automatically CC'd on formal Warning/PIP letters.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Head of Operations Escalation Email</label>
+          <input type="email" name="ops_escalation_email" value="{{ settings.ops_escalation_email or 'ops.escalations@msedcl.in' }}" class="form-control" placeholder="ops.escalations@msedcl.in">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Recipient for 2nd warning breaches and critical compliance failures.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Standard PIP (Performance Improvement Plan) Duration</label>
+          <select name="pip_duration_days" class="form-control">
+            <option value="15" {{ 'selected' if settings.pip_duration_days=='15' else '' }}>15 Calendar Days (Accelerated)</option>
+            <option value="30" {{ 'selected' if not settings.pip_duration_days or settings.pip_duration_days=='30' else '' }}>30 Calendar Days (Standard MSEDCL)</option>
+            <option value="45" {{ 'selected' if settings.pip_duration_days=='45' else '' }}>45 Calendar Days</option>
+            <option value="60" {{ 'selected' if settings.pip_duration_days=='60' else '' }}>60 Calendar Days (Comprehensive)</option>
+          </select>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Default review timeline calculated when drafting a PIP action.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Fatal Calls Threshold for 1st Warning</label>
+          <input type="number" name="warning_fatal_threshold" value="{{ settings.warning_fatal_threshold or '1' }}" class="form-control" min="1" max="5">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Number of zero-tolerance / fatal errors before warning is recommended.</small>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">Save HR Policies</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: Quality & Calibration ================= -->
+  <div id="tabQuality" class="settings-tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Quality Scoring &amp; Auditor Calibration Governance</h3>
+          <span class="card-subtitle">Operational score bands, calibration tolerances, and ingestion limits</span>
+        </div>
+      </div>
+
+      <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+        <div class="filter-group">
+          <label>Benchmark Target Score (%)</label>
+          <input type="number" step="0.5" name="target_score_benchmark" value="{{ settings.target_score_benchmark or '85.0' }}" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Organization-wide target threshold for monthly call compliance.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Excellence Tier Score (%)</label>
+          <input type="number" step="0.5" name="excellence_score_threshold" value="{{ settings.excellence_score_threshold or '90.0' }}" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Top-tier performers eligible for monthly quality commendations.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Coaching Required / At-Risk Score (%)</label>
+          <input type="number" step="0.5" name="coaching_trigger_threshold" value="{{ settings.coaching_trigger_threshold or '80.0' }}" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Scores below this trigger automatic coaching flags.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Auditor Calibration Variance Limit (± %)</label>
+          <input type="number" step="0.1" name="calibration_variance_limit" value="{{ settings.calibration_variance_limit or '3.5' }}" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Acceptable variance between evaluator scores during blind audits.</small>
+        </div>
+
+        <div class="filter-group">
+          <label>Maximum Workbook Upload Size (MB)</label>
+          <input type="number" name="max_upload_size_mb" value="{{ settings.max_upload_size_mb or '50' }}" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Safety ceiling for batch excel/csv ingestion files.</small>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">Save Quality Benchmarks</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 4: Email & Dispatch Providers ================= -->
+  <div id="tabEmail" class="settings-tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Email Dispatch &amp; Authentication Providers</h3>
+          <span class="card-subtitle">Connect corporate SMTP or Microsoft 365 Graph OAuth credentials</span>
+        </div>
+      </div>
+
+      <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));gap:16px;">
+        <div class="filter-group">
+          <label>Selected Email Provider</label>
+          <select name="email_provider" class="form-control" id="providerSelect" onchange="toggleEmailFields()">
+            <option value="smtp" {{ 'selected' if settings.email_provider=='smtp' else '' }}>Standard Organization SMTP</option>
+            <option value="ms_graph" {{ 'selected' if settings.email_provider=='ms_graph' else '' }}>Microsoft Graph OAuth (MSEDCL Tenant)</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Sender 'From' Email Address</label>
+          <input type="email" name="smtp_from" value="{{ settings.smtp_from or '' }}" class="form-control" placeholder="quality@msedcl.in">
+        </div>
+      </div>
+
+      <!-- SMTP Specific Fields -->
+      <div id="smtpFields" style="margin-top:16px;">
+        <div class="filter-grid" style="grid-template-columns: 2fr 1fr 2fr 2fr;gap:12px;">
+          <div class="filter-group">
+            <label>SMTP Host</label>
+            <input type="text" name="smtp_host" value="{{ settings.smtp_host or '' }}" class="form-control" placeholder="mail.msedcl.in or smtp.office365.com">
+          </div>
+          <div class="filter-group">
+            <label>Port</label>
+            <input type="number" name="smtp_port" value="{{ settings.smtp_port or '587' }}" class="form-control">
+          </div>
+          <div class="filter-group">
+            <label>SMTP Username</label>
+            <input type="text" name="smtp_username" value="{{ settings.smtp_username or '' }}" class="form-control">
+          </div>
+          <div class="filter-group">
+            <label>SMTP Password / App Password</label>
+            <input type="password" name="smtp_password" value="{{ settings.smtp_password or '' }}" class="form-control" placeholder="••••••••">
+          </div>
+        </div>
+      </div>
+
+      <!-- Microsoft Graph Specific Fields -->
+      <div id="msGraphFields" style="display:none;margin-top:16px;background:var(--bg-card-subtle);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <p style="font-size:12.5px;color:var(--brand-green);margin-bottom:12px;font-weight:600;">
+          Microsoft Graph API Integration: Recommended for M365 tenants where basic SMTP AUTH is disabled.
+        </p>
+        <div class="filter-grid" style="grid-template-columns: repeat(3, 1fr);gap:12px;">
+          <div class="filter-group">
+            <label>Client ID (Application ID)</label>
+            <input type="text" name="ms_client_id" value="{{ settings.ms_client_id or '' }}" class="form-control">
+          </div>
+          <div class="filter-group">
+            <label>Tenant ID (Directory ID)</label>
+            <input type="text" name="ms_tenant_id" value="{{ settings.ms_tenant_id or '' }}" class="form-control">
+          </div>
+          <div class="filter-group">
+            <label>Client Secret</label>
+            <input type="password" name="ms_client_secret" value="{{ settings.ms_client_secret or '' }}" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">Save Email Settings</button>
+      </div>
+    </div>
+
+    <!-- Live Asynchronous Diagnostic Ping Card -->
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header">
+        <h3 class="card-title">📡 Live Connection Diagnostic Test</h3>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+        Perform an instant asynchronous test transmission to verify that mail servers accept credentials without reloading the page.
+      </p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="email" id="testEmailRecipient" placeholder="Enter recipient email (e.g. admin@msedcl.in)" class="form-control" style="flex:1;min-width:240px;" required>
+        <button type="button" onclick="sendDiagnosticEmailPing()" id="btnSendPing" class="btn btn-secondary" style="min-width:130px;">
+          <span>📨</span> Send Ping Test
+        </button>
+      </div>
+      <div id="pingResultBox" style="display:none;margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);font-size:13px;"></div>
+    </div>
+  </div>
+
+</form>
+
+<!-- ================= TAB 5: Backups & Maintenance ================= -->
+<div id="tabBackups" class="settings-tab-pane">
+  
+  <!-- Backup Download Center -->
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title">Database Maintenance & Backups</h3>
+      <div>
+        <h3 class="card-title">💾 Disaster Recovery &amp; Database Backup Center</h3>
+        <span class="card-subtitle">Export full structural SQL dumps or multi-table CSV relational archives</span>
+      </div>
     </div>
-    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Create instantaneous snapshots of the active SQLite database file or download backup copies.</p>
-    <div class="action-buttons">
-      <a href="{{ url_for('db_backup_download') }}" class="btn btn-secondary" style="width:100%;">💾 Download Full Database Backup</a>
+
+    <div class="charts-grid-2" style="gap:16px;">
+      <!-- SQL Dump Card -->
+      <div class="backup-card">
+        <div>
+          <h4 style="font-size:14px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span>🐘</span> <strong>Full PostgreSQL SQL Relational Dump</strong>
+          </h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+            Generates a standard `.sql` script with table schemas, audit records, users, and foreign key relations for disaster recovery.
+          </p>
+        </div>
+        <a href="{{ url_for('db_backup_download', format='sql') }}" class="btn btn-primary" style="width:100%;text-align:center;">
+          <span>💾</span> Download Full SQL Dump (.sql)
+        </a>
+      </div>
+
+      <!-- CSV Archive Zip Card -->
+      <div class="backup-card">
+        <div>
+          <h4 style="font-size:14px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span>🗂️</span> <strong>Relational CSV Archive (.zip)</strong>
+          </h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+            Downloads a zipped archive containing clean CSV files for `audits.csv`, `warnings.csv`, `users.csv`, and `settings.csv`.
+          </p>
+        </div>
+        <a href="{{ url_for('db_backup_download', format='csv') }}" class="btn btn-secondary" style="width:100%;text-align:center;">
+          <span>📦</span> Download All Tables CSV (.zip)
+        </a>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">Test Email Transmission</h3>
+  <!-- System Operations & Maintenance Row -->
+  <div class="charts-grid-2" style="margin-top:20px;gap:16px;">
+    <!-- Service Restart -->
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <div class="card-header">
+        <h3 class="card-title" style="color:var(--danger);display:flex;align-items:center;gap:6px;">
+          <span>🔄</span> Server Operations &amp; System Reload
+        </h3>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+        Perform a clean service restart of the Flask application and reload database connections.
+      </p>
+      <div>
+        <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger" style="width:100%;">
+          <span>🔄</span> Request Full System Restart
+        </button>
+      </div>
     </div>
-    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Send a diagnostic test ping to verify current SMTP / provider credentials.</p>
-    <form method="post" action="{{ url_for('test_email_connection') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input type="email" name="test_recipient" placeholder="Recipient email address" class="form-control" style="flex:1;min-width:180px;" required>
-      <button type="submit" class="btn btn-secondary" style="min-width:100px;">Send Ping</button>
-    </form>
-  </div>
-</div>
 
-<!-- System Operations & Maintenance Row -->
-<div class="charts-grid-2" style="margin-top:20px;">
-  <div class="card" style="border-left:4px solid var(--danger);">
-    <div class="card-header">
-      <h3 class="card-title" style="color:var(--danger);display:flex;align-items:center;gap:6px;">
-        <span>🔄</span> Server Operations & Full System Restart
-      </h3>
-    </div>
-    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
-      Perform a complete service restart of the Flask server and reload all system modules. An active administrator password is required for security authorization.
-    </p>
-    <div>
-      <button type="button" onclick="openSystemRestartModal()" class="btn btn-danger" style="width:100%;">
-        <span>🔄</span> Request Full System Restart
-      </button>
+    <!-- Purge Audits -->
+    <div class="card" style="border-left:4px solid var(--warning);">
+      <div class="card-header">
+        <h3 class="card-title" style="color:#d97706;display:flex;align-items:center;gap:6px;">
+          <span>🧹</span> Purge Uploaded Call Audits
+        </h3>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+        Clear call evaluations to reload fresh monthly batches. <strong>All user accounts and system settings are strictly preserved.</strong>
+      </p>
+      <form method="post" action="{{ url_for('purge_uploaded_audits') }}" onsubmit="return confirm('⚠️ Are you sure you want to remove uploaded call audits?\n\nThis will clear historical calls. All user logins, roles, and settings are preserved.')">
+        <button type="submit" class="btn btn-secondary" style="border-color:#d97706;color:#d97706;width:100%;">
+          <span>🧹</span> Clear Historical Audits
+        </button>
+      </form>
     </div>
   </div>
 
-  <div class="card" style="border-left:4px solid var(--warning);">
-    <div class="card-header">
-      <h3 class="card-title" style="color:#d97706;display:flex;align-items:center;gap:6px;">
-        <span>🧹</span> Purge Uploaded Audits (Keep User Accounts)
-      </h3>
-    </div>
-    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
-      Remove all previously uploaded call audit records and batches to start completely fresh. <strong>All user accounts, credentials, and settings are preserved.</strong>
-    </p>
-    <form method="post" action="{{ url_for('purge_uploaded_audits') }}" onsubmit="return confirm('⚠️ Are you sure you want to remove all uploaded call audit files?\n\nThis will clear old call records and allow fresh uploads. All user logins and credentials will remain safely stored.')">
-      <button type="submit" class="btn btn-secondary" style="border-color:#d97706;color:#d97706;width:100%;">
-        <span>🧹</span> Clear Historical Audits
-      </button>
-    </form>
-  </div>
 </div>
 
 <script>
+// Tab Switching
+function switchSettingsTab(tabId, btn) {
+  document.querySelectorAll('.settings-tab-pane').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.settings-tab-btn').forEach(el => el.classList.remove('active'));
+  
+  const target = document.getElementById(tabId);
+  if (target) {
+    target.classList.add('active');
+    btn.classList.add('active');
+  }
+}
+
+// Toggle Email provider specific inputs
 function toggleEmailFields() {
   const p = document.getElementById('providerSelect').value;
   document.getElementById('smtpFields').style.display = (p === 'smtp') ? 'block' : 'none';
   document.getElementById('msGraphFields').style.display = (p === 'ms_graph') ? 'block' : 'none';
 }
 document.addEventListener('DOMContentLoaded', toggleEmailFields);
+
+// Live Asynchronous Email Diagnostic Ping
+function sendDiagnosticEmailPing() {
+  const recipient = (document.getElementById('testEmailRecipient').value || '').trim();
+  const resBox = document.getElementById('pingResultBox');
+  const btn = document.getElementById('btnSendPing');
+
+  if (!recipient) {
+    resBox.style.display = 'block';
+    resBox.style.background = '#fef2f2';
+    resBox.style.color = '#991b1b';
+    resBox.style.border = '1px solid #fecaca';
+    resBox.innerHTML = '⚠️ Please enter a recipient email address.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Sending ping...';
+  resBox.style.display = 'block';
+  resBox.style.background = '#eff6ff';
+  resBox.style.color = '#1e40af';
+  resBox.style.border = '1px solid #bfdbfe';
+  resBox.innerHTML = '🔄 Contacting mail server and dispatching diagnostic ping...';
+
+  const formData = new FormData();
+  formData.append('test_recipient', recipient);
+
+  fetch("{{ url_for('test_email_connection') }}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = '<span>📨</span> Send Ping Test';
+    if (data.success) {
+      resBox.style.background = '#f0fdf4';
+      resBox.style.color = '#166534';
+      resBox.style.border = '1px solid #bbf7d0';
+      resBox.innerHTML = '✅ ' + data.message;
+    } else {
+      resBox.style.background = '#fef2f2';
+      resBox.style.color = '#991b1b';
+      resBox.style.border = '1px solid #fecaca';
+      resBox.innerHTML = '❌ ' + data.message;
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '<span>📨</span> Send Ping Test';
+    resBox.style.background = '#fef2f2';
+    resBox.style.color = '#991b1b';
+    resBox.style.border = '1px solid #fecaca';
+    resBox.innerHTML = '❌ Diagnostic request failed: ' + err.message;
+  });
+}
 </script>
 {% endblock %}

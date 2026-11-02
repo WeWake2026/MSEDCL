@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 
 import pandas as pd
-from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, abort, Response
+from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, abort, Response, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -2090,7 +2090,18 @@ def settings_page():
             ("smtp_from", request.form.get("smtp_from", "").strip()),
             ("ms_client_id", request.form.get("ms_client_id", "").strip()),
             ("ms_tenant_id", request.form.get("ms_tenant_id", "").strip()),
-            ("ms_client_secret", request.form.get("ms_client_secret", "").strip())
+            ("ms_client_secret", request.form.get("ms_client_secret", "").strip()),
+            # HR & Disciplinary Policy
+            ("hr_email_cc", request.form.get("hr_email_cc", "").strip()),
+            ("ops_escalation_email", request.form.get("ops_escalation_email", "").strip()),
+            ("pip_duration_days", request.form.get("pip_duration_days", "30").strip()),
+            ("warning_fatal_threshold", request.form.get("warning_fatal_threshold", "1").strip()),
+            # Quality & Calibration Governance
+            ("target_score_benchmark", request.form.get("target_score_benchmark", "85").strip()),
+            ("excellence_score_threshold", request.form.get("excellence_score_threshold", "90").strip()),
+            ("coaching_trigger_threshold", request.form.get("coaching_trigger_threshold", "80").strip()),
+            ("calibration_variance_limit", request.form.get("calibration_variance_limit", "3.5").strip()),
+            ("max_upload_size_mb", request.form.get("max_upload_size_mb", "50").strip())
         ]
         with db() as con:
             for k, v in updates:
@@ -2114,7 +2125,11 @@ def settings_page():
 @roles("admin")
 def test_email_connection():
     recipient = request.form.get("test_recipient", "").strip()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes.best == "application/json"
+    
     if not recipient:
+        if is_ajax:
+            return jsonify({"success": False, "message": "Please enter a test recipient email."}), 400
         flash("Please enter a test recipient email.", "error")
         return redirect(url_for("settings_page"))
         
@@ -2125,7 +2140,10 @@ def test_email_connection():
     sender = get_setting("smtp_from") or os.environ.get("SMTP_FROM", username or "quality@msedcl.in")
 
     if not all([host, username, password]):
-        flash("Test failed: SMTP Host, Username, or Password missing in configuration.", "error")
+        err_msg = "Test failed: SMTP Host, Username, or Password missing in configuration."
+        if is_ajax:
+            return jsonify({"success": False, "message": err_msg}), 400
+        flash(err_msg, "error")
         return redirect(url_for("settings_page"))
 
     try:
@@ -2141,10 +2159,15 @@ def test_email_connection():
             server.send_message(msg)
 
         log_audit("EMAIL_TEST_SUCCESS", recipient, "SMTP diagnostic ping succeeded")
-        flash(f"Test email successfully accepted by {host} for {recipient}!", "success")
+        success_msg = f"Test email successfully accepted by {host} for {recipient}!"
+        if is_ajax:
+            return jsonify({"success": True, "message": success_msg})
+        flash(success_msg, "success")
     except Exception as exc:
         err = f"{type(exc).__name__}: {str(exc)}"
         log_audit("EMAIL_TEST_FAILED", recipient, err)
+        if is_ajax:
+            return jsonify({"success": False, "message": f"Connection test failed ({err})."}), 500
         flash(f"Email connection test failed ({err}).", "error")
 
     return redirect(url_for("settings_page"))
@@ -2152,8 +2175,75 @@ def test_email_connection():
 @app.route("/admin/backup/download")
 @roles("admin")
 def db_backup_download():
-    log_audit("DOWNLOAD_DB_BACKUP", "quality_audit.db", "Database backup downloaded")
-    return send_file(DB_PATH, as_attachment=True, download_name=f"quality_audit_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db")
+    fmt = request.args.get("format", "sql").lower()
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    if fmt == "csv" or fmt == "zip":
+        import io, zipfile, csv
+        mem_zip = io.BytesIO()
+        tables = ['system_settings', 'users', 'warnings', 'email_history', 'audit_logs', 'audits']
+        with zipfile.ZipFile(mem_zip, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+            with db() as con:
+                for t in tables:
+                    try:
+                        rows = con.execute(f"SELECT * FROM {t}").fetchall()
+                        if rows:
+                            out = io.StringIO()
+                            writer = csv.DictWriter(out, fieldnames=list(rows[0].keys()))
+                            writer.writeheader()
+                            for r in rows:
+                                writer.writerow(dict(r))
+                            zf.writestr(f"msedcl_{t}.csv", out.getvalue())
+                    except Exception as e:
+                        pass
+        mem_zip.seek(0)
+        log_audit("DOWNLOAD_CSV_BACKUP", "all_tables.zip", "All tables CSV zip backup downloaded")
+        return send_file(mem_zip, mimetype="application/zip", as_attachment=True, download_name=f"msedcl_tables_backup_{timestamp}.zip")
+
+    elif fmt == "sqlite" and os.path.exists(DB_PATH):
+        log_audit("DOWNLOAD_SQLITE_BACKUP", "quality_audit.db", "SQLite database backup downloaded")
+        return send_file(DB_PATH, as_attachment=True, download_name=f"quality_audit_backup_{timestamp}.db")
+
+    else:
+        # Default: Full SQL Dump
+        import io
+        mem_sql = io.StringIO()
+        mem_sql.write(f"-- ========================================================\n")
+        mem_sql.write(f"-- MSEDCL Quality Audit System Database Dump\n")
+        mem_sql.write(f"-- Generated At: {datetime.now().isoformat()}\n")
+        mem_sql.write(f"-- Platform: PostgreSQL / Compatible SQL\n")
+        mem_sql.write(f"-- ========================================================\n\n")
+
+        tables = ['system_settings', 'users', 'warnings', 'email_history', 'audit_logs', 'audits']
+        with db() as con:
+            for t in tables:
+                try:
+                    rows = con.execute(f"SELECT * FROM {t}").fetchall()
+                    mem_sql.write(f"-- --------------------------------------------------------\n")
+                    mem_sql.write(f"-- Table: {t} ({len(rows)} records)\n")
+                    mem_sql.write(f"-- --------------------------------------------------------\n")
+                    if rows:
+                        cols = list(rows[0].keys())
+                        cols_str = ', '.join([f'"{c}"' for c in cols])
+                        for r in rows:
+                            vals = []
+                            for c in cols:
+                                v = r[c]
+                                if v is None:
+                                    vals.append('NULL')
+                                elif isinstance(v, (int, float)):
+                                    vals.append(str(v))
+                                else:
+                                    escaped = str(v).replace("'", "''")
+                                    vals.append(f"'{escaped}'")
+                            mem_sql.write(f"INSERT INTO {t} ({cols_str}) VALUES ({', '.join(vals)});\n")
+                    mem_sql.write('\n')
+                except Exception as e:
+                    mem_sql.write(f"-- Error dumping {t}: {e}\n\n")
+
+        mem_bytes = io.BytesIO(mem_sql.getvalue().encode('utf-8'))
+        log_audit("DOWNLOAD_SQL_BACKUP", "msedcl_dump.sql", "Full SQL relational backup downloaded")
+        return send_file(mem_bytes, mimetype="application/sql", as_attachment=True, download_name=f"msedcl_full_backup_{timestamp}.sql")
 
 @app.route("/admin/audit-logs")
 @roles("admin")
