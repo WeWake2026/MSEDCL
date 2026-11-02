@@ -4,56 +4,63 @@
 
 {% block content %}
 <div class="card">
-  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+  <div class="card-header"
+    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
     <div>
       <h3 class="card-title">Upload Excel / CSV Audit Register</h3>
       <p class="card-subtitle">Upload Inbound and Outbound files separately. Duplicates are auto-suppressed.</p>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <a href="{{ url_for('download_sample_template', format='xlsx') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;" title="Download complete Excel sample template with all columns and proper data format">
+      <a href="{{ url_for('download_sample_template', format='xlsx') }}" class="btn btn-secondary btn-sm"
+        style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;"
+        title="Download complete Excel sample template with all columns and proper data format">
         <span>📊</span> Download Demo Template (.xlsx)
       </a>
-      <a href="{{ url_for('download_sample_template', format='csv') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;" title="Download CSV sample format">
+      <a href="{{ url_for('download_sample_template', format='csv') }}" class="btn btn-secondary btn-sm"
+        style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;"
+        title="Download CSV sample format">
         <span>📄</span> Demo (.csv)
       </a>
       {% if not import_enabled %}
-        <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
+      <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
       {% endif %}
     </div>
   </div>
 
   {% if not import_enabled %}
-    <div class="alert alert-warning">
-      <strong>Notice:</strong> Workbook ingestion has been temporarily disabled by an Administrator in System Settings. All previously imported audits and reports remain fully accessible.
-    </div>
+  <div class="alert alert-warning">
+    <strong>Notice:</strong> Workbook ingestion has been temporarily disabled by an Administrator in System Settings.
+    All previously imported audits and reports remain fully accessible.
+  </div>
   {% else %}
-    <form method="post" enctype="multipart/form-data">
-      <div class="filter-grid" style="grid-template-columns: 1fr 2fr 1fr;">
-        <div class="filter-group">
-          <label>Department Scope *</label>
-          <select name="department" class="form-control" required>
-            <option value="">Select Department</option>
-            <option value="Inbound">Inbound Customer Service</option>
-            <option value="Outbound">Outbound Operations</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Workbook File (.xlsx, .xlsm, .csv) *</label>
-          <input type="file" name="file" accept=".xlsx,.xlsm,.csv" class="form-control" required>
-        </div>
-        <div class="filter-group">
-          <label>Duplicate Handling</label>
-          <select name="duplicate_handling" class="form-control">
-            <option value="skip">Skip duplicates (Default)</option>
-            <option value="force_insert">Insert All (Force insert even if duplicate)</option>
-          </select>
-        </div>
+  <form method="post" enctype="multipart/form-data">
+    <div class="filter-grid" style="grid-template-columns: 1fr 2fr 1fr;">
+      <div class="filter-group">
+        <label>Department Scope *</label>
+        <select name="department" class="form-control" required>
+          <option value="">Select Department</option>
+          <option value="Inbound">Inbound Customer Service</option>
+          <option value="Outbound">Outbound Operations</option>
+        </select>
       </div>
-      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12px;color:var(--text-muted);">Max file size: {{ max_mb }} MB. Required columns: Advisor Name and Quality Score.</span>
-        <button type="submit" class="btn btn-primary">Validate and Ingest Workbook</button>
+      <div class="filter-group">
+        <label>Workbook File (.xlsx, .xlsm, .csv) *</label>
+        <input type="file" name="file" accept=".xlsx,.xlsm,.csv" class="form-control" required>
       </div>
-    </form>
+      <div class="filter-group">
+        <label>Duplicate Handling</label>
+        <select name="duplicate_handling" class="form-control">
+          <option value="skip">Skip duplicates (Default)</option>
+          <option value="force_insert">Insert All (Force insert even if duplicate)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--text-muted);">Max file size: {{ max_mb }} MB. Required columns: Advisor
+        Name and Quality Score.</span>
+      <button type="submit" class="btn btn-primary">Validate and Ingest Workbook</button>
+    </div>
+  </form>
   {% endif %}
 </div>
 
@@ -62,29 +69,34 @@
   <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
     <div>
       <h3 class="card-title">Batch Ingestion Summary</h3>
-      <p class="card-subtitle" style="font-size:12px;color:var(--text-muted);">Batch ID: <code>{{ result.batch_id }}</code> · Click any metric card below to inspect data and cross-check records.</p>
+      <p class="card-subtitle" style="font-size:12px;color:var(--text-muted);">Batch ID:
+        <code>{{ result.batch_id }}</code> · Click any metric card below to inspect data and cross-check records.</p>
     </div>
     <button type="button" class="btn btn-secondary btn-sm" onclick="openBatchModal('{{ result.batch_id }}', 'all')">
       🔍 Cross-Check All Batch Records
     </button>
   </div>
   <div class="stat-grid">
-    <div class="stat-card" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'all')" title="View batch details">
+    <div class="stat-card" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'all')"
+      title="View batch details">
       <div class="stat-label">Total Rows Scanned</div>
       <div class="stat-val primary">{{ result.seen }}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Click to view summary ↗</div>
     </div>
-    <div class="stat-card good" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'inserted')" title="Click to view inserted audit rows">
+    <div class="stat-card good" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'inserted')"
+      title="Click to view inserted audit rows">
       <div class="stat-label">Inserted Audits</div>
       <div class="stat-val good" id="stat-val-inserted-{{ result.batch_id }}">{{ result.inserted }}</div>
       <div style="font-size:11px;color:var(--success);margin-top:4px;">Click to inspect inserted ↗</div>
     </div>
-    <div class="stat-card low" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'duplicates')" title="Click to inspect duplicate rows & force insert">
+    <div class="stat-card low" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'duplicates')"
+      title="Click to inspect duplicate rows & force insert">
       <div class="stat-label">Duplicates Skipped</div>
       <div class="stat-val warn" id="stat-val-duplicates-{{ result.batch_id }}">{{ result.duplicates }}</div>
       <div style="font-size:11px;color:var(--warning);margin-top:4px;">Click to cross-check duplicates ↗</div>
     </div>
-    <div class="stat-card fatal" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'rejected')" title="Click to inspect rejected rows & fix & re-insert">
+    <div class="stat-card fatal" style="cursor:pointer;" onclick="openBatchModal('{{ result.batch_id }}', 'rejected')"
+      title="Click to inspect rejected rows & fix & re-insert">
       <div class="stat-label">Rejected Rows</div>
       <div class="stat-val danger" id="stat-val-rejected-{{ result.batch_id }}">{{ result.rejected }}</div>
       <div style="font-size:11px;color:var(--danger);margin-top:4px;">Click to fix & insert again ↗</div>
@@ -94,10 +106,18 @@
   <h4 style="font-size:14px;margin:18px 0 8px;">Auto-Detected Column Mapping</h4>
   <div class="table-responsive">
     <table class="data-table">
-      <thead><tr><th>Internal System Field</th><th>Detected Workbook Column</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Internal System Field</th>
+          <th>Detected Workbook Column</th>
+        </tr>
+      </thead>
       <tbody>
         {% for k, v in result.mapping.items() %}
-        <tr><td><strong>{{ k }}</strong></td><td>{{ v }}</td></tr>
+        <tr>
+          <td><strong>{{ k }}</strong></td>
+          <td>{{ v }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -110,9 +130,12 @@
   <div class="card-header">
     <div>
       <h3 class="card-title">Recent Ingestion Batches</h3>
-      <p class="card-subtitle" style="font-size:12px;color:var(--text-muted);">Click on any <span class="badge badge-success">Inserted</span>, <span class="badge badge-warning">Duplicates</span>, or <span class="badge badge-danger">Rejected</span> badge to open detailed records and cross-check or re-insert.</p>
+      <p class="card-subtitle" style="font-size:12px;color:var(--text-muted);">Click on any <span
+          class="badge badge-success">Inserted</span>, <span class="badge badge-warning">Duplicates</span>, or <span
+          class="badge badge-danger">Rejected</span> badge to open detailed records and cross-check or re-insert.</p>
     </div>
-    <a href="{{ url_for('export_single', key='Import History', format='xlsx') }}" class="btn btn-secondary btn-sm">Export Import History</a>
+    <a href="{{ url_for('export_single', key='Import History', format='xlsx') }}"
+      class="btn btn-secondary btn-sm">Export Import History</a>
   </div>
   <div class="table-responsive">
     <table class="data-table">
@@ -141,31 +164,44 @@
           <td>{{ b.uploaded_by }}</td>
           <td>{{ b.rows_seen }}</td>
           <td>
-            <button type="button" class="badge badge-success clickable-count-badge" onclick="openBatchModal('{{ b.id }}', 'inserted')" title="Click to view all {{ b.rows_inserted }} inserted audits">
+            <button type="button" class="badge badge-success clickable-count-badge"
+              onclick="openBatchModal('{{ b.id }}', 'inserted')"
+              title="Click to view all {{ b.rows_inserted }} inserted audits">
               {{ b.rows_inserted }} 🔍
             </button>
           </td>
           <td>
-            <button type="button" class="badge badge-warning clickable-count-badge" onclick="openBatchModal('{{ b.id }}', 'duplicates')" title="Click to view all {{ b.duplicates }} duplicate rows">
+            <button type="button" class="badge badge-warning clickable-count-badge"
+              onclick="openBatchModal('{{ b.id }}', 'duplicates')"
+              title="Click to view all {{ b.duplicates }} duplicate rows">
               {{ b.duplicates }} 🔍
             </button>
           </td>
           <td>
-            <button type="button" class="badge badge-danger clickable-count-badge" onclick="openBatchModal('{{ b.id }}', 'rejected')" title="Click to cross-check & fix {{ b.rejected }} rejected rows">
+            <button type="button" class="badge badge-danger clickable-count-badge"
+              onclick="openBatchModal('{{ b.id }}', 'rejected')"
+              title="Click to cross-check & fix {{ b.rejected }} rejected rows">
               {{ b.rejected }} 🛠️
             </button>
           </td>
           <td style="white-space:nowrap;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="openBatchModal('{{ b.id }}', 'all')" title="Inspect and cross-check all records">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openBatchModal('{{ b.id }}', 'all')"
+              title="Inspect and cross-check all records">
               👁️ View Data
             </button>
-            <form method="post" action="{{ url_for('delete_import_batch', batch_id=b.id) }}" style="display:inline-block;margin-left:4px;" onsubmit="return confirm('⚠️ Are you sure you want to remove this import file ({{ b.source_file }})?\n\nThis will remove all {{ b.rows_inserted }} call audit records imported in this batch.')">
-              <button type="submit" class="btn btn-danger btn-sm" title="Remove import file and associated audits">🗑️</button>
+            <form method="post" action="{{ url_for('delete_import_batch', batch_id=b.id) }}"
+              style="display:inline-block;margin-left:4px;"
+              onsubmit="return confirm('⚠️ Are you sure you want to remove this import file ({{ b.source_file }})?\n\nThis will remove all {{ b.rows_inserted }} call audit records imported in this batch.')">
+              <button type="submit" class="btn btn-danger btn-sm"
+                title="Remove import file and associated audits">🗑️</button>
             </form>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No upload history recorded.</td></tr>
+        <tr>
+          <td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No upload history recorded.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -173,20 +209,26 @@
 </div>
 
 <!-- Modal for Detailed Ingestion Drill-Down, Cross-Check & Re-Insert -->
-<div id="batchDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.65);backdrop-filter:blur(3px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="modal-container" style="background:#fff;border-radius:12px;width:100%;max-width:1150px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.25);overflow:hidden;">
-    
+<div id="batchDetailModal" class="modal-overlay"
+  style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.65);backdrop-filter:blur(3px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal-container"
+    style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:100%;max-width:1150px;max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;">
+
     <!-- Modal Header -->
-    <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
+    <div
+      style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg-card-subtle);">
       <div>
-        <h3 id="modalBatchTitle" style="margin:0;font-size:18px;font-weight:700;color:#0f172a;">Batch Details & Cross-Check</h3>
-        <p id="modalBatchSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">File: <strong id="mSourceFile">-</strong> | Dept: <span id="mDept">-</span> | Batch: <code id="mBatchId">-</code></p>
+        <h3 id="modalBatchTitle" style="margin:0;font-size:18px;font-weight:700;color:var(--text-main);">Batch Details &
+          Cross-Check</h3>
+        <p id="modalBatchSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">File: <strong
+            id="mSourceFile">-</strong> | Dept: <span id="mDept">-</span> | Batch: <code id="mBatchId">-</code></p>
       </div>
-      <button type="button" onclick="closeBatchModal()" style="background:transparent;border:none;font-size:24px;line-height:1;cursor:pointer;color:#64748b;">&times;</button>
+      <button type="button" onclick="closeBatchModal()"
+        style="background:transparent;border:none;font-size:24px;line-height:1;cursor:pointer;color:#64748b;">&times;</button>
     </div>
 
     <!-- Tabs Header -->
-    <div style="padding:0 24px;border-bottom:1px solid #e2e8f0;background:#fff;display:flex;gap:12px;overflow-x:auto;">
+    <div style="padding:0 24px;border-bottom:1px solid var(--border);background:var(--bg-card);display:flex;gap:12px;overflow-x:auto;">
       <button type="button" class="tab-btn active" id="tabBtnInserted" onclick="switchBatchTab('inserted')">
         ✅ Inserted Audits (<span id="countInserted">0</span>)
       </button>
@@ -210,8 +252,11 @@
       <!-- Tab Content: Inserted -->
       <div id="tabContentInserted" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <p style="font-size:13px;color:#475569;margin:0;">These records were successfully saved into the active audit register.</p>
-          <input type="text" id="searchInsertedInput" onkeyup="filterInsertedTable()" placeholder="Filter by Advisor, Auditor or Call ID..." class="form-control" style="width:280px;font-size:12px;padding:6px 10px;">
+          <p style="font-size:13px;color:var(--text-muted);margin:0;">These records were successfully saved into the active audit
+            register.</p>
+          <input type="text" id="searchInsertedInput" onkeyup="filterInsertedTable()"
+            placeholder="Filter by Advisor, Auditor or Call ID..." class="form-control"
+            style="width:280px;font-size:12px;padding:6px 10px;">
         </div>
         <div class="table-responsive" style="max-height:480px;">
           <table class="data-table" id="insertedTable">
@@ -234,15 +279,19 @@
 
       <!-- Tab Content: Duplicates -->
       <div id="tabContentDuplicates" style="display:none;">
-        <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div
+          style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
           <div>
-            💡 <strong>Duplicate Rows Detected:</strong> These records match existing entries by hash or fields. You can select specific rows or click <strong>Select All</strong> and then insert all of them as new audits at once!
+            💡 <strong>Duplicate Rows Detected:</strong> These records match existing entries by hash or fields. You can
+            select specific rows or click <strong>Select All</strong> and then insert all of them as new audits at once!
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSelectAllDuplicates()" id="btnSelectAllDups">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSelectAllDuplicates()"
+              id="btnSelectAllDups">
               ☑️ Select All (<span id="dupSelectedCount">0</span>)
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="submitBulkForceInsertDuplicates()" id="btnBulkInsertDups" style="font-weight:600;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="submitBulkForceInsertDuplicates()"
+              id="btnBulkInsertDups" style="font-weight:600;">
               ➕ Force Insert Selected As New
             </button>
           </div>
@@ -252,7 +301,8 @@
             <thead>
               <tr>
                 <th style="width:40px;text-align:center;">
-                  <input type="checkbox" id="masterDupCheckbox" onchange="toggleSelectAllDuplicates(this.checked)" title="Select all duplicates">
+                  <input type="checkbox" id="masterDupCheckbox" onchange="toggleSelectAllDuplicates(this.checked)"
+                    title="Select all duplicates">
                 </th>
                 <th>Row #</th>
                 <th>Call ID</th>
@@ -271,9 +321,12 @@
 
       <!-- Tab Content: Rejected -->
       <div id="tabContentRejected" style="display:none;">
-        <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#991b1b;">
-          ⚠️ <strong>Rejected Rows:</strong> These rows failed validation because crucial data was missing (e.g. Missing Advisor Name or invalid Score).
-          <strong>Cross-check the data below, correct the fields directly, and click "Perfect Insert Again"</strong> to save them immediately.
+        <div
+          style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#991b1b;">
+          ⚠️ <strong>Rejected Rows:</strong> These rows failed validation because crucial data was missing (e.g. Missing
+          Advisor Name or invalid Score).
+          <strong>Cross-check the data below, correct the fields directly, and click "Perfect Insert Again"</strong> to
+          save them immediately.
         </div>
         <div class="table-responsive" style="max-height:500px;">
           <table class="data-table">
@@ -297,7 +350,8 @@
     </div>
 
     <!-- Modal Footer -->
-    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;">
+    <div
+      style="padding:12px 24px;border-top:1px solid var(--border);background:var(--bg-card-subtle);display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:12px;color:#64748b;">MSEDCL Quality Audit System · Batch Data Ingestion Inspector</span>
       <button type="button" class="btn btn-secondary btn-sm" onclick="closeBatchModal()">Close Window</button>
     </div>
@@ -306,124 +360,143 @@
 </div>
 
 <style>
-.clickable-count-badge {
-  border: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  font-size: 13px;
-  padding: 4px 10px;
-}
-.clickable-count-badge:hover {
-  transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-.tab-btn {
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  font-size: 13px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.tab-btn:hover {
-  color: #0f172a;
-}
-.tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-}
-.reinsert-input {
-  padding: 5px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 12px;
-  width: 100%;
-}
-.reinsert-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
-}
+  .clickable-count-badge {
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    font-size: 13px;
+    padding: 4px 10px;
+  }
+
+  .clickable-count-badge:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .tab-btn {
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab-btn:hover {
+    color: #0f172a;
+  }
+
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  .reinsert-input {
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 100%;
+  }
+
+  .reinsert-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+
+  [data-theme="dark"] .tab-btn {
+    color: var(--text-muted);
+  }
+  [data-theme="dark"] .tab-btn:hover {
+    color: var(--text-main);
+  }
+  [data-theme="dark"] .reinsert-input {
+    background: var(--bg-card-subtle);
+    border-color: var(--border);
+    color: var(--text-main);
+  }
+
 </style>
 
 <script>
-let currentBatchData = null;
-let currentBatchId = null;
+  let currentBatchData = null;
+  let currentBatchId = null;
 
-function openBatchModal(batchId, initialTab = 'all') {
-  currentBatchId = batchId;
-  const modal = document.getElementById('batchDetailModal');
-  modal.style.display = 'flex';
-  document.getElementById('modalLoading').style.display = 'block';
-  document.getElementById('tabContentInserted').style.display = 'none';
-  document.getElementById('tabContentDuplicates').style.display = 'none';
-  document.getElementById('tabContentRejected').style.display = 'none';
-  hideModalNotice();
+  function openBatchModal(batchId, initialTab = 'all') {
+    currentBatchId = batchId;
+    const modal = document.getElementById('batchDetailModal');
+    modal.style.display = 'flex';
+    document.getElementById('modalLoading').style.display = 'block';
+    document.getElementById('tabContentInserted').style.display = 'none';
+    document.getElementById('tabContentDuplicates').style.display = 'none';
+    document.getElementById('tabContentRejected').style.display = 'none';
+    hideModalNotice();
 
-  fetch(`/upload/batch/${batchId}/details`)
-    .then(r => {
-      if (!r.ok) throw new Error("Could not fetch batch details.");
-      return r.json();
-    })
-    .then(data => {
-      currentBatchData = data;
-      renderBatchModal(data, initialTab);
-    })
-    .catch(err => {
-      document.getElementById('modalLoading').innerHTML = `<div style="color:var(--danger);font-weight:600;">⚠️ Error: ${err.message}</div>`;
-    });
-}
-
-function closeBatchModal() {
-  document.getElementById('batchDetailModal').style.display = 'none';
-}
-
-function switchBatchTab(tabName) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.getElementById('tabContentInserted').style.display = 'none';
-  document.getElementById('tabContentDuplicates').style.display = 'none';
-  document.getElementById('tabContentRejected').style.display = 'none';
-
-  if (tabName === 'inserted') {
-    document.getElementById('tabBtnInserted').classList.add('active');
-    document.getElementById('tabContentInserted').style.display = 'block';
-  } else if (tabName === 'duplicates') {
-    document.getElementById('tabBtnDuplicates').classList.add('active');
-    document.getElementById('tabContentDuplicates').style.display = 'block';
-  } else if (tabName === 'rejected') {
-    document.getElementById('tabBtnRejected').classList.add('active');
-    document.getElementById('tabContentRejected').style.display = 'block';
+    fetch(`/upload/batch/${batchId}/details`)
+      .then(r => {
+        if (!r.ok) throw new Error("Could not fetch batch details.");
+        return r.json();
+      })
+      .then(data => {
+        currentBatchData = data;
+        renderBatchModal(data, initialTab);
+      })
+      .catch(err => {
+        document.getElementById('modalLoading').innerHTML = `<div style="color:var(--danger);font-weight:600;">⚠️ Error: ${err.message}</div>`;
+      });
   }
-}
 
-function renderBatchModal(data, initialTab) {
-  document.getElementById('modalLoading').style.display = 'none';
-  
-  // Header Info
-  document.getElementById('mSourceFile').innerText = data.batch.source_file;
-  document.getElementById('mDept').innerText = data.batch.department;
-  document.getElementById('mBatchId').innerText = data.batch.id;
+  function closeBatchModal() {
+    document.getElementById('batchDetailModal').style.display = 'none';
+  }
 
-  // Counts
-  const insertedCount = (data.inserted || []).length;
-  const duplicatesCount = (data.duplicates || []).length;
-  const rejectedCount = (data.rejected || []).length;
+  function switchBatchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tabContentInserted').style.display = 'none';
+    document.getElementById('tabContentDuplicates').style.display = 'none';
+    document.getElementById('tabContentRejected').style.display = 'none';
 
-  document.getElementById('countInserted').innerText = insertedCount;
-  document.getElementById('countDuplicates').innerText = duplicatesCount;
-  document.getElementById('countRejected').innerText = rejectedCount;
+    if (tabName === 'inserted') {
+      document.getElementById('tabBtnInserted').classList.add('active');
+      document.getElementById('tabContentInserted').style.display = 'block';
+    } else if (tabName === 'duplicates') {
+      document.getElementById('tabBtnDuplicates').classList.add('active');
+      document.getElementById('tabContentDuplicates').style.display = 'block';
+    } else if (tabName === 'rejected') {
+      document.getElementById('tabBtnRejected').classList.add('active');
+      document.getElementById('tabContentRejected').style.display = 'block';
+    }
+  }
 
-  // Render Inserted Table
-  const insTbody = document.getElementById('insertedTbody');
-  insTbody.innerHTML = '';
-  if (data.inserted && data.inserted.length > 0) {
-    data.inserted.forEach(row => {
-      const tr = document.createElement('tr');
-      const fatalBadge = row.is_fatal ? '<span class="badge badge-danger">Fatal</span>' : '<span class="badge badge-neutral">No</span>';
-      tr.innerHTML = `
+  function renderBatchModal(data, initialTab) {
+    document.getElementById('modalLoading').style.display = 'none';
+
+    // Header Info
+    document.getElementById('mSourceFile').innerText = data.batch.source_file;
+    document.getElementById('mDept').innerText = data.batch.department;
+    document.getElementById('mBatchId').innerText = data.batch.id;
+
+    // Counts
+    const insertedCount = (data.inserted || []).length;
+    const duplicatesCount = (data.duplicates || []).length;
+    const rejectedCount = (data.rejected || []).length;
+
+    document.getElementById('countInserted').innerText = insertedCount;
+    document.getElementById('countDuplicates').innerText = duplicatesCount;
+    document.getElementById('countRejected').innerText = rejectedCount;
+
+    // Render Inserted Table
+    const insTbody = document.getElementById('insertedTbody');
+    insTbody.innerHTML = '';
+    if (data.inserted && data.inserted.length > 0) {
+      data.inserted.forEach(row => {
+        const tr = document.createElement('tr');
+        const fatalBadge = row.is_fatal ? '<span class="badge badge-danger">Fatal</span>' : '<span class="badge badge-neutral">No</span>';
+        tr.innerHTML = `
         <td><strong>${escapeHtml(row.call_id || '-')}</strong></td>
         <td>${escapeHtml(row.call_date || '-')}</td>
         <td><strong>${escapeHtml(row.advisor_name || '-')}</strong></td>
@@ -433,25 +506,25 @@ function renderBatchModal(data, initialTab) {
         <td>${fatalBadge}</td>
         <td>${escapeHtml(row.location || '-')}</td>
       `;
-      insTbody.appendChild(tr);
-    });
-  } else {
-    insTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No inserted audits found in this batch.</td></tr>';
-  }
+        insTbody.appendChild(tr);
+      });
+    } else {
+      insTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No inserted audits found in this batch.</td></tr>';
+    }
 
-  // Render Duplicates Table
-  const dupTbody = document.getElementById('duplicatesTbody');
-  dupTbody.innerHTML = '';
-  const masterDupCb = document.getElementById('masterDupCheckbox');
-  if (masterDupCb) masterDupCb.checked = false;
-  updateDupSelectedCount();
+    // Render Duplicates Table
+    const dupTbody = document.getElementById('duplicatesTbody');
+    dupTbody.innerHTML = '';
+    const masterDupCb = document.getElementById('masterDupCheckbox');
+    if (masterDupCb) masterDupCb.checked = false;
+    updateDupSelectedCount();
 
-  if (data.duplicates && data.duplicates.length > 0) {
-    data.duplicates.forEach((item, index) => {
-      const d = item.data || {};
-      const tr = document.createElement('tr');
-      tr.id = `dup-row-${index}`;
-      tr.innerHTML = `
+    if (data.duplicates && data.duplicates.length > 0) {
+      data.duplicates.forEach((item, index) => {
+        const d = item.data || {};
+        const tr = document.createElement('tr');
+        tr.id = `dup-row-${index}`;
+        tr.innerHTML = `
         <td style="text-align:center;">
           <input type="checkbox" class="dup-row-cb" value="${index}" onchange="updateDupSelectedCount()">
         </td>
@@ -468,21 +541,21 @@ function renderBatchModal(data, initialTab) {
           </button>
         </td>
       `;
-      dupTbody.appendChild(tr);
-    });
-  } else {
-    dupTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">No duplicate records recorded for this batch.</td></tr>';
-  }
+        dupTbody.appendChild(tr);
+      });
+    } else {
+      dupTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:24px;">No duplicate records recorded for this batch.</td></tr>';
+    }
 
-  // Render Rejected Table
-  const rejTbody = document.getElementById('rejectedTbody');
-  rejTbody.innerHTML = '';
-  if (data.rejected && data.rejected.length > 0) {
-    data.rejected.forEach((item, index) => {
-      const d = item.data || {};
-      const tr = document.createElement('tr');
-      tr.id = `rej-row-${index}`;
-      tr.innerHTML = `
+    // Render Rejected Table
+    const rejTbody = document.getElementById('rejectedTbody');
+    rejTbody.innerHTML = '';
+    if (data.rejected && data.rejected.length > 0) {
+      data.rejected.forEach((item, index) => {
+        const d = item.data || {};
+        const tr = document.createElement('tr');
+        tr.id = `rej-row-${index}`;
+        tr.innerHTML = `
         <td><span class="badge badge-neutral">Row ${item.row || (index + 2)}</span></td>
         <td><span class="badge badge-danger" style="font-size:11px;">${escapeHtml(item.reason || 'Missing or Invalid Data')}</span></td>
         <td>
@@ -509,231 +582,231 @@ function renderBatchModal(data, initialTab) {
           </button>
         </td>
       `;
-      rejTbody.appendChild(tr);
-    });
-  } else {
-    rejTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No rejected rows recorded for this batch.</td></tr>';
-  }
-
-  // Choose default tab
-  if (initialTab === 'duplicates' && duplicatesCount > 0) {
-    switchBatchTab('duplicates');
-  } else if (initialTab === 'rejected' && rejectedCount > 0) {
-    switchBatchTab('rejected');
-  } else if (initialTab === 'inserted' || insertedCount > 0) {
-    switchBatchTab('inserted');
-  } else if (rejectedCount > 0) {
-    switchBatchTab('rejected');
-  } else if (duplicatesCount > 0) {
-    switchBatchTab('duplicates');
-  } else {
-    switchBatchTab('inserted');
-  }
-}
-
-function submitReinsertRejected(batchId, index) {
-  const item = currentBatchData.rejected[index];
-  const originalData = (item && item.data) ? item.data : {};
-
-  const advisor_name = (document.getElementById(`rej-adv-${index}`).value || '').trim();
-  const quality_score = (document.getElementById(`rej-score-${index}`).value || '').trim();
-  const call_id = (document.getElementById(`rej-callid-${index}`).value || '').trim();
-  const call_date = (document.getElementById(`rej-date-${index}`).value || '').trim();
-  const is_fatal = document.getElementById(`rej-fatal-${index}`).value;
-
-  if (!advisor_name) {
-    showModalNotice("⚠️ Please enter a valid Advisor Name before re-inserting.", "error");
-    return;
-  }
-  if (!quality_score || isNaN(parseFloat(quality_score))) {
-    showModalNotice("⚠️ Please enter a valid Quality Score (0 - 100) before re-inserting.", "error");
-    return;
-  }
-
-  const payload = {
-    source_type: "rejected",
-    item_index: index,
-    advisor_name: advisor_name,
-    quality_score: quality_score,
-    call_id: call_id,
-    call_date: call_date,
-    is_fatal: is_fatal,
-    advisor_id: originalData.advisor_id || "",
-    team_leader: originalData.team_leader || "",
-    auditor_name: originalData.auditor_name || "",
-    evaluation_date: originalData.evaluation_date || "",
-    fatal_category: originalData.fatal_category || "",
-    error_categories: originalData.error_categories || "",
-    observation: originalData.observation || "",
-    location: originalData.location || "",
-    audio_url: originalData.audio_url || "",
-    force_insert: true
-  };
-
-  sendReinsertRequest(batchId, payload, `rej-row-${index}`);
-}
-
-function reinsertRecord(batchId, sourceType, index, forceInsert = false) {
-  const item = currentBatchData.duplicates[index];
-  const d = item.data || {};
-
-  const payload = {
-    source_type: sourceType,
-    item_index: index,
-    advisor_name: d.advisor_name,
-    quality_score: d.quality_score,
-    call_id: d.call_id,
-    call_date: d.call_date,
-    is_fatal: d.is_fatal,
-    advisor_id: d.advisor_id || "",
-    team_leader: d.team_leader || "",
-    auditor_name: d.auditor_name || "",
-    evaluation_date: d.evaluation_date || "",
-    fatal_category: d.fatal_category || "",
-    error_categories: d.error_categories || "",
-    observation: d.observation || "",
-    location: d.location || "",
-    audio_url: d.audio_url || "",
-    force_insert: forceInsert
-  };
-
-  sendReinsertRequest(batchId, payload, `dup-row-${index}`);
-}
-
-function sendReinsertRequest(batchId, payload, rowElementId) {
-  hideModalNotice();
-  fetch(`/upload/batch/${batchId}/reinsert`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.success) {
-      showModalNotice(`✅ ${res.message}`, "success");
-      
-      // Animate and remove the row
-      const rowEl = document.getElementById(rowElementId);
-      if (rowEl) {
-        rowEl.style.transition = 'all 0.4s ease';
-        rowEl.style.backgroundColor = '#ecfdf5';
-        setTimeout(() => rowEl.remove(), 400);
-      }
-
-      // Re-fetch batch details to refresh inserted list and counts
-      setTimeout(() => {
-        openBatchModal(batchId, payload.source_type);
-      }, 500);
-
+        rejTbody.appendChild(tr);
+      });
     } else {
-      showModalNotice(`❌ Failed: ${res.error}`, "error");
+      rejTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No rejected rows recorded for this batch.</td></tr>';
     }
-  })
-  .catch(err => {
-    showModalNotice(`❌ Re-insert failed: ${err.message}`, "error");
-  });
-}
 
-function updateDupSelectedCount() {
-  const checked = document.querySelectorAll('.dup-row-cb:checked');
-  const countEl = document.getElementById('dupSelectedCount');
-  if (countEl) countEl.innerText = checked.length;
-}
-
-function toggleSelectAllDuplicates(forceState) {
-  const cbs = document.querySelectorAll('.dup-row-cb');
-  const master = document.getElementById('masterDupCheckbox');
-  let state = forceState;
-  if (typeof state === 'undefined') {
-    const checked = document.querySelectorAll('.dup-row-cb:checked');
-    state = checked.length < cbs.length;
-  }
-  cbs.forEach(cb => { cb.checked = state; });
-  if (master) master.checked = state;
-  updateDupSelectedCount();
-}
-
-function submitBulkForceInsertDuplicates() {
-  const checked = Array.from(document.querySelectorAll('.dup-row-cb:checked'));
-  if (checked.length === 0) {
-    showModalNotice("⚠️ Please select at least one duplicate row to insert.", "error");
-    return;
+    // Choose default tab
+    if (initialTab === 'duplicates' && duplicatesCount > 0) {
+      switchBatchTab('duplicates');
+    } else if (initialTab === 'rejected' && rejectedCount > 0) {
+      switchBatchTab('rejected');
+    } else if (initialTab === 'inserted' || insertedCount > 0) {
+      switchBatchTab('inserted');
+    } else if (rejectedCount > 0) {
+      switchBatchTab('rejected');
+    } else if (duplicatesCount > 0) {
+      switchBatchTab('duplicates');
+    } else {
+      switchBatchTab('inserted');
+    }
   }
 
-  if (!confirm(`Are you sure you want to force-insert ${checked.length} duplicate records as new audits?`)) {
-    return;
-  }
+  function submitReinsertRejected(batchId, index) {
+    const item = currentBatchData.rejected[index];
+    const originalData = (item && item.data) ? item.data : {};
 
-  const items = checked.map(cb => {
-    const idx = parseInt(cb.value);
-    const item = currentBatchData.duplicates[idx];
-    return {
-      index: idx,
-      data: (item && item.data) ? item.data : {}
+    const advisor_name = (document.getElementById(`rej-adv-${index}`).value || '').trim();
+    const quality_score = (document.getElementById(`rej-score-${index}`).value || '').trim();
+    const call_id = (document.getElementById(`rej-callid-${index}`).value || '').trim();
+    const call_date = (document.getElementById(`rej-date-${index}`).value || '').trim();
+    const is_fatal = document.getElementById(`rej-fatal-${index}`).value;
+
+    if (!advisor_name) {
+      showModalNotice("⚠️ Please enter a valid Advisor Name before re-inserting.", "error");
+      return;
+    }
+    if (!quality_score || isNaN(parseFloat(quality_score))) {
+      showModalNotice("⚠️ Please enter a valid Quality Score (0 - 100) before re-inserting.", "error");
+      return;
+    }
+
+    const payload = {
+      source_type: "rejected",
+      item_index: index,
+      advisor_name: advisor_name,
+      quality_score: quality_score,
+      call_id: call_id,
+      call_date: call_date,
+      is_fatal: is_fatal,
+      advisor_id: originalData.advisor_id || "",
+      team_leader: originalData.team_leader || "",
+      auditor_name: originalData.auditor_name || "",
+      evaluation_date: originalData.evaluation_date || "",
+      fatal_category: originalData.fatal_category || "",
+      error_categories: originalData.error_categories || "",
+      observation: originalData.observation || "",
+      location: originalData.location || "",
+      audio_url: originalData.audio_url || "",
+      force_insert: true
     };
-  });
 
-  hideModalNotice();
-  showModalNotice(`⏳ Inserting ${items.length} records into database...`, "success");
-
-  fetch(`/upload/batch/${currentBatchId}/reinsert_bulk`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: items })
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.success) {
-      showModalNotice(`✅ ${res.message}`, "success");
-      setTimeout(() => {
-        openBatchModal(currentBatchId, 'duplicates');
-      }, 600);
-    } else {
-      showModalNotice(`❌ Bulk insert failed: ${res.error}`, "error");
-    }
-  })
-  .catch(err => {
-    showModalNotice(`❌ Network error during bulk insert: ${err.message}`, "error");
-  });
-}
-
-function showModalNotice(msg, type) {
-  const notice = document.getElementById('modalNotice');
-  notice.style.display = 'block';
-  if (type === 'success') {
-    notice.style.background = '#ecfdf5';
-    notice.style.color = '#065f46';
-    notice.style.border = '1px solid #a7f3d0';
-  } else {
-    notice.style.background = '#fef2f2';
-    notice.style.color = '#991b1b';
-    notice.style.border = '1px solid #fecaca';
+    sendReinsertRequest(batchId, payload, `rej-row-${index}`);
   }
-  notice.innerHTML = msg;
-}
 
-function hideModalNotice() {
-  const notice = document.getElementById('modalNotice');
-  notice.style.display = 'none';
-}
+  function reinsertRecord(batchId, sourceType, index, forceInsert = false) {
+    const item = currentBatchData.duplicates[index];
+    const d = item.data || {};
 
-function filterInsertedTable() {
-  const query = (document.getElementById('searchInsertedInput').value || '').toLowerCase();
-  const rows = document.querySelectorAll('#insertedTbody tr');
-  rows.forEach(r => {
-    const text = r.innerText.toLowerCase();
-    r.style.display = text.includes(query) ? '' : 'none';
-  });
-}
+    const payload = {
+      source_type: sourceType,
+      item_index: index,
+      advisor_name: d.advisor_name,
+      quality_score: d.quality_score,
+      call_id: d.call_id,
+      call_date: d.call_date,
+      is_fatal: d.is_fatal,
+      advisor_id: d.advisor_id || "",
+      team_leader: d.team_leader || "",
+      auditor_name: d.auditor_name || "",
+      evaluation_date: d.evaluation_date || "",
+      fatal_category: d.fatal_category || "",
+      error_categories: d.error_categories || "",
+      observation: d.observation || "",
+      location: d.location || "",
+      audio_url: d.audio_url || "",
+      force_insert: forceInsert
+    };
 
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+    sendReinsertRequest(batchId, payload, `dup-row-${index}`);
+  }
+
+  function sendReinsertRequest(batchId, payload, rowElementId) {
+    hideModalNotice();
+    fetch(`/upload/batch/${batchId}/reinsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          showModalNotice(`✅ ${res.message}`, "success");
+
+          // Animate and remove the row
+          const rowEl = document.getElementById(rowElementId);
+          if (rowEl) {
+            rowEl.style.transition = 'all 0.4s ease';
+            rowEl.style.backgroundColor = '#ecfdf5';
+            setTimeout(() => rowEl.remove(), 400);
+          }
+
+          // Re-fetch batch details to refresh inserted list and counts
+          setTimeout(() => {
+            openBatchModal(batchId, payload.source_type);
+          }, 500);
+
+        } else {
+          showModalNotice(`❌ Failed: ${res.error}`, "error");
+        }
+      })
+      .catch(err => {
+        showModalNotice(`❌ Re-insert failed: ${err.message}`, "error");
+      });
+  }
+
+  function updateDupSelectedCount() {
+    const checked = document.querySelectorAll('.dup-row-cb:checked');
+    const countEl = document.getElementById('dupSelectedCount');
+    if (countEl) countEl.innerText = checked.length;
+  }
+
+  function toggleSelectAllDuplicates(forceState) {
+    const cbs = document.querySelectorAll('.dup-row-cb');
+    const master = document.getElementById('masterDupCheckbox');
+    let state = forceState;
+    if (typeof state === 'undefined') {
+      const checked = document.querySelectorAll('.dup-row-cb:checked');
+      state = checked.length < cbs.length;
+    }
+    cbs.forEach(cb => { cb.checked = state; });
+    if (master) master.checked = state;
+    updateDupSelectedCount();
+  }
+
+  function submitBulkForceInsertDuplicates() {
+    const checked = Array.from(document.querySelectorAll('.dup-row-cb:checked'));
+    if (checked.length === 0) {
+      showModalNotice("⚠️ Please select at least one duplicate row to insert.", "error");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to force-insert ${checked.length} duplicate records as new audits?`)) {
+      return;
+    }
+
+    const items = checked.map(cb => {
+      const idx = parseInt(cb.value);
+      const item = currentBatchData.duplicates[idx];
+      return {
+        index: idx,
+        data: (item && item.data) ? item.data : {}
+      };
+    });
+
+    hideModalNotice();
+    showModalNotice(`⏳ Inserting ${items.length} records into database...`, "success");
+
+    fetch(`/upload/batch/${currentBatchId}/reinsert_bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          showModalNotice(`✅ ${res.message}`, "success");
+          setTimeout(() => {
+            openBatchModal(currentBatchId, 'duplicates');
+          }, 600);
+        } else {
+          showModalNotice(`❌ Bulk insert failed: ${res.error}`, "error");
+        }
+      })
+      .catch(err => {
+        showModalNotice(`❌ Network error during bulk insert: ${err.message}`, "error");
+      });
+  }
+
+  function showModalNotice(msg, type) {
+    const notice = document.getElementById('modalNotice');
+    notice.style.display = 'block';
+    if (type === 'success') {
+      notice.style.background = '#ecfdf5';
+      notice.style.color = '#065f46';
+      notice.style.border = '1px solid #a7f3d0';
+    } else {
+      notice.style.background = '#fef2f2';
+      notice.style.color = '#991b1b';
+      notice.style.border = '1px solid #fecaca';
+    }
+    notice.innerHTML = msg;
+  }
+
+  function hideModalNotice() {
+    const notice = document.getElementById('modalNotice');
+    notice.style.display = 'none';
+  }
+
+  function filterInsertedTable() {
+    const query = (document.getElementById('searchInsertedInput').value || '').toLowerCase();
+    const rows = document.querySelectorAll('#insertedTbody tr');
+    rows.forEach(r => {
+      const text = r.innerText.toLowerCase();
+      r.style.display = text.includes(query) ? '' : 'none';
+    });
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 </script>
 {% endblock %}

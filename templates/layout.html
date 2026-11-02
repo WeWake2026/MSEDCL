@@ -354,8 +354,9 @@
       localStorage.setItem('msedcl_theme', next);
       updateThemeIcon();
       
-      // Update chart colors if chart instances exist
+      // Dispatch custom themeChanged event and resize event
       if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: next } }));
         window.dispatchEvent(new Event('resize'));
       }
     }

@@ -286,6 +286,88 @@
     padding: 0 !important;
   }
 }
+
+/* Dark Theme Support for Calculator */
+[data-theme="dark"] .calc-card {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .calc-section-title {
+  color: var(--text-main);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .calc-group label {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .calc-group input,
+[data-theme="dark"] .calc-group select {
+  background: var(--bg-card-subtle);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .calc-group input:focus,
+[data-theme="dark"] .calc-group select:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+}
+
+[data-theme="dark"] .calc-kpi-box {
+  background: var(--bg-card-subtle);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .calc-kpi-box strong {
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .calc-kpi-box.highlight {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .calc-kpi-box.highlight strong {
+  color: #34d399;
+}
+
+[data-theme="dark"] .calc-table th {
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .calc-table td {
+  border-bottom-color: var(--border);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .calc-table .subtotal-row {
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .calc-table .highlight-row {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="dark"] .calc-table .warning-row {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .formula-box {
+  background: var(--bg-card-subtle);
+  border-color: var(--border);
+  border-left-color: var(--brand-electric);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .calc-actions {
+  border-top-color: var(--border);
+}
+
 </style>
 
 <div class="calc-wrapper">

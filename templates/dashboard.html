@@ -548,8 +548,16 @@ function filterRefAdvTable() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  window.chartData = {{ chart_data|tojson }}; const chartData = window.chartData;
+let mainChartInstances = [];
+
+function renderMainDashboardCharts() {
+  // Destroy existing main charts if re-rendering on theme switch
+  mainChartInstances.forEach(c => {
+    try { if (c) c.destroy(); } catch(e) {}
+  });
+  mainChartInstances = [];
+
+  const chartData = window.chartData || {};
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const donutBorder = isDark ? '#0f1929' : '#ffffff';
   const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
@@ -557,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 1. Score Categories Donut (Matching Reference Screenshot)
   const scoreTotal = chartData.low_scores + chartData.mid_scores + chartData.good_scores + chartData.fatal_count;
-  new Chart(document.getElementById('refScoreDistChart'), {
+  mainChartInstances.push(new Chart(document.getElementById('refScoreDistChart'), {
     type: 'doughnut',
     data: {
       labels: ['Good (>90%)', 'Average (80-90%)', 'Low (<80%)', 'Fatal Errors'],
@@ -580,7 +588,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 2. Fatal vs Non-Fatal Donut
   const fatalTotal = chartData.fatal_count + chartData.non_fatal_count;
-  new Chart(document.getElementById('refFatalRatioChart'), {
+  mainChartInstances.push(new Chart(document.getElementById('refFatalRatioChart'), {
     type: 'doughnut',
     data: {
       labels: ['Fatal Calls', 'Non-Fatal Calls'],
@@ -606,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const deptCtx = document.getElementById('refDeptTrendChart');
   if (deptCtx) {
-    new Chart(deptCtx, {
+    mainChartInstances.push(new Chart(deptCtx, {
       type: 'line',
       data: {
         labels: dates,
@@ -667,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const auditorCounts = (chartData.auditor_counts && chartData.auditor_counts.length) ? chartData.auditor_counts : [0];
   const auditorCtx = document.getElementById('refAuditorActivityChart');
   if (auditorCtx) {
-    new Chart(auditorCtx, {
+    mainChartInstances.push(new Chart(auditorCtx, {
       type: 'bar',
       data: {
         labels: auditorNames,
@@ -718,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const topScores = (chartData.top_scores && chartData.top_scores.length) ? chartData.top_scores : [0];
   const topAdvisorCtx = document.getElementById('refTopAdvisorChart');
   if (topAdvisorCtx) {
-    new Chart(topAdvisorCtx, {
+    mainChartInstances.push(new Chart(topAdvisorCtx, {
       type: 'bar',
       data: {
         labels: topAdvisors,
@@ -774,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const warnTotal = chartData.open_warnings + chartData.in_progress_warnings + chartData.closed_warnings;
   const warnCtx = document.getElementById('refWarningStatusChart');
   if (warnCtx) {
-    new Chart(warnCtx, {
+    mainChartInstances.push(new Chart(warnCtx, {
       type: 'doughnut',
       data: {
         labels: ['Open', 'In Progress', 'Closed'],
@@ -791,8 +799,18 @@ document.addEventListener('DOMContentLoaded', function() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } }
       }
-    });
+    }));
   }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  window.chartData = {{ chart_data|tojson }};
+  renderMainDashboardCharts();
+
+  // Re-render graphs seamlessly whenever the Day / Night theme toggle is clicked
+  window.addEventListener('themeChanged', function() {
+    renderMainDashboardCharts();
+  });
 
   // Dynamic Live Time & Date Updater for Banner Card
   function updateLiveClock() {
@@ -825,24 +843,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered in Middle of Screen) -->
 <div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px;">
-  <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 60px -15px rgba(0,0,0,0.4);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
+  <div class="modal-container" style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
     
     <!-- Modal Header -->
-    <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg-card-subtle);">
       <div>
-        <h3 id="modalChartTitle" style="margin:0;font-size:18px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px;">
+        <h3 id="modalChartTitle" style="margin:0;font-size:18px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px;">
           <span id="modalChartIcon">📊</span>
           <span id="modalChartTitleText">Analytics Deep-Dive</span>
         </h3>
         <p id="modalChartSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">Interactive multi-dimensional evaluation with search, filter, and table view</p>
       </div>
-      <button type="button" onclick="closeChartModal()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-size:22px;line-height:1;cursor:pointer;color:#334155;padding:4px 10px;transition:all 0.15s ease;" title="Close pop-up">&times;</button>
+      <button type="button" onclick="closeChartModal()" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-size:22px;line-height:1;cursor:pointer;color:var(--text-main);padding:4px 10px;transition:all 0.15s ease;" title="Close pop-up">&times;</button>
     </div>
 
     <!-- Modal Filter Bar -->
-    <div style="padding:10px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div style="padding:10px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:12.5px;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:4px;">
+        <span style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:4px;">
           <span>🔍</span> Filter & Highlight:
         </span>
         <div style="position:relative;display:flex;align-items:center;">
@@ -861,9 +879,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="padding:18px 24px;overflow-y:auto;flex:1;">
       
       <!-- Expanded Chart Box -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
+      <div style="background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:18px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <h4 style="font-size:13px;font-weight:600;margin:0;color:#334155;">Visual Analytics Breakdown</h4>
+          <h4 style="font-size:13px;font-weight:600;margin:0;color:var(--text-main);">Visual Analytics Breakdown</h4>
           <span style="font-size:11px;color:#64748b;">Hover data points for exact counts and percentages</span>
         </div>
         <div style="position:relative;height:240px;width:100%;">
@@ -873,7 +891,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <!-- Tabular Data View -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <h4 style="font-size:13.5px;font-weight:700;margin:0;color:#0f172a;" id="modalTableHeading">Comprehensive Records Breakdown</h4>
+        <h4 style="font-size:13.5px;font-weight:700;margin:0;color:var(--text-main);" id="modalTableHeading">Comprehensive Records Breakdown</h4>
         <span style="font-size:11px;color:#64748b;">Click column headers or row items to navigate</span>
       </div>
       <div class="table-responsive" style="max-height:300px;">
@@ -886,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
     <!-- Modal Footer -->
-    <div style="padding:12px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;">
+    <div style="padding:12px 24px;border-top:1px solid var(--border);background:var(--bg-card-subtle);display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:12px;color:#64748b;">MSEDCL Quality Audit System · Interactive Analytics Inspector</span>
       <button type="button" class="btn btn-secondary btn-sm" onclick="closeChartModal()">Close Inspector</button>
     </div>
@@ -949,11 +967,11 @@ document.addEventListener('DOMContentLoaded', function() {
   width: 290px;
   font-size: 12.5px;
   padding: 7px 12px;
-  border: 2px solid #cbd5e1;
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   transition: all 0.2s ease;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--bg-card);
+  color: var(--text-main);
 }
 .modal-search-box:focus {
   outline: none;
@@ -1044,6 +1062,10 @@ window.openChartModal = function(type) {
 
   // Access chartData passed from Flask
   const cd = window.chartData || {};
+  const isNight = document.documentElement.getAttribute('data-theme') === 'dark';
+  const mTextColor = isNight ? '#94a3b8' : '#64748b';
+  const mGridColor = isNight ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+  const mDonutBorder = isNight ? '#0f1929' : '#ffffff';
 
   if (type === 'timeline') {
     icon.innerText = '📞';
@@ -1069,8 +1091,8 @@ window.openChartModal = function(type) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>📅 ${d.dt || 'Undated'}</strong></td>
-        <td style="text-align:center;"><span class="badge" style="background:#e0e7ff;color:#4338ca;">${d.in_cnt || 0}</span></td>
-        <td style="text-align:center;"><span class="badge" style="background:#d1fae5;color:#065f46;">${d.out_cnt || 0}</span></td>
+        <td style="text-align:center;"><span class="badge badge-info">${d.in_cnt || 0}</span></td>
+        <td style="text-align:center;"><span class="badge badge-success">${d.out_cnt || 0}</span></td>
         <td style="text-align:center;"><strong>${d.total_cnt || 0}</strong></td>
         <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
         <td>
@@ -1107,8 +1129,8 @@ window.openChartModal = function(type) {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { stacked: true, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
+          x: { stacked: true, grid: { display: false }, ticks: { color: mTextColor } },
+          y: { stacked: true, beginAtZero: true, grid: { color: mGridColor }, ticks: { color: mTextColor, precision: 0 } }
         }
       }
     });
@@ -1136,7 +1158,7 @@ window.openChartModal = function(type) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>👤 ${d.auditor_name || 'Unassigned'}</strong></td>
-        <td style="text-align:center;"><span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:12px;">${d.cnt || 0}</span></td>
+        <td style="text-align:center;"><span class="badge badge-info" style="font-size:12px;">${d.cnt || 0}</span></td>
         <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
         <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals}</span>` : `<span class="badge badge-neutral">0</span>`}</td>
         <td>
@@ -1178,9 +1200,9 @@ window.openChartModal = function(type) {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, position: 'left', grid: { color: '#f1f5f9' }, title: { display: true, text: 'Total Calls' } },
-          y1: { min: 0, max: 100, position: 'right', grid: { display: false }, title: { display: true, text: 'Avg Score %' } }
+          x: { grid: { display: false }, ticks: { color: mTextColor } },
+          y: { beginAtZero: true, position: 'left', grid: { color: mGridColor }, ticks: { color: mTextColor }, title: { display: true, text: 'Total Calls', color: mTextColor } },
+          y1: { min: 0, max: 100, position: 'right', grid: { display: false }, ticks: { color: mTextColor }, title: { display: true, text: 'Avg Score %', color: mTextColor } }
         }
       }
     });
@@ -1210,7 +1232,7 @@ window.openChartModal = function(type) {
       const tr = document.createElement('tr');
       const rankBadge = idx === 0 ? '🥇 #1' : (idx === 1 ? '🥈 #2' : (idx === 2 ? '🥉 #3' : `#${idx + 1}`));
       tr.innerHTML = `
-        <td><span class="badge" style="background:#f1f5f9;color:#334155;font-weight:700;">${rankBadge}</span></td>
+        <td><span class="badge badge-neutral" style="font-weight:700;">${rankBadge}</span></td>
         <td><strong>👤 ${d.advisor_name || 'Unassigned'}</strong></td>
         <td style="text-align:center;"><span class="badge badge-neutral">${d.dept || 'Inbound'}</span></td>
         <td style="text-align:center;"><strong>${d.cnt || 0}</strong></td>
@@ -1241,8 +1263,8 @@ window.openChartModal = function(type) {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false } },
-          y: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v + '%' } }
+          x: { grid: { display: false }, ticks: { color: mTextColor } },
+          y: { min: 0, max: 100, grid: { color: mGridColor }, ticks: { color: mTextColor, callback: (v) => v + '%' } }
         }
       }
     });

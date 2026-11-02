@@ -32,8 +32,8 @@
   </div>
   <form method="post" action="{{ url_for('warnings') }}" id="warningForm">
     <!-- Quick Auto-Fill Banner -->
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div style="font-size:12.5px;color:#1e40af;">
+    <div style="background:var(--kpi-blue-bg);border:1px solid var(--kpi-blue-border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:12.5px;color:var(--text-main);">
         💡 <strong>Smart Auto-Fill:</strong> Enter an Employee ID or Advisor Name and click <strong>Lookup & Auto-Fill</strong> (or press Enter) to pull live call audit counts, performance metrics, and draft the notice automatically.
       </div>
       <button type="button" onclick="triggerAdvisorLookup()" class="btn btn-primary btn-sm" id="btnLookup">⚡ Lookup & Auto-Fill</button>
@@ -183,11 +183,11 @@
               
               <!-- Advisor Response & Feedback Display -->
               {% if w.advisor_feedback %}
-              <div style="margin:12px 0;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;">
-                <p style="font-size:12.5px;color:#166534;font-weight:600;margin-bottom:4px;">
+              <div style="margin:12px 0;background:var(--kpi-green-bg);border:1px solid var(--kpi-green-border);border-radius:6px;padding:12px;">
+                <p style="font-size:12.5px;color:var(--brand-green);font-weight:600;margin-bottom:4px;">
                   💬 Advisor Response & Feedback (Received {{ w.advisor_feedback_date or '' }}):
                 </p>
-                <p style="font-size:13px;color:#1e293b;margin:0;line-height:1.4;">{{ w.advisor_feedback }}</p>
+                <p style="font-size:13px;color:var(--text-main);margin:0;line-height:1.4;">{{ w.advisor_feedback }}</p>
               </div>
               {% endif %}
 
@@ -196,7 +196,7 @@
               <div style="margin-top:14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
                   <span style="font-size:15px;">✍️</span>
-                  <strong style="font-size:13px;color:#1e293b;">Advisor Response &amp; Corrective Action Plan</strong>
+                  <strong style="font-size:13px;color:var(--text-main);">Advisor Response &amp; Corrective Action Plan</strong>
                 </div>
                 <p style="font-size:11.5px;color:#64748b;margin:0 0 10px;">Please state your explanation, root-cause analysis, and agreed coaching steps for this notice.</p>
                 <form method="post" action="{{ url_for('warning_advisor_feedback', warning_id=w.id) }}">
