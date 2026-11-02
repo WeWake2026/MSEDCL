@@ -39,6 +39,16 @@
       <label>To Date</label>
       <input type="date" name="end" value="{{ end }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
+    <div class="filter-group">
+      <label>Show Rows</label>
+      <select name="limit" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="500" {{ 'selected' if limit=='500' else '' }}>Latest 500</option>
+        <option value="1000" {{ 'selected' if limit=='1000' else '' }}>Latest 1,000</option>
+        <option value="2000" {{ 'selected' if limit=='2000' else '' }}>Latest 2,000</option>
+        <option value="5000" {{ 'selected' if limit=='5000' else '' }}>Latest 5,000</option>
+        <option value="all" {{ 'selected' if limit=='all' else '' }}>All Audits</option>
+      </select>
+    </div>
     <div style="display:flex; gap:6px; align-items:flex-end;">
       <button type="submit" class="btn btn-primary btn-sm" style="flex:1; height: 31px; font-size: 12px;">Apply Filter</button>
       <a href="?" class="btn btn-secondary btn-sm" style="height: 31px; font-size: 12px; line-height: 20px;">Reset</a>
@@ -52,7 +62,7 @@
     <div>
       <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 13.5px;">
         <span>Audited Interactions</span>
-        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size: 11px;">{{ rows|length }} Records</span>
+        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size: 11px;">Showing {{ rows|length }} of {{ total_count }} Records</span>
       </h3>
       <p class="card-subtitle" style="margin:1px 0 0; font-size: 11px; color:var(--text-muted);">{{ subtitle }}</p>
     </div>

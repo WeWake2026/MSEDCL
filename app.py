@@ -617,6 +617,7 @@ def audits_view(dept="Inbound"):
     q = request.args.get("q", "").strip()
     start = request.args.get("start", "")
     end = request.args.get("end", "")
+    limit = request.args.get("limit", "1000").strip().lower()
     
     where = ["department=?"]
     params = [dept]
@@ -634,8 +635,18 @@ def audits_view(dept="Inbound"):
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC LIMIT 500"
+    limit_clause = ""
+    if limit != "all":
+        try:
+            limit_val = int(limit)
+            limit_clause = f" LIMIT {limit_val}"
+        except ValueError:
+            limit_clause = " LIMIT 1000"
+
+    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC" + limit_clause
+    count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
     with db() as con:
+        total_count = con.execute(count_sql, params).fetchone()["total"]
         rows = con.execute(sql, params).fetchall()
 
     return render_template("audits_view.html",
@@ -643,7 +654,8 @@ def audits_view(dept="Inbound"):
                            title=f"{dept} Call Audits",
                            subtitle=f"Displaying evaluated customer calls for {dept} operations",
                            fixed_dept=True,
-                           rows=rows, q=q, dept=dept, start=start, end=end)
+                           rows=rows, total_count=total_count, limit=limit,
+                           q=q, dept=dept, start=start, end=end)
 
 @app.route("/fatal-calls")
 @login_required
@@ -652,6 +664,7 @@ def fatal_calls():
     dept = request.args.get("department", "All")
     start = request.args.get("start", "")
     end = request.args.get("end", "")
+    limit = request.args.get("limit", "1000").strip().lower()
     
     where = ["is_fatal=1"]
     params = []
@@ -672,15 +685,26 @@ def fatal_calls():
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC LIMIT 500"
+    limit_clause = ""
+    if limit != "all":
+        try:
+            limit_val = int(limit)
+            limit_clause = f" LIMIT {limit_val}"
+        except ValueError:
+            limit_clause = " LIMIT 1000"
+
+    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC" + limit_clause
+    count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
     with db() as con:
+        total_count = con.execute(count_sql, params).fetchone()["total"]
         rows = con.execute(sql, params).fetchall()
 
     return render_template("audits_view.html",
                            page="fatal_calls",
                            title="Fatal Call Register",
                            subtitle="Critical compliance, zero-tolerance, and policy breach calls (independent of Quality Score)",
-                           rows=rows, q=q, dept=dept, start=start, end=end)
+                           rows=rows, total_count=total_count, limit=limit,
+                           q=q, dept=dept, start=start, end=end)
 
 @app.route("/score-reports")
 @login_required
@@ -690,6 +714,7 @@ def score_reports():
     score_band = request.args.get("score_band", "All")
     start = request.args.get("start", "")
     end = request.args.get("end", "")
+    limit = request.args.get("limit", "1000").strip().lower()
     
     where = ["1=1"]
     params = []
@@ -716,8 +741,18 @@ def score_reports():
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY quality_score ASC LIMIT 500"
+    limit_clause = ""
+    if limit != "all":
+        try:
+            limit_val = int(limit)
+            limit_clause = f" LIMIT {limit_val}"
+        except ValueError:
+            limit_clause = " LIMIT 1000"
+
+    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY quality_score ASC" + limit_clause
+    count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
     with db() as con:
+        total_count = con.execute(count_sql, params).fetchone()["total"]
         rows = con.execute(sql, params).fetchall()
 
     return render_template("audits_view.html",
@@ -726,7 +761,8 @@ def score_reports():
                            subtitle="Detailed score category breakdown (Low <80%, Average 80-90%, Good >90%)",
                            show_score_filter=True,
                            score_band=score_band,
-                           rows=rows, q=q, dept=dept, start=start, end=end)
+                           rows=rows, total_count=total_count, limit=limit,
+                           q=q, dept=dept, start=start, end=end)
 
 @app.route("/auditors")
 @roles("admin", "quality", "manager")
