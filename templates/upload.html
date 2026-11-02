@@ -49,9 +49,10 @@
       </div>
       <div class="filter-group">
         <label>Duplicate Handling</label>
-        <select name="duplicate_handling" class="form-control">
+        <select name="duplicate_handling" class="form-control" style="font-weight:600;">
           <option value="skip">Skip duplicates (Default)</option>
-          <option value="force_insert">Insert All (Force insert even if duplicate)</option>
+          <option value="update">Update Existing (Overwrite & sync existing records)</option>
+          <option value="force_insert">Insert All (Force insert all as new records)</option>
         </select>
       </div>
     </div>

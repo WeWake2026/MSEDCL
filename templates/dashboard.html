@@ -824,7 +824,10 @@ function renderMainDashboardCharts() {
 
 document.addEventListener('DOMContentLoaded', function() {
   window.chartData = {{ chart_data|tojson }};
-  renderMainDashboardCharts();
+  // Ensure DOM is fully painted before initializing Chart.js
+  setTimeout(function() {
+    renderMainDashboardCharts();
+  }, 50);
 
   // Re-render graphs seamlessly whenever the Day / Night theme toggle is clicked
   window.addEventListener('themeChanged', function() {
@@ -1119,8 +1122,8 @@ window.setDashboardRange = function(rangeType) {
   const monthSelect = form.querySelector('select[name="month"]');
   
   if (monthSelect) monthSelect.value = ''; // Clear month select when setting specific date ranges
-  
-  const today = new Date();
+
+  const cd = window.chartData || {};
   const formatYMD = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1128,15 +1131,24 @@ window.setDashboardRange = function(rangeType) {
     return `${y}-${m}-${day}`;
   };
 
-  const endDateStr = formatYMD(today);
+  // Determine anchor date: use latest recorded audit date from DB if available, else current system date
+  let anchorDate = new Date();
+  if (cd.latest_audit_date) {
+    const parts = cd.latest_audit_date.split('-');
+    if (parts.length === 3) {
+      anchorDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+  }
+
+  const endDateStr = formatYMD(anchorDate);
   let daysBack = 30;
   if (rangeType === '7d') daysBack = 7;
   else if (rangeType === '15d') daysBack = 15;
   else if (rangeType === '30d') daysBack = 30;
   else if (rangeType === '31d') daysBack = 31;
 
-  const startDate = new Date();
-  startDate.setDate(today.getDate() - (daysBack - 1));
+  const startDate = new Date(anchorDate);
+  startDate.setDate(anchorDate.getDate() - (daysBack - 1));
   const startDateStr = formatYMD(startDate);
 
   if (startInput) startInput.value = startDateStr;

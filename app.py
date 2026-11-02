@@ -594,7 +594,9 @@ def dashboard():
         "open_warnings": open_warnings,
         "in_progress_warnings": in_progress_warnings,
         "closed_warnings": closed_warnings,
-        "active_pips": active_pips
+        "active_pips": active_pips,
+        "latest_audit_date": [r["dt"] for r in timeline_rows][-1] if timeline_rows else None,
+        "earliest_audit_date": [r["dt"] for r in timeline_rows][0] if timeline_rows else None
     }
 
     now_dt = datetime.now()
