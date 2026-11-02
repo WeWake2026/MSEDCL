@@ -480,7 +480,7 @@
       <p class="card-subtitle">Detailed breakdown of quality scores, fatal calls, and coaching triggers for {{ advisor_summary|length }} advisors</p>
     </div>
     <div class="action-buttons">
-      <input type="text" id="refAdvSearch" oninput="filterRefAdvTable()" placeholder="🔍 Filter advisors..." class="ref-input-control" style="width:170px;padding:6px 10px;font-size:12px;">
+      <input type="text" id="refAdvSearch" oninput="filterRefAdvTable()" placeholder="🔍 Filter advisor or auditor..." class="ref-input-control" style="width:190px;padding:6px 10px;font-size:12px;">
       <a href="{{ url_for('export_center') }}" class="btn btn-secondary btn-sm">Export Detailed Data</a>
     </div>
   </div>
@@ -503,7 +503,7 @@
       </thead>
       <tbody>
         {% for r in advisor_summary %}
-        <tr class="ref-adv-row" data-name="{{ r.advisor_name|lower }}" data-id="{{ (r.advisor_id or '')|lower }}" data-dept="{{ r.department|lower }}">
+        <tr class="ref-adv-row" data-name="{{ r.advisor_name|lower }}" data-id="{{ (r.advisor_id or '')|lower }}" data-dept="{{ r.department|lower }}" data-auditor="{{ (r.auditors or '')|lower }}">
           <td><span class="badge badge-neutral" style="font-family:monospace;">{{ r.advisor_id or '—' }}</span></td>
           <td><strong>{{ r.advisor_name }}</strong></td>
           <td><span class="badge badge-neutral">{{ r.department }}</span></td>
@@ -563,7 +563,8 @@ function filterRefAdvTable() {
     const name = r.getAttribute('data-name') || '';
     const id = r.getAttribute('data-id') || '';
     const dept = r.getAttribute('data-dept') || '';
-    r.style.display = (!q || name.includes(q) || id.includes(q) || dept.includes(q)) ? '' : 'none';
+    const auditor = r.getAttribute('data-auditor') || '';
+    r.style.display = (!q || name.includes(q) || id.includes(q) || dept.includes(q) || auditor.includes(q)) ? '' : 'none';
   });
 }
 
@@ -1373,7 +1374,7 @@ window.openChartModal = function(type) {
         <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}">${d.avg_score || 0}%</strong></td>
         <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals}</span>` : `<span class="badge badge-neutral">0</span>`}</td>
         <td>
-          <a href="/audits/Inbound?q=${encodeURIComponent(d.auditor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Filter Audits ↗</a>
+          <a href="/audits/${encodeURIComponent(d.dept || 'Inbound')}?q=${encodeURIComponent(d.auditor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Filter Audits ↗</a>
         </td>
       `;
       tbody.appendChild(tr);

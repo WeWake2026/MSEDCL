@@ -511,7 +511,7 @@ def dashboard():
 
         # Auditor activity (Top 15 with average score and fatals for deep evaluation)
         auditor_stats = con.execute("""
-            SELECT auditor_name, COUNT(*) as cnt,
+            SELECT auditor_name, MIN(department) as dept, COUNT(*) as cnt,
                    ROUND(AVG(quality_score), 2) as avg_score,
                    SUM(is_fatal) as fatals
             """ + sql_base + """ AND auditor_name IS NOT NULL AND auditor_name != ''
@@ -539,7 +539,8 @@ def dashboard():
                    SUM(is_fatal) as fatals,
                    SUM(CASE WHEN quality_score < 80 THEN 1 ELSE 0 END) as low_calls,
                    SUM(CASE WHEN quality_score >= 80 AND quality_score <= 90 THEN 1 ELSE 0 END) as mid_calls,
-                   SUM(CASE WHEN quality_score > 90 THEN 1 ELSE 0 END) as good_calls
+                   SUM(CASE WHEN quality_score > 90 THEN 1 ELSE 0 END) as good_calls,
+                   STRING_AGG(DISTINCT auditor_name, ', ') as auditors
             """ + sql_base + """
             GROUP BY advisor_id, advisor_name, department
             ORDER BY fatals DESC, low_calls DESC LIMIT 20
@@ -661,8 +662,8 @@ def audits_view(dept="Inbound"):
         where.append("(advisor_id = ? OR advisor_name LIKE ?)")
         params.extend([curr_user["advisor_id"], f"%{curr_user['advisor_id']}%"])
     if q:
-        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR call_id LIKE ? OR fatal_category LIKE ? OR error_categories LIKE ?)")
-        params += [f"%{q}%"] * 5
+        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR auditor_name LIKE ? OR call_id LIKE ? OR fatal_category LIKE ? OR error_categories LIKE ?)")
+        params += [f"%{q}%"] * 6
     if start:
         where.append("COALESCE(call_date, evaluation_date) >= ?")
         params.append(start)
@@ -711,8 +712,8 @@ def fatal_calls():
         where.append("department=?")
         params.append(dept)
     if q:
-        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR call_id LIKE ? OR fatal_category LIKE ?)")
-        params += [f"%{q}%"] * 4
+        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR auditor_name LIKE ? OR call_id LIKE ? OR fatal_category LIKE ?)")
+        params += [f"%{q}%"] * 5
     if start:
         where.append("COALESCE(call_date, evaluation_date) >= ?")
         params.append(start)
@@ -767,8 +768,8 @@ def score_reports():
     elif score_band == "Good":
         where.append("quality_score > 90")
     if q:
-        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR call_id LIKE ?)")
-        params += [f"%{q}%"] * 3
+        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR auditor_name LIKE ? OR call_id LIKE ?)")
+        params += [f"%{q}%"] * 4
     if start:
         where.append("COALESCE(call_date, evaluation_date) >= ?")
         params.append(start)
@@ -835,8 +836,8 @@ def advisor_search():
 
     profile = None
     if emp_id:
-        where = ["(advisor_id = ? OR advisor_name LIKE ?)"]
-        params = [emp_id, f"%{emp_id}%"]
+        where = ["(advisor_id = ? OR advisor_name LIKE ? OR auditor_name LIKE ?)"]
+        params = [emp_id, f"%{emp_id}%", f"%{emp_id}%"]
         
         if dept in ("Inbound", "Outbound"):
             where.append("department=?")
