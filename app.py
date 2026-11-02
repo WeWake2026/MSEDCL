@@ -821,6 +821,7 @@ def bill_calculator():
 
 # --- Routes: Advisor 360 Search ---
 @app.route("/advisor-search")
+@app.route("/advisor/search")
 @roles("admin", "quality", "manager")
 def advisor_search():
     emp_id = request.args.get("emp_id", "").strip()

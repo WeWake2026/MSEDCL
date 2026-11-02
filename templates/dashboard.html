@@ -1153,7 +1153,7 @@ window.openChartModal = function(type) {
         <td style="text-align:center;"><strong class="${(d.avg_score || 0) < 80 ? 'text-danger' : 'text-success'}" style="font-size:13px;">${d.avg_score || 0}%</strong></td>
         <td style="text-align:center;">${d.fatals ? `<span class="badge badge-danger">${d.fatals} Fatal</span>` : `<span class="badge badge-success">Clean (0)</span>`}</td>
         <td>
-          <a href="/advisor/search?emp_id=${encodeURIComponent(d.advisor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Advisor 360° ↗</a>
+          <a href="/advisor-search?emp_id=${encodeURIComponent(d.advisor_name || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Advisor 360° ↗</a>
         </td>
       `;
       tbody.appendChild(tr);
