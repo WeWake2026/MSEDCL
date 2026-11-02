@@ -417,6 +417,7 @@ def logout():
 @login_required
 def dashboard():
     dept = request.args.get("department", "All")
+    month = request.args.get("month", "").strip() # Format: YYYY-MM
     start = request.args.get("start", "")
     end = request.args.get("end", "")
     selected_auditor = request.args.get("auditor", "").strip()
@@ -429,6 +430,9 @@ def dashboard():
     if dept in ("Inbound", "Outbound"):
         where.append("department=?")
         params.append(dept)
+    if month:
+        where.append("COALESCE(call_date, evaluation_date) LIKE ?")
+        params.append(f"{month}%")
     if start:
         where.append("COALESCE(call_date, evaluation_date) >= ?")
         params.append(start)
@@ -461,6 +465,15 @@ def dashboard():
     sql_base = " FROM audits WHERE " + " AND ".join(where)
     
     with db() as con:
+        # Fetch distinct months available in audits
+        available_months_raw = con.execute("""
+            SELECT DISTINCT SUBSTR(COALESCE(call_date, evaluation_date), 1, 7) as m
+            FROM audits
+            WHERE COALESCE(call_date, evaluation_date) IS NOT NULL AND LENGTH(COALESCE(call_date, evaluation_date)) >= 7
+            ORDER BY m DESC
+        """).fetchall()
+        available_months = [r[0] for r in available_months_raw if r[0] and len(r[0]) == 7]
+
         # System live status metadata
         last_batch = con.execute("SELECT uploaded_at, source_file FROM import_batches ORDER BY uploaded_at DESC LIMIT 1").fetchone()
         last_sync_time = last_batch["uploaded_at"] if last_batch else None
@@ -609,7 +622,7 @@ def dashboard():
         "last_sync_file": last_sync_file or "Connected",
         "all_time_records": all_time_records,
         "filtered_count": total_audits,
-        "is_filtered": bool(dept != "All" or start or end or selected_auditor or advisor_query or score_bracket != "All" or fatal_status != "All")
+        "is_filtered": bool(dept != "All" or month or start or end or selected_auditor or advisor_query or score_bracket != "All" or fatal_status != "All")
     }
 
     return render_template("dashboard.html",
@@ -618,6 +631,8 @@ def dashboard():
                            chart_data=chart_data,
                            advisor_summary=advisor_summary,
                            auditors_list=auditors_list,
+                           available_months=available_months,
+                           selected_month=month,
                            selected_auditor=selected_auditor,
                            advisor_query=advisor_query,
                            score_bracket=score_bracket,

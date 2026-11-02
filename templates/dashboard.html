@@ -6,6 +6,20 @@
 <!-- 1. Top Advanced Filter Panel (Patterned exactly after reference screenshot) -->
 <div class="ref-filter-container">
   <form method="get" action="{{ url_for('dashboard') }}" class="ref-filter-grid" id="refFilterForm">
+    <!-- Month-wise Scope Filter -->
+    <div class="ref-filter-item">
+      <div class="ref-filter-label">
+        <span class="icon-tag blue">🗓️</span>
+        <span>Audit Month</span>
+      </div>
+      <select name="month" class="ref-input-control" onchange="document.getElementById('refFilterForm').submit()" style="font-weight:600;color:var(--primary);">
+        <option value="">All Months (Cumulative)</option>
+        {% for m in available_months %}
+        <option value="{{ m }}" {{ 'selected' if selected_month==m else '' }}>📅 {{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
     <!-- Department Filter -->
     <div class="ref-filter-item">
       <div class="ref-filter-label">
@@ -236,12 +250,13 @@
 <!-- 4. Reference Analytics Charts Row (3 Charts matching Screenshot) -->
 <div class="ref-charts-row">
   <!-- Chart 1: Score Category Distribution -->
-  <div class="ref-chart-card">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="scores" onclick="openChartModal('scores')" title="Click or scroll to inspect score category breakdown">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📊</span>
         <span>Score Category Distribution</span>
       </div>
+      <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('scores')">🔍 Inspect</button>
       <div class="ref-chart-subtitle">
         <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-blue);margin-right:4px;"></span>
         Total Audited: <strong>{{ metrics.total_audits }}</strong>
@@ -277,12 +292,13 @@
   </div>
 
   <!-- Chart 2: Fatal vs Non-Fatal Ratio -->
-  <div class="ref-chart-card">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="fatals" onclick="openChartModal('fatals')" title="Click or scroll to inspect fatal compliance breakdown">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">👥</span>
         <span>Fatal vs Non-Fatal Ratio</span>
       </div>
+      <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('fatals')">🔍 Inspect</button>
     </div>
     <div class="ref-donut-container">
       <div class="ref-donut-canvas-box">
@@ -367,12 +383,13 @@
   </div>
 
   <!-- Chart 6: Warning & PIP Action Status -->
-  <div class="ref-chart-card">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="warnings" onclick="openChartModal('warnings')" title="Click or scroll to inspect disciplinary action breakdown">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-orange);">🛡️</span>
         <span>Warning &amp; PIP Action Status</span>
       </div>
+      <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('warnings')">🔍 Inspect</button>
       <div class="ref-chart-subtitle">
         Total: <strong>{{ metrics.total_warnings }}</strong>
       </div>
@@ -1132,6 +1149,165 @@ window.openChartModal = function(type) {
           x: { grid: { display: false } },
           y: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v + '%' } }
         }
+      }
+    });
+
+  } else if (type === 'scores') {
+    icon.innerText = '📊';
+    titleText.innerText = 'Quality Score Category Distribution';
+    subtitle.innerText = 'Breakdown of evaluated calls into Good (>90%), Average (80-90%), Low (<80%), and Fatal errors.';
+    thead.innerHTML = `
+      <tr>
+        <th>Performance Tier</th>
+        <th style="text-align:center;">Score Range</th>
+        <th style="text-align:center;">Total Calls Audited</th>
+        <th style="text-align:center;">Percentage of Total</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    const total = (cd.low_scores || 0) + (cd.mid_scores || 0) + (cd.good_scores || 0) + (cd.fatal_count || 0);
+    const tiers = [
+      { name: 'Good Performance', range: '> 90%', count: cd.good_scores || 0, color: '#10b981', filter: 'Good' },
+      { name: 'Average Performance', range: '80% - 90%', count: cd.mid_scores || 0, color: '#0284c7', filter: 'Mid' },
+      { name: 'Low Score Warning', range: '< 80%', count: cd.low_scores || 0, color: '#f59e0b', filter: 'Low' },
+      { name: 'Fatal Policy Breaches', range: 'Zero Tolerance', count: cd.fatal_count || 0, color: '#ef4444', filter: 'fatal' }
+    ];
+
+    countBadge.innerText = `${total} Total Audits`;
+    tbody.innerHTML = '';
+
+    tiers.forEach(t => {
+      const pct = total > 0 ? ((t.count / total) * 100).toFixed(1) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong style="color:${t.color};">● ${t.name}</strong></td>
+        <td style="text-align:center;"><span class="badge badge-neutral">${t.range}</span></td>
+        <td style="text-align:center;"><strong>${t.count}</strong></td>
+        <td style="text-align:center;"><strong>${pct}%</strong></td>
+        <td>
+          <a href="${t.filter === 'fatal' ? '/fatal-calls' : '/score-reports?score_band=' + t.filter}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Calls ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: tiers.map(t => t.name),
+        datasets: [{
+          data: tiers.map(t => t.count),
+          backgroundColor: tiers.map(t => t.color),
+          borderWidth: 2,
+          cutout: '65%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+
+  } else if (type === 'fatals') {
+    icon.innerText = '👥';
+    titleText.innerText = 'Fatal vs Non-Fatal Call Compliance Ratio';
+    subtitle.innerText = 'Analysis of severe compliance and critical fatal breaches vs clean audited interactions.';
+    thead.innerHTML = `
+      <tr>
+        <th>Compliance Category</th>
+        <th style="text-align:center;">Audit Volume</th>
+        <th style="text-align:center;">Compliance Share</th>
+        <th style="text-align:center;">Audit Register</th>
+      </tr>
+    `;
+
+    const totalAudits = (cd.fatal_count || 0) + (cd.non_fatal_count || 0);
+    const fatalPct = totalAudits > 0 ? (((cd.fatal_count || 0) / totalAudits) * 100).toFixed(1) : 0;
+    const cleanPct = (100 - fatalPct).toFixed(1);
+
+    countBadge.innerText = `${totalAudits} Total Audits`;
+    tbody.innerHTML = `
+      <tr>
+        <td><strong style="color:#ef4444;">🚨 Fatal Breaches Tagged</strong></td>
+        <td style="text-align:center;"><span class="badge badge-danger" style="font-size:12px;">${cd.fatal_count || 0}</span></td>
+        <td style="text-align:center;"><strong>${fatalPct}%</strong></td>
+        <td><a href="/fatal-calls" class="btn btn-danger btn-sm" style="font-size:11px;padding:3px 8px;">View Fatal Calls ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong style="color:#3b82f6;">✅ Clean / Non-Fatal Interactions</strong></td>
+        <td style="text-align:center;"><span class="badge badge-success" style="font-size:12px;">${cd.non_fatal_count || 0}</span></td>
+        <td style="text-align:center;"><strong>${cleanPct}%</strong></td>
+        <td><a href="/audits/Inbound" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Clean Audits ↗</a></td>
+      </tr>
+    `;
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Fatal Calls', 'Non-Fatal Calls'],
+        datasets: [{
+          data: [cd.fatal_count || 0, cd.non_fatal_count || 0],
+          backgroundColor: ['#ef4444', '#3b82f6'],
+          borderWidth: 2,
+          cutout: '65%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+
+  } else if (type === 'warnings') {
+    icon.innerText = '🛡️';
+    titleText.innerText = 'Disciplinary Warning & PIP Action Status';
+    subtitle.innerText = 'Lifecycle tracking of disciplinary notices, PIP coaching enrollments, and closure statuses.';
+    thead.innerHTML = `
+      <tr>
+        <th>Action Status</th>
+        <th style="text-align:center;">Warning Count</th>
+        <th style="text-align:center;">Distribution</th>
+        <th>Action Link</th>
+      </tr>
+    `;
+
+    const wTotal = (cd.open_warnings || 0) + (cd.in_progress_warnings || 0) + (cd.closed_warnings || 0);
+    const statuses = [
+      { name: 'Open Disciplinary Notices', count: cd.open_warnings || 0, color: '#ef4444' },
+      { name: 'Under Active PIP Coaching', count: cd.in_progress_warnings || 0, color: '#f59e0b' },
+      { name: 'Successfully Closed / Resolved', count: cd.closed_warnings || 0, color: '#10b981' }
+    ];
+
+    countBadge.innerText = `${wTotal} Actions Recorded`;
+    tbody.innerHTML = '';
+
+    statuses.forEach(s => {
+      const pct = wTotal > 0 ? ((s.count / wTotal) * 100).toFixed(1) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong style="color:${s.color};">● ${s.name}</strong></td>
+        <td style="text-align:center;"><strong>${s.count}</strong></td>
+        <td style="text-align:center;"><strong>${pct}%</strong></td>
+        <td><a href="/warnings" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">Manage PIPs ↗</a></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: statuses.map(s => s.name),
+        datasets: [{
+          data: statuses.map(s => s.count),
+          backgroundColor: statuses.map(s => s.color),
+          borderWidth: 2,
+          cutout: '65%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
       }
     });
   }
