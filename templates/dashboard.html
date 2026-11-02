@@ -523,7 +523,7 @@
             <div class="action-buttons">
               <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="btn btn-secondary btn-sm" title="Drilldown to advisor history">🔍 Inspect</a>
               {% if user.role not in ('viewer', 'advisor') and (r.fatals > 0 or r.low_calls > 0 or r.avg_score < 90) %}
-                <a href="{{ url_for('warnings') }}" class="btn btn-primary btn-sm" title="Issue Warning or PIP notice">✉️ PIP</a>
+                <a href="{{ url_for('warnings', advisor_id=r.advisor_id or '', advisor_name=r.advisor_name, department=r.department) }}" class="btn btn-primary btn-sm" title="Issue Warning or PIP notice">✉️ PIP</a>
               {% endif %}
             </div>
           </td>

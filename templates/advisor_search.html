@@ -351,7 +351,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="card-title">Disciplinary Warnings & PIP History ({{ profile.warnings|length }} Records)</h3>
-      <a href="{{ url_for('warnings') }}" class="btn btn-secondary btn-sm">+ Draft New Warning</a>
+      <a href="{{ url_for('warnings', advisor_id=profile.advisor_id or '', advisor_name=profile.advisor_name, department=profile.department) }}" class="btn btn-secondary btn-sm">+ Draft New Warning</a>
     </div>
     <div class="table-responsive">
       <table class="data-table">

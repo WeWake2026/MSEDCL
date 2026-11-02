@@ -1586,16 +1586,17 @@ def advisor_lookup():
         """, (adv_id, f"%{adv_name}%")).fetchall()
         prior_count = len(prior_warnings)
 
-        # 3. Retrieve evaluated call interaction for evidence
-        focus_tier = request.args.get("tier", "").strip()
-        if focus_tier == "Appreciation Letter":
+        # 3. Retrieve evaluated call interaction for evidence based on requested tier
+        requested_tier = request.args.get("tier", "").strip()
+        
+        if requested_tier == "Appreciation Letter":
             latest_audit = con.execute("""
                 SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
                 FROM audits
                 WHERE ((advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?) AND is_fatal=0 AND quality_score >= 85
                 ORDER BY id DESC LIMIT 1
             """, (adv_id, f"%{adv_name}%")).fetchone()
-        elif focus_tier:
+        elif requested_tier in ["First Warning", "Second Warning", "Final Warning", "Performance Improvement Plan (PIP)", "Coaching Notice"]:
             latest_audit = con.execute("""
                 SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
                 FROM audits
@@ -1603,21 +1604,20 @@ def advisor_lookup():
                 ORDER BY id DESC LIMIT 1
             """, (adv_id, f"%{adv_name}%")).fetchone()
         else:
-            # Default: If advisor has any fatal or low score call, pull that as primary evidence for notice
             latest_audit = con.execute("""
                 SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
                 FROM audits
                 WHERE ((advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?) AND (is_fatal=1 OR quality_score < 80)
                 ORDER BY id DESC LIMIT 1
             """, (adv_id, f"%{adv_name}%")).fetchone()
-            
-            if not latest_audit:
-                latest_audit = con.execute("""
-                    SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
-                    FROM audits
-                    WHERE (advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?
-                    ORDER BY id DESC LIMIT 1
-                """, (adv_id, f"%{adv_name}%")).fetchone()
+
+        if not latest_audit:
+            latest_audit = con.execute("""
+                SELECT call_id, call_date, evaluation_date, quality_score, is_fatal, fatal_category, error_categories, observation
+                FROM audits
+                WHERE (advisor_id = ? AND advisor_id != '') OR advisor_name LIKE ?
+                ORDER BY id DESC LIMIT 1
+            """, (adv_id, f"%{adv_name}%")).fetchone()
 
     # 4. Determine status & tier
     call_date = (latest_audit["call_date"] if latest_audit and latest_audit["call_date"] else "Recent Evaluation")
@@ -1630,7 +1630,6 @@ def advisor_lookup():
     err_raw = (latest_audit["error_categories"] or "") if latest_audit else ""
     fatal_cat = (latest_audit["fatal_category"] or "Critical Failure") if latest_audit else ""
 
-    # Generate clean observation bullet points
     bullets = []
     if is_fatal:
         bullets.append(f"Fatal Violation Identified: {fatal_cat}")
@@ -1640,7 +1639,6 @@ def advisor_lookup():
             if part and len(part) > 3:
                 bullets.append(f"Error category noted: {part}")
     if obs_raw:
-        # Split into short sentences
         sentences = [s.strip() for s in obs_raw.replace("\n", ". ").split(". ") if len(s.strip()) > 15]
         for s in sentences[:3]:
             bullets.append(s)
@@ -1652,37 +1650,179 @@ def advisor_lookup():
     email_prefix = (adv_id or adv_name.split()[0]).lower().replace(" ", ".")
     suggested_email = f"{email_prefix}@msedcl.in"
 
-    # 5. Apply the 5 Official QA Templates
-    if not is_fail and score >= 90:
+    # 5. Determine active tier: use requested_tier if provided, otherwise auto-calculate based on prior warnings and score
+    if requested_tier:
+        warning_type = requested_tier
+    elif not is_fail and score >= 90:
         warning_type = "Appreciation Letter"
-        suggested_subject = f"Appreciation: Call Quality Evaluation - {call_date}"
+    elif prior_count == 0:
+        warning_type = "First Warning"
+    elif prior_count == 1:
+        warning_type = "Second Warning"
+    elif prior_count == 2:
+        warning_type = "Final Warning"
+    else:
+        warning_type = "Performance Improvement Plan (PIP)"
+
+    # Default review period in days based on tier
+    review_days = 14
+    if warning_type == "Performance Improvement Plan (PIP)":
+        review_days = 30
+    elif warning_type == "Final Warning":
+        review_days = 7
+    elif warning_type == "Second Warning":
+        review_days = 14
+    elif warning_type == "First Warning":
+        review_days = 14
+    elif warning_type == "Appreciation Letter":
+        review_days = 90
+    elif warning_type in ("Coaching Notice", "Quality Feedback Email"):
+        review_days = 7
+
+    # 6. Generate Tier-Specific Official QA Drafts & Subjects
+    if warning_type == "Appreciation Letter":
+        suggested_subject = f"Appreciation: Call Quality Evaluation - {adv_name} ({call_date})"
         suggested_body = (
             f"Dear {adv_name},\n\n"
-            f"The Quality Team would like to appreciate your excellent call handling observed during the evaluation of your call dated {call_date}.\n\n"
-            f"Call Evaluation Details:\n"
-            f"- Employee Name: {adv_name}\n"
+            f"The Quality Assurance Team would like to commend your excellent call handling observed during the evaluation of your customer interaction dated {call_date}.\n\n"
+            f"Call Evaluation Summary:\n"
+            f"- Advisor Name: {adv_name}\n"
             f"- Employee ID: {adv_id or 'N/A'}\n"
-            f"- Call Date: {call_date}\n"
-            f"- Status: Pass / Exceeds Expectations (Score: {score}%)\n\n"
-            f"During the interaction, you demonstrated:\n"
-            f"- Proper opening and verification process\n"
-            f"- Clear understanding of the consumer concern\n"
-            f"- Accurate process guidance and resolution\n"
-            f"- Professional communication and active listening\n\n"
-            f"Your effort in maintaining quality standards and providing a positive customer experience is highly appreciated. Keep up the good work and continue maintaining this performance in future calls.\n\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
+            f"- Evaluation Date: {call_date}\n"
+            f"- Quality Score: {score}% (Pass / Exceeds Benchmark)\n\n"
+            f"Key Observed Strengths:\n"
+            f"- Courteous and standard opening/closing protocols.\n"
+            f"- Active listening and swift comprehension of consumer concerns.\n"
+            f"- Accurate guidance and first-contact problem resolution.\n"
+            f"- Strict adherence to verification and SLA standards.\n\n"
+            f"Your dedication to exceptional consumer service and quality excellence is greatly appreciated. Keep up the high standard of performance!\n\n"
+            f"Best regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif warning_type == "Second Warning":
+        suggested_subject = f"Second Warning Letter: Continued Call Quality Deviation - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This email serves as your Second Formal Warning regarding continued non-compliance with MSEDCL call quality standards.\n\n"
+            f"Despite previous coaching and formal notice, your call interaction evaluated on {call_date} demonstrates recurring quality gaps.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Advisor Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
+            f"- Evaluation Date: {call_date}\n"
+            f"- Quality Score: {score}% (Fail)\n\n"
+            f"Observed Deficiencies:\n"
+            f"{bullet_text}\n\n"
+            f"Urgent Mandatory Directives:\n"
+            f"1. Follow standard verification protocols before disclosing account or billing information.\n"
+            f"2. Strictly follow script guidelines and mandatory hold duration limits.\n"
+            f"3. Ensure complete resolution notes are updated in CRM prior to call wrap-up.\n\n"
+            f"Please note that continued failure to meet minimum benchmarks within the review timeline will result in immediate escalation to a Final Warning and formal disciplinary proceedings.\n\n"
             f"Regards,\n"
             f"Quality Assurance Team\n"
             f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
         )
-    elif prior_count == 0:
-        warning_type = "First Warning"
-        suggested_subject = f"First Warning Letter: Call Quality Performance Concern - {call_date}"
+    elif warning_type == "Final Warning":
+        suggested_subject = f"Final Warning Letter: Repeated Quality Standard Non-Compliance - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This communication serves as your FINAL OFFICIAL WARNING regarding serious and recurring quality deviations in call interactions.\n\n"
+            f"Despite prior warning notices and structured coaching sessions, your call evaluated on {call_date} continues to fail mandatory quality and compliance requirements.\n\n"
+            f"Call Evaluation Details:\n"
+            f"- Advisor Name: {adv_name}\n"
+            f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
+            f"- Evaluation Date: {call_date}\n"
+            f"- Quality Score: {score}% (Critical Failure)\n\n"
+            f"Non-Compliance Observations:\n"
+            f"{bullet_text}\n\n"
+            f"Critical Notice:\n"
+            f"You are hereby given a final opportunity to rectify your performance. Any further failure or compliance breach will result in immediate placement on an escalated PIP or disciplinary action up to and including termination of service as per company policy.\n\n"
+            f"Regards,\n"
+            f"Quality Assurance & Operations Management\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif warning_type == "Performance Improvement Plan (PIP)":
+        suggested_subject = f"Official Notice: Placement on Performance Improvement Plan (PIP) - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"Following multiple quality audits and documented performance gaps, this serves as formal notification that you are placed on a structured Performance Improvement Plan (PIP).\n\n"
+            f"Performance Background:\n"
+            f"- Advisor Name: {adv_name} (ID: {adv_id or 'N/A'})\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
+            f"- Total Historical Audits: {r['total_calls']} (Avg Quality: {r['avg_score']}%)\n"
+            f"- Most Recent Evaluation: {call_date} (Score: {score}%)\n"
+            f"- Prior Documented Warnings: {prior_count}\n\n"
+            f"Primary Deficiencies Identified:\n"
+            f"{bullet_text}\n\n"
+            f"PIP Targets & Mandatory Terms:\n"
+            f"1. Maintain an average quality score of at least 85.0% across all evaluated interactions during the 30-day PIP period.\n"
+            f"2. Zero fatal compliance breaches (customer verification, call disconnections, improper tariff advice).\n"
+            f"3. Participate in mandatory weekly coaching check-ins with Quality & Team Leader ({r['team_leader'] or 'Supervisor'}).\n\n"
+            f"Failure to meet these defined targets at the end of the PIP review period will lead to administrative termination of contract/employment.\n\n"
+            f"Regards,\n"
+            f"Human Resources & Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif warning_type == "Coaching Notice":
+        suggested_subject = f"Quality Coaching Notice: Targeted Skill Refinement - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"During recent quality monitoring ({call_date}), specific areas were identified that require focused refresher training and coaching.\n\n"
+            f"Evaluation Highlights:\n"
+            f"- Advisor: {adv_name} (ID: {adv_id or 'N/A'})\n"
+            f"- Quality Score: {score}%\n"
+            f"- Department: {r['department'] or 'Inbound'}\n\n"
+            f"Coaching Focus Areas:\n"
+            f"{bullet_text}\n\n"
+            f"Action Required:\n"
+            f"Please schedule a 1-on-1 coaching session with your Quality Coach / Team Leader within 48 hours to review the recorded interaction and align on recommended call techniques.\n\n"
+            f"Regards,\n"
+            f"Quality Training & Development\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif warning_type == "Quality Feedback Email":
+        suggested_subject = f"Quality Audit Feedback: Call Interaction dated {call_date} - {adv_name}"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"Please find below the quality evaluation summary for your customer call handled on {call_date}.\n\n"
+            f"Audit Summary:\n"
+            f"- Score: {score}%\n"
+            f"- Call Date: {call_date}\n"
+            f"- Department: {r['department'] or 'Inbound'}\n\n"
+            f"Observations & Recommendations:\n"
+            f"{bullet_text}\n\n"
+            f"Please review the feedback and apply the suggested corrections in your upcoming interactions.\n\n"
+            f"Regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    elif warning_type == "Other Authorized Communication":
+        suggested_subject = f"Official Quality Communication - {adv_name} ({call_date})"
+        suggested_body = (
+            f"Dear {adv_name},\n\n"
+            f"This official communication pertains to quality standards and operational compliance observed during call evaluations.\n\n"
+            f"Details:\n"
+            f"- Advisor Name: {adv_name} (ID: {adv_id or 'N/A'})\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
+            f"- Evaluated Score: {score}%\n\n"
+            f"Key Notes:\n"
+            f"{bullet_text}\n\n"
+            f"Regards,\n"
+            f"Quality Assurance Team\n"
+            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
+        )
+    else:  # First Warning
+        suggested_subject = f"First Warning Letter: Call Quality Performance Concern - {adv_name}"
         suggested_body = (
             f"Dear {adv_name},\n\n"
             f"This email serves as your First Warning Letter regarding performance concerns and deviation from quality parameters observed during call evaluation.\n\n"
             f"Call Evaluation Details:\n"
             f"- Employee Name: {adv_name}\n"
             f"- Employee ID: {adv_id or 'N/A'}\n"
+            f"- Department: {r['department'] or 'Inbound'}\n"
             f"- Call Date: {call_date}\n"
             f"- Status: Fail (Score: {score}%)\n\n"
             f"Call Observation Summary:\n"
@@ -1701,75 +1841,6 @@ def advisor_lookup():
             f"Quality Assurance Team\n"
             f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
         )
-    elif prior_count == 1:
-        warning_type = "Second Warning"
-        suggested_subject = f"Second Warning Letter: Continued Call Quality Deviation - {call_date}"
-        suggested_body = (
-            f"Dear {adv_name},\n\n"
-            f"This email serves as your Second Warning Letter regarding continued deviation from defined call quality standards.\n\n"
-            f"Despite previous feedback and the warning issued earlier, the Quality Team observed similar gaps during the call evaluation conducted on {call_date}.\n\n"
-            f"Call Evaluation Details:\n"
-            f"- Employee Name: {adv_name}\n"
-            f"- Employee ID: {adv_id or 'N/A'}\n"
-            f"- Call Date: {call_date}\n"
-            f"- Status: Fail (Score: {score}%)\n\n"
-            f"Key Observations:\n"
-            f"{bullet_text}\n\n"
-            f"You are advised to strictly adhere to the defined call handling guidelines and quality parameters.\n\n"
-            f"Please treat this matter with urgency and ensure immediate improvement. Further non-compliance will lead to final escalation and disciplinary proceedings.\n\n"
-            f"Regards,\n"
-            f"Quality Assurance Team\n"
-            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
-        )
-    elif prior_count == 2:
-        warning_type = "Final Warning"
-        suggested_subject = f"Final Warning Letter: Repeated Quality Standard Non-Compliance - {call_date}"
-        suggested_body = (
-            f"Dear {adv_name},\n\n"
-            f"This email serves as your Final Warning Letter regarding repeated quality performance concerns and non-compliance observed during call evaluation.\n\n"
-            f"Despite prior warnings and coaching sessions, your recent call evaluated on {call_date} continues to show critical deviations from mandatory quality standards.\n\n"
-            f"Call Evaluation Details:\n"
-            f"- Employee Name: {adv_name}\n"
-            f"- Employee ID: {adv_id or 'N/A'}\n"
-            f"- Call Date: {call_date}\n"
-            f"- Status: Fail (Score: {score}%)\n\n"
-            f"Call Observation Summary:\n"
-            f"During the evaluated call, the following concerns were identified:\n"
-            f"{bullet_text}\n\n"
-            f"The Quality Team has identified recurring gaps in:\n"
-            f"- Process adherence\n"
-            f"- Consumer verification\n"
-            f"- Hold procedure compliance\n"
-            f"- CRM updates and call ownership\n\n"
-            f"Important Notice:\n"
-            f"This is your Final Official Warning. You must ensure strict adherence to quality parameters, provide accurate information, and maintain professional call ownership.\n\n"
-            f"Please note that any further deviation from quality standards will result in immediate formal escalation to the Human Resources Department for a Performance Improvement Plan (PIP) or further disciplinary action up to and including termination of employment.\n\n"
-            f"Regards,\n"
-            f"Quality Assurance Team\n"
-            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
-        )
-    else:
-        warning_type = "Performance Improvement Plan (PIP)"
-        suggested_subject = f"Official Notice: Placement on Performance Improvement Plan (PIP) - {adv_name}"
-        suggested_body = (
-            f"Dear {adv_name},\n\n"
-            f"Following repeated quality non-compliance and the issuance of your prior warning notices, your call performance remains below acceptable organizational benchmarks.\n\n"
-            f"Consequently, this communication serves as formal notification that you are being placed on a Performance Improvement Plan (PIP).\n\n"
-            f"Summary of Performance History:\n"
-            f"- Prior Formal Warnings on Record: {prior_count}\n"
-            f"- Most Recent Evaluation: {call_date} (Status: Fail - Score: {score}%)\n\n"
-            f"Call Quality Observations:\n"
-            f"{bullet_text}\n\n"
-            f"PIP Terms & Expectations:\n"
-            f"1. Target Benchmark: Maintain a minimum average call quality score of 85.0% over the PIP duration.\n"
-            f"2. Compliance: Zero tolerance for process non-adherence, verification skips, or unauthorized dead air.\n"
-            f"3. Review Schedule: Weekly quality reviews will be conducted by the Quality Team and your Team Leader ({r['team_leader'] or 'Leadership'}).\n\n"
-            f"Failure to meet and sustain the performance expectations outlined in this PIP will lead to further disciplinary actions up to and including termination of employment.\n\n"
-            f"Please sign and return an acknowledged copy of this letter to HR.\n\n"
-            f"Regards,\n"
-            f"Human Resources & Quality Assurance Team\n"
-            f"Maharashtra State Electricity Distribution Co. Ltd. (MSEDCL)"
-        )
 
     return {
         "found": True,
@@ -1777,6 +1848,7 @@ def advisor_lookup():
         "advisor_id": adv_id,
         "department": r["department"] or "Inbound",
         "warning_type": warning_type,
+        "review_days": review_days,
         "suggested_email": suggested_email,
         "suggested_subject": suggested_subject,
         "suggested_body": suggested_body,

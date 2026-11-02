@@ -42,23 +42,23 @@
     <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
       <div class="filter-group">
         <label>Advisor Name *</label>
-        <input type="text" name="advisor_name" id="f_advisor_name" class="form-control" placeholder="Full name of advisor" required>
+        <input type="text" name="advisor_name" id="f_advisor_name" value="{{ request.args.get('advisor_name', '') }}" class="form-control" placeholder="Full name of advisor" required>
       </div>
       <div class="filter-group">
         <label>Employee ID</label>
-        <input type="text" name="advisor_id" id="f_advisor_id" class="form-control" placeholder="e.g. DEMO001 or AIPLCC1243">
+        <input type="text" name="advisor_id" id="f_advisor_id" value="{{ request.args.get('advisor_id', '') }}" class="form-control" placeholder="e.g. DEMO001 or AIPLCC1243">
       </div>
       <div class="filter-group">
         <label>Department</label>
-        <select name="department" id="f_department" class="form-control">
-          <option value="Inbound">Inbound</option>
-          <option value="Outbound">Outbound</option>
-          <option value="Both">Both</option>
+        <select name="department" id="f_department" class="form-control" onchange="onDepartmentChanged()">
+          <option value="Inbound" {% if request.args.get('department') == 'Inbound' %}selected{% endif %}>Inbound</option>
+          <option value="Outbound" {% if request.args.get('department') == 'Outbound' %}selected{% endif %}>Outbound</option>
+          <option value="Both" {% if request.args.get('department') == 'Both' %}selected{% endif %}>Both</option>
         </select>
       </div>
       <div class="filter-group">
         <label>Communication / Action Tier *</label>
-        <select name="warning_type" id="f_warning_type" class="form-control" required>
+        <select name="warning_type" id="f_warning_type" class="form-control" required onchange="onTierChanged()">
           <option value="First Warning">First Warning</option>
           <option value="Second Warning">Second Warning</option>
           <option value="Final Warning">Final Warning</option>
@@ -232,44 +232,125 @@ function toggleDetails(id) {
   el.style.display = (el.style.display === 'none' || !el.style.display) ? 'table-row' : 'none';
 }
 
-function triggerAdvisorLookup() {
+function updateReviewDate(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + (days || 14));
+  const reviewElem = document.getElementById('f_review_date');
+  if (reviewElem) {
+    reviewElem.value = d.toISOString().split('T')[0];
+  }
+}
+
+function triggerAdvisorLookup(explicitTier) {
   const empId = document.getElementById('f_advisor_id').value.trim();
   const name = document.getElementById('f_advisor_name').value.trim();
   const query = empId || name;
   if (!query) {
-    alert('Please enter an Employee ID or Advisor Name to auto-fill.');
+    if (!explicitTier) {
+      alert('Please enter an Employee ID or Advisor Name to auto-fill.');
+    }
     return;
   }
   
-  const btn = document.getElementById('btnLookup');
-  btn.innerText = 'Searching...';
+  const tierSelect = document.getElementById('f_warning_type');
+  const targetTier = explicitTier || (tierSelect ? tierSelect.value : '');
   
-  fetch('/api/advisor/lookup?query=' + encodeURIComponent(query))
+  const btn = document.getElementById('btnLookup');
+  if (btn && !explicitTier) btn.innerText = 'Searching...';
+  
+  let url = '/api/advisor/lookup?query=' + encodeURIComponent(query);
+  if (targetTier) {
+    url += '&tier=' + encodeURIComponent(targetTier);
+  }
+  
+  fetch(url)
     .then(r => r.json())
     .then(data => {
-      btn.innerText = '⚡ Lookup & Auto-Fill';
+      if (btn && !explicitTier) btn.innerText = '⚡ Lookup & Auto-Fill';
       if (data.found) {
-        document.getElementById('f_advisor_name').value = data.advisor_name;
-        if (data.advisor_id) document.getElementById('f_advisor_id').value = data.advisor_id;
-        if (data.department) document.getElementById('f_department').value = data.department;
-        if (data.warning_type) document.getElementById('f_warning_type').value = data.warning_type;
-        if (data.suggested_email) document.getElementById('f_recipient_email').value = data.suggested_email;
-        if (data.suggested_subject) document.getElementById('f_subject').value = data.suggested_subject;
-        if (data.suggested_body) document.getElementById('f_body').value = data.suggested_body;
-        if (data.remarks) document.getElementById('f_remarks').value = data.remarks;
+        if (!document.getElementById('f_advisor_name').value.trim() || !explicitTier) {
+          document.getElementById('f_advisor_name').value = data.advisor_name;
+        }
+        if (data.advisor_id && (!document.getElementById('f_advisor_id').value.trim() || !explicitTier)) {
+          document.getElementById('f_advisor_id').value = data.advisor_id;
+        }
+        if (data.department && !explicitTier) {
+          document.getElementById('f_department').value = data.department;
+        }
+        if (data.warning_type) {
+          document.getElementById('f_warning_type').value = data.warning_type;
+        }
+        if (data.suggested_email) {
+          document.getElementById('f_recipient_email').value = data.suggested_email;
+        }
+        if (data.suggested_subject) {
+          document.getElementById('f_subject').value = data.suggested_subject;
+        }
+        if (data.suggested_body) {
+          document.getElementById('f_body').value = data.suggested_body;
+        }
+        if (data.remarks) {
+          document.getElementById('f_remarks').value = data.remarks;
+        }
         
-        // Auto-set review date to 14 days ahead
-        const d = new Date();
-        d.setDate(d.getDate() + 14);
-        document.getElementById('f_review_date').value = d.toISOString().split('T')[0];
+        // Dynamic Review Date based on tier returned or selected
+        updateReviewDate(data.review_days || 14);
       } else {
-        alert('No prior call audit records found for "' + query + '". You can still fill out the notice manually.');
+        if (!explicitTier) {
+          alert('No prior call audit records found for "' + query + '". You can still fill out the notice manually.');
+        }
       }
     })
     .catch(err => {
-      btn.innerText = '⚡ Lookup & Auto-Fill';
+      if (btn && !explicitTier) btn.innerText = '⚡ Lookup & Auto-Fill';
       console.error(err);
     });
+}
+
+// When Tier dropdown is selected or changed by the user, dynamically adapt subject, draft & review date
+function onTierChanged() {
+  const tier = document.getElementById('f_warning_type').value;
+  const name = document.getElementById('f_advisor_name').value.trim();
+  const empId = document.getElementById('f_advisor_id').value.trim();
+  
+  if (name || empId) {
+    triggerAdvisorLookup(tier);
+  } else {
+    // If no advisor is entered yet, update the default subject and review timeline
+    const subInput = document.getElementById('f_subject');
+    const bodyInput = document.getElementById('f_body');
+    if (tier === 'Performance Improvement Plan (PIP)') {
+      if (subInput) subInput.value = 'Official Notice: Placement on Performance Improvement Plan (PIP)';
+      updateReviewDate(30);
+    } else if (tier === 'First Warning') {
+      if (subInput) subInput.value = 'First Warning Letter: Call Quality Performance Concern';
+      updateReviewDate(14);
+    } else if (tier === 'Second Warning') {
+      if (subInput) subInput.value = 'Second Warning Letter: Continued Call Quality Deviation';
+      updateReviewDate(14);
+    } else if (tier === 'Final Warning') {
+      if (subInput) subInput.value = 'Final Warning Letter: Repeated Quality Standard Non-Compliance';
+      updateReviewDate(7);
+    } else if (tier === 'Appreciation Letter') {
+      if (subInput) subInput.value = 'Appreciation: Call Quality Evaluation';
+      updateReviewDate(90);
+    } else if (tier === 'Coaching Notice') {
+      if (subInput) subInput.value = 'Quality Coaching Notice: Targeted Skill Refinement';
+      updateReviewDate(7);
+    } else if (tier === 'Quality Feedback Email') {
+      if (subInput) subInput.value = 'Quality Audit Feedback: Call Interaction';
+      updateReviewDate(7);
+    }
+  }
+}
+
+// When Department dropdown is changed, update the Department in the email draft body
+function onDepartmentChanged() {
+  const dept = document.getElementById('f_department').value;
+  const bodyInput = document.getElementById('f_body');
+  if (bodyInput && bodyInput.value) {
+    bodyInput.value = bodyInput.value.replace(/Department:\s*(Inbound|Outbound|Both)/g, 'Department: ' + dept);
+  }
 }
 
 // Auto-trigger lookup when user stops typing in Advisor ID or Name
@@ -279,13 +360,21 @@ function attachAutoLookup(inputElem) {
     clearTimeout(lookupTimeout);
     const val = this.value.trim();
     if (val.length >= 4) {
-      lookupTimeout = setTimeout(triggerAdvisorLookup, 600);
+      lookupTimeout = setTimeout(() => triggerAdvisorLookup(), 600);
     }
   });
 }
+
 document.addEventListener('DOMContentLoaded', function() {
   attachAutoLookup(document.getElementById('f_advisor_id'));
   attachAutoLookup(document.getElementById('f_advisor_name'));
+  
+  // If arrived via link with advisor_name or advisor_id parameter, auto-trigger lookup
+  const initialName = document.getElementById('f_advisor_name').value.trim();
+  const initialId = document.getElementById('f_advisor_id').value.trim();
+  if (initialName || initialId) {
+    triggerAdvisorLookup();
+  }
 });
 </script>
 {% endblock %}
