@@ -532,7 +532,7 @@ function filterRefAdvTable() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  const chartData = {{ chart_data|tojson }};
+  window.chartData = {{ chart_data|tojson }}; const chartData = window.chartData;
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const donutBorder = isDark ? '#0f1929' : '#ffffff';
   const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
@@ -931,7 +931,7 @@ window.openChartModal = function(type) {
   }
 
   // Access chartData passed from Flask
-  const cd = (typeof chartData !== 'undefined') ? chartData : {};
+  const cd = window.chartData || {};
 
   if (type === 'timeline') {
     icon.innerText = '📞';
