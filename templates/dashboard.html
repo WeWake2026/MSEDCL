@@ -1,7 +1,8 @@
 {% extends "layout.html" %}
-{% block title %}MSEDCL Quality Audit & Performance Dashboard<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation -->
-<div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.7);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.3);overflow:hidden;">
+{% block title %}MSEDCL Quality Audit & Performance Dashboard
+<!-- Modal for Interactive Chart Deep-Dive & Data Evaluation (Centered on screen) -->
+<div id="chartDetailModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal-container" style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 60px -15px rgba(0,0,0,0.4);overflow:hidden;position:relative;animation:modalScaleUp 0.25s ease-out;">
     
     <!-- Modal Header -->
     <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
@@ -12,11 +13,11 @@
         </h3>
         <p id="modalChartSubtitle" style="margin:4px 0 0;font-size:12px;color:#64748b;">Interactive multi-dimensional evaluation with search, filter, and table view</p>
       </div>
-      <button type="button" onclick="closeChartModal()" style="background:transparent;border:none;font-size:26px;line-height:1;cursor:pointer;color:#64748b;padding:4px 8px;">&times;</button>
+      <button type="button" onclick="closeChartModal()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-size:22px;line-height:1;cursor:pointer;color:#334155;padding:4px 10px;transition:all 0.15s ease;" title="Close pop-up">&times;</button>
     </div>
 
     <!-- Modal Filter Bar -->
-    <div style="padding:12px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div style="padding:10px 24px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:12px;font-weight:600;color:#475569;">Quick Filter:</span>
         <input type="text" id="modalTableFilter" onkeyup="filterModalTable()" placeholder="Search in records..." class="form-control" style="width:240px;font-size:12px;padding:6px 10px;">
@@ -28,15 +29,15 @@
     </div>
 
     <!-- Modal Body: High-Res Expanded Chart + Full Data Table -->
-    <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+    <div style="padding:18px 24px;overflow-y:auto;flex:1;">
       
       <!-- Expanded Chart Box -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <h4 style="font-size:13px;font-weight:600;margin:0;color:#334155;">Visual Analytics Breakdown</h4>
           <span style="font-size:11px;color:#64748b;">Hover data points for exact counts and percentages</span>
         </div>
-        <div style="position:relative;height:280px;width:100%;">
+        <div style="position:relative;height:240px;width:100%;">
           <canvas id="modalExpandedChart"></canvas>
         </div>
       </div>
@@ -46,7 +47,7 @@
         <h4 style="font-size:13.5px;font-weight:700;margin:0;color:#0f172a;" id="modalTableHeading">Comprehensive Records Breakdown</h4>
         <span style="font-size:11px;color:#64748b;">Click column headers or row items to navigate</span>
       </div>
-      <div class="table-responsive" style="max-height:360px;">
+      <div class="table-responsive" style="max-height:300px;">
         <table class="data-table" id="modalDataTable">
           <thead id="modalDataTableThead"></thead>
           <tbody id="modalDataTableTbody"></tbody>
@@ -65,38 +66,49 @@
 </div>
 
 <style>
+@keyframes modalScaleUp {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
 .interactive-chart-card {
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
 }
 .interactive-chart-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   border-color: var(--primary) !important;
 }
 .chart-expand-btn {
-  background: rgba(79, 70, 229, 0.08);
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.25);
   color: var(--primary);
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
+  z-index: 5;
 }
-.interactive-chart-card:hover .chart-expand-btn {
-  background: var(--primary);
-  color: #fff;
+.chart-expand-btn:hover {
+  background: var(--primary) !important;
+  color: #fff !important;
+  transform: scale(1.05);
 }
 </style>
 
 <script>
 let modalChartInstance = null;
 let currentModalRows = [];
+let hoverTriggerTimer = null;
+let lastHoveredType = null;
 
-function openChartModal(type) {
+// Global chart modal trigger
+window.openChartModal = function(type) {
   const modal = document.getElementById('chartDetailModal');
+  if (!modal) return;
   modal.style.display = 'flex';
   document.getElementById('modalTableFilter').value = '';
 
@@ -128,7 +140,7 @@ function openChartModal(type) {
       </tr>
     `;
 
-    const details = chartData.timeline_details || [];
+    const details = (typeof chartData !== 'undefined' && chartData.timeline_details) ? chartData.timeline_details : [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Days Recorded`;
     tbody.innerHTML = '';
@@ -195,7 +207,7 @@ function openChartModal(type) {
       </tr>
     `;
 
-    const details = chartData.auditor_details || [];
+    const details = (typeof chartData !== 'undefined' && chartData.auditor_details) ? chartData.auditor_details : [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Auditors Evaluated`;
     tbody.innerHTML = '';
@@ -269,7 +281,7 @@ function openChartModal(type) {
       </tr>
     `;
 
-    const details = chartData.top_advisor_details || [];
+    const details = (typeof chartData !== 'undefined' && chartData.top_advisor_details) ? chartData.top_advisor_details : [];
     currentModalRows = details;
     countBadge.innerText = `${details.length} Top Advisors`;
     tbody.innerHTML = '';
@@ -315,26 +327,27 @@ function openChartModal(type) {
       }
     });
   }
-}
+};
 
-function closeChartModal() {
-  document.getElementById('chartDetailModal').style.display = 'none';
+window.closeChartModal = function() {
+  const modal = document.getElementById('chartDetailModal');
+  if (modal) modal.style.display = 'none';
   if (modalChartInstance) {
     modalChartInstance.destroy();
     modalChartInstance = null;
   }
-}
+};
 
-function filterModalTable() {
+window.filterModalTable = function() {
   const query = (document.getElementById('modalTableFilter').value || '').toLowerCase();
   const rows = document.querySelectorAll('#modalDataTableTbody tr');
   rows.forEach(r => {
     const text = r.innerText.toLowerCase();
     r.style.display = text.includes(query) ? '' : 'none';
   });
-}
+};
 
-function exportModalTableToCSV() {
+window.exportModalTableToCSV = function() {
   const rows = Array.from(document.querySelectorAll('#modalDataTable tr'));
   if (rows.length === 0) return;
   const csvContent = rows.map(r => {
@@ -350,7 +363,50 @@ function exportModalTableToCSV() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-}
+};
+
+// Mouse Hover and Wheel / Scroll Trigger to automatically Pop Up Chart in center of screen
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.interactive-chart-card');
+  cards.forEach(card => {
+    const chartType = card.dataset.chartType;
+    if (!chartType) return;
+
+    // Trigger pop-up on mouse hover with smooth delay (400ms)
+    card.addEventListener('mouseenter', () => {
+      clearTimeout(hoverTriggerTimer);
+      hoverTriggerTimer = setTimeout(() => {
+        const modal = document.getElementById('chartDetailModal');
+        if (!modal || modal.style.display === 'flex') return;
+        lastHoveredType = chartType;
+        openChartModal(chartType);
+      }, 400);
+    });
+
+    card.addEventListener('mouseleave', () => {
+      clearTimeout(hoverTriggerTimer);
+    });
+
+    // Also trigger on mouse scroll wheel over the graph
+    card.addEventListener('wheel', (e) => {
+      const modal = document.getElementById('chartDetailModal');
+      if (!modal || modal.style.display !== 'flex') {
+        openChartModal(chartType);
+      }
+    }, { passive: true });
+  });
+
+  // Close modal when pressing ESC or clicking backdrop
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeChartModal();
+  });
+  const modalOverlay = document.getElementById('chartDetailModal');
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeChartModal();
+    });
+  }
+});
 </script>
 
 {% endblock %}
@@ -660,7 +716,7 @@ function exportModalTableToCSV() {
   </div>
 
   <!-- Chart 3: Inbound vs Outbound Audits Line / Timeline Chart -->
-  <div class="ref-chart-card interactive-chart-card" onclick="openChartModal('timeline')" title="Click to view full timeline details, filter dates, and inspect audit records">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="timeline" onclick="openChartModal('timeline')" title="Click or hover to inspect timeline data and view records">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📞</span>
@@ -671,7 +727,7 @@ function exportModalTableToCSV() {
           <span><span class="ref-legend-bullet" style="background:#4f46e5;"></span> Inbound</span>
           <span><span class="ref-legend-bullet" style="background:#10b981;"></span> Outbound</span>
         </div>
-        <button type="button" class="chart-expand-btn" title="Expand interactive view">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('timeline')" title="Inspect Inbound vs Outbound Data">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:180px;width:100%;">
@@ -683,7 +739,7 @@ function exportModalTableToCSV() {
 <!-- 4B. Secondary Analytics Charts Row: Auditor Evaluation Activity, Top Advisor Quality Scores, Warning & PIP Status -->
 <div class="ref-charts-row secondary-charts-row">
   <!-- Chart 4: Auditor Evaluation Activity -->
-  <div class="ref-chart-card interactive-chart-card" onclick="openChartModal('auditor')" title="Click to inspect auditor ranking, average score given, and evaluations count">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="auditor" onclick="openChartModal('auditor')" title="Click or hover to inspect auditor productivity">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-purple);">📋</span>
@@ -693,7 +749,7 @@ function exportModalTableToCSV() {
         <div class="ref-chart-subtitle">
           Auditors: <strong>{{ auditors_list|length }}</strong>
         </div>
-        <button type="button" class="chart-expand-btn" title="Expand interactive view">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('auditor')" title="Inspect Auditor Details">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:195px;width:100%;">
@@ -702,7 +758,7 @@ function exportModalTableToCSV() {
   </div>
 
   <!-- Chart 5: Top Advisor Quality Scores -->
-  <div class="ref-chart-card interactive-chart-card" onclick="openChartModal('advisor')" title="Click to inspect top advisors, quality scores, fatals count, and audit list">
+  <div class="ref-chart-card interactive-chart-card" data-chart-type="advisor" onclick="openChartModal('advisor')" title="Click or hover to inspect top advisor performance">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-cyan);">🏆</span>
@@ -712,7 +768,7 @@ function exportModalTableToCSV() {
         <div class="ref-chart-subtitle">
           Top Performers
         </div>
-        <button type="button" class="chart-expand-btn" title="Expand interactive view">🔍 Inspect</button>
+        <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('advisor')" title="Inspect Advisor Details">🔍 Inspect</button>
       </div>
     </div>
     <div style="position:relative;height:195px;width:100%;">
@@ -950,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', function() {
           label: 'Inbound',
           data: inData,
           borderColor: '#4f46e5',
-          backgroundColor: 'rgba(79, 70, 229, 0.1)',
+          backgroundColor: 'rgba(79, 70, 229, 0.12)',
           fill: true,
           tension: 0.25,
           pointRadius: 4,
@@ -961,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', function() {
           label: 'Outbound',
           data: outData,
           borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
           fill: true,
           tension: 0.25,
           pointRadius: 4,
