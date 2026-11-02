@@ -239,19 +239,47 @@ def import_dataframe(df, department, filename, username):
     batch_id = secrets.token_hex(8)
     seen, inserted, duplicates, rejected = len(df), 0, 0, 0
     errors = []
+    duplicate_rows = []
+    rejected_rows = []
     now = datetime.now().isoformat(timespec="seconds")
     
     with db() as con:
         for ix, source_row in df.iterrows():
+            row_num = int(ix) + 2
             row = {}
             for field, source_col in mapping.items():
                 val = source_row.get(source_col)
                 row[field] = None if pd.isna(val) else val
+            
+            raw_record = {k: (None if pd.isna(v) else str(v).strip()) for k, v in row.items()}
             advisor = str(row.get("advisor_name") or "").strip()
             score = parse_score(row.get("quality_score"))
+            
             if not advisor or score is None:
                 rejected += 1
-                errors.append({"row": int(ix)+2, "reason": "Missing advisor name or invalid quality score"})
+                reason = "Missing advisor name" if not advisor else "Invalid quality score"
+                err_entry = {"row": row_num, "reason": reason}
+                errors.append(err_entry)
+                rejected_rows.append({
+                    "row": row_num,
+                    "reason": reason,
+                    "data": {
+                        "call_id": raw_record.get("call_id") or "",
+                        "call_date": raw_record.get("call_date") or "",
+                        "evaluation_date": raw_record.get("evaluation_date") or "",
+                        "advisor_id": raw_record.get("advisor_id") or "",
+                        "advisor_name": advisor,
+                        "team_leader": raw_record.get("team_leader") or "",
+                        "auditor_name": raw_record.get("auditor_name") or "",
+                        "quality_score": raw_record.get("quality_score") or "",
+                        "is_fatal": raw_record.get("is_fatal") or "",
+                        "fatal_category": raw_record.get("fatal_category") or "",
+                        "error_categories": raw_record.get("error_categories") or "",
+                        "observation": raw_record.get("observation") or "",
+                        "location": raw_record.get("location") or "",
+                        "audio_url": raw_record.get("audio_url") or ""
+                    }
+                })
                 continue
                 
             fatal_raw = str(row.get("is_fatal") or "")
@@ -278,6 +306,7 @@ def import_dataframe(df, department, filename, username):
                 "audio_url": str(row.get("audio_url") or "").strip() or None
             }
             row_hash = make_hash(department, record)
+            is_dup = False
             try:
                 cur = con.execute("""INSERT OR IGNORE INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
                 team_leader,auditor_name,quality_score,is_fatal,fatal_category,error_categories,observation,location,
@@ -289,17 +318,55 @@ def import_dataframe(df, department, filename, username):
                 if getattr(cur, "rowcount", 0) > 0:
                     inserted += 1
                 else:
-                    duplicates += 1
+                    is_dup = True
             except DbIntegrityError:
-                duplicates += 1
+                is_dup = True
                 
-        report = {"errors": errors[:200], "mapping": mapping}
+            if is_dup:
+                duplicates += 1
+                duplicate_rows.append({
+                    "row": row_num,
+                    "reason": "Duplicate record (identical hash found in database)",
+                    "data": {
+                        "call_id": record["call_id"] or "",
+                        "call_date": record["call_date"] or "",
+                        "evaluation_date": record["evaluation_date"] or "",
+                        "advisor_id": record["advisor_id"] or "",
+                        "advisor_name": record["advisor_name"],
+                        "team_leader": record["team_leader"] or "",
+                        "auditor_name": record["auditor_name"] or "",
+                        "quality_score": record["quality_score"],
+                        "is_fatal": record["is_fatal"],
+                        "fatal_category": record["fatal_category"] or "",
+                        "error_categories": record["error_categories"] or "",
+                        "observation": record["observation"] or "",
+                        "location": record["location"] or "",
+                        "audio_url": record["audio_url"] or ""
+                    }
+                })
+                
+        report = {
+            "errors": errors[:500],
+            "mapping": mapping,
+            "duplicate_rows": duplicate_rows[:500],
+            "rejected_rows": rejected_rows[:500]
+        }
         con.execute("""INSERT INTO import_batches(id,department,source_file,uploaded_by,uploaded_at,rows_seen,
         rows_inserted,duplicates,rejected,report_json) VALUES(?,?,?,?,?,?,?,?,?,?)""",
         (batch_id, department, filename, username, now, seen, inserted, duplicates, rejected, json.dumps(report, default=str)))
         
     log_audit("IMPORT_EXCEL", filename, f"Dept: {department}, Inserted: {inserted}, Dups: {duplicates}, Rejected: {rejected}")
-    return {"batch_id": batch_id, "seen": seen, "inserted": inserted, "duplicates": duplicates, "rejected": rejected, "mapping": mapping, "errors": errors}
+    return {
+        "batch_id": batch_id,
+        "seen": seen,
+        "inserted": inserted,
+        "duplicates": duplicates,
+        "rejected": rejected,
+        "mapping": mapping,
+        "errors": errors,
+        "duplicate_rows": duplicate_rows,
+        "rejected_rows": rejected_rows
+    }
 
 # --- Routes: Auth ---
 @app.route("/login", methods=["GET", "POST"])
@@ -1135,6 +1202,173 @@ def delete_import_batch(batch_id):
     log_audit("DELETE_IMPORT_BATCH", batch_id, f"File: {batch['source_file']}, Deleted {deleted_audits} audits")
     flash(f"Import batch '{batch['source_file']}' removed along with {deleted_audits} associated audit records.", "success")
     return redirect(url_for("upload"))
+
+@app.route("/upload/batch/<batch_id>/details", methods=["GET"])
+@roles("admin", "quality", "manager")
+def get_batch_details(batch_id):
+    with db() as con:
+        batch = con.execute("SELECT * FROM import_batches WHERE id=?", (batch_id,)).fetchone()
+        if not batch:
+            return {"error": "Batch not found"}, 404
+        
+        batch_dict = dict(batch)
+        report = {}
+        if batch_dict.get("report_json"):
+            try:
+                report = json.loads(batch_dict["report_json"])
+            except Exception:
+                report = {}
+        
+        # Fetch inserted records for this batch
+        inserted_rows = con.execute(
+            """SELECT id, department, call_id, call_date, evaluation_date, advisor_id, advisor_name,
+                      team_leader, auditor_name, quality_score, is_fatal, fatal_category,
+                      error_categories, observation, location, audio_url, imported_at
+               FROM audits WHERE import_batch=? ORDER BY id ASC LIMIT 500""",
+            (batch_id,)
+        ).fetchall()
+        
+        inserted_list = [dict(r) for r in inserted_rows]
+        duplicate_list = report.get("duplicate_rows", [])
+        rejected_list = report.get("rejected_rows", [])
+        
+        # If legacy report only had errors list, map it into rejected_list format
+        if not rejected_list and report.get("errors"):
+            rejected_list = [
+                {"row": e.get("row"), "reason": e.get("reason"), "data": {"advisor_name": "", "quality_score": ""}}
+                for e in report.get("errors", [])
+            ]
+            
+        return {
+            "batch": {
+                "id": batch_dict["id"],
+                "source_file": batch_dict["source_file"],
+                "department": batch_dict["department"],
+                "uploaded_at": str(batch_dict["uploaded_at"]),
+                "uploaded_by": batch_dict["uploaded_by"],
+                "rows_seen": batch_dict["rows_seen"],
+                "rows_inserted": batch_dict["rows_inserted"],
+                "duplicates": batch_dict["duplicates"],
+                "rejected": batch_dict["rejected"]
+            },
+            "inserted": inserted_list,
+            "duplicates": duplicate_list,
+            "rejected": rejected_list
+        }
+
+@app.route("/upload/batch/<batch_id>/reinsert", methods=["POST"])
+@roles("admin", "quality")
+def reinsert_batch_record(batch_id):
+    data = request.get_json(force=True, silent=True) or request.form.to_dict()
+    source_type = data.get("source_type", "rejected") # "rejected" or "duplicate"
+    item_index = data.get("item_index") # index in the report list
+    
+    advisor = str(data.get("advisor_name") or "").strip()
+    score = parse_score(data.get("quality_score"))
+    if not advisor:
+        return {"success": False, "error": "Advisor Name is required."}, 400
+    if score is None:
+        return {"success": False, "error": "Valid Quality Score is required."}, 400
+        
+    with db() as con:
+        batch = con.execute("SELECT * FROM import_batches WHERE id=?", (batch_id,)).fetchone()
+        if not batch:
+            return {"success": False, "error": "Import batch not found."}, 404
+        
+        batch_dict = dict(batch)
+        department = batch_dict["department"]
+        filename = batch_dict["source_file"]
+        
+        fatal_raw = str(data.get("is_fatal") or "0")
+        fatal_category = str(data.get("fatal_category") or "").strip()
+        error_categories = str(data.get("error_categories") or "").strip()
+        fatal = int(truthy_fatal(fatal_raw) or bool(fatal_category and "non fatal" not in norm(fatal_category)))
+        if fatal and not fatal_category:
+            fatal_category = "Fatal — category needs review"
+            
+        record = {
+            "call_id": str(data.get("call_id") or "").strip() or None,
+            "call_date": parse_date(data.get("call_date")),
+            "evaluation_date": parse_date(data.get("evaluation_date")),
+            "advisor_id": str(data.get("advisor_id") or "").strip() or None,
+            "advisor_name": advisor,
+            "team_leader": str(data.get("team_leader") or "").strip() or None,
+            "auditor_name": str(data.get("auditor_name") or "").strip() or None,
+            "quality_score": score,
+            "is_fatal": fatal,
+            "fatal_category": fatal_category or None,
+            "error_categories": error_categories or None,
+            "observation": str(data.get("observation") or "").strip() or None,
+            "location": str(data.get("location") or "").strip() or None,
+            "audio_url": str(data.get("audio_url") or "").strip() or None
+        }
+        
+        now = datetime.now().isoformat(timespec="seconds")
+        # Generate hash - if force re-inserting duplicate, ensure uniqueness if requested
+        force_insert = str(data.get("force_insert", "false")).lower() in ("true", "1")
+        row_hash = make_hash(department, record)
+        if force_insert:
+            row_hash = row_hash[:56] + secrets.token_hex(4)
+            
+        try:
+            cur = con.execute("""INSERT INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
+            team_leader,auditor_name,quality_score,is_fatal,fatal_category,error_categories,observation,location,
+            audio_url,source_file,import_batch,row_hash,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (department, record["call_id"], record["call_date"], record["evaluation_date"], record["advisor_id"],
+             record["advisor_name"], record["team_leader"], record["auditor_name"], record["quality_score"],
+             record["is_fatal"], record["fatal_category"], record["error_categories"], record["observation"],
+             record["location"], record["audio_url"], filename, batch_id, row_hash, now))
+        except DbIntegrityError as e:
+            return {"success": False, "error": f"Record still duplicates an existing record in the database. Use Force Insert to bypass hash check."}, 409
+        except Exception as e:
+            return {"success": False, "error": f"Database error: {str(e)}"}, 500
+
+        # Update batch report json and counts
+        report = {}
+        if batch_dict.get("report_json"):
+            try:
+                report = json.loads(batch_dict["report_json"])
+            except Exception:
+                report = {}
+                
+        new_inserted = batch_dict["rows_inserted"] + 1
+        new_duplicates = batch_dict["duplicates"]
+        new_rejected = batch_dict["rejected"]
+        
+        if source_type == "rejected":
+            new_rejected = max(0, new_rejected - 1)
+            rejected_rows = report.get("rejected_rows", [])
+            if item_index is not None and str(item_index).isdigit():
+                idx = int(item_index)
+                if 0 <= idx < len(rejected_rows):
+                    rejected_rows.pop(idx)
+            report["rejected_rows"] = rejected_rows
+        elif source_type == "duplicate":
+            new_duplicates = max(0, new_duplicates - 1)
+            dup_rows = report.get("duplicate_rows", [])
+            if item_index is not None and str(item_index).isdigit():
+                idx = int(item_index)
+                if 0 <= idx < len(dup_rows):
+                    dup_rows.pop(idx)
+            report["duplicate_rows"] = dup_rows
+            
+        con.execute(
+            """UPDATE import_batches
+               SET rows_inserted=?, duplicates=?, rejected=?, report_json=?
+               WHERE id=?""",
+            (new_inserted, new_duplicates, new_rejected, json.dumps(report, default=str), batch_id)
+        )
+
+    log_audit("REINSERT_AUDIT", batch_id, f"Re-inserted audit for '{advisor}' ({department}) from {source_type}")
+    return {
+        "success": True,
+        "message": f"Successfully validated and inserted audit record for '{advisor}'!",
+        "stats": {
+            "rows_inserted": new_inserted,
+            "duplicates": new_duplicates,
+            "rejected": new_rejected
+        }
+    }
 
 @app.route("/api/advisor/lookup")
 @login_required

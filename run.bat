@@ -12,16 +12,33 @@ cd /d "%~dp0"
 :: 1. Check Python installation
 where python >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Python was not found in your system PATH.
-    echo Please install Python 3.10+ and check 'Add Python to PATH' during setup.
-    pause
-    exit /b 1
+    if not exist ".venv\Scripts\python.exe" (
+        where py >nul 2>nul
+        if %errorlevel% neq 0 (
+:: 1. Check Python installation and virtual environment
+if not exist ".venv\Scripts\python.exe" (
+    where py >nul 2>nul
+    if %errorlevel% equ 0 (
+        set "PY_CMD=py"
+    ) else (
+        where python >nul 2>nul
+        if %errorlevel% equ 0 (
+            set "PY_CMD=python"
+        ) else (
+            echo [ERROR] Python was not found in your system PATH.
+            echo Please install Python 3.10+ and check 'Add Python to PATH' during setup.
+            pause
+            exit /b 1
+        )
+    )
 )
 
 :: 2. Create virtual environment if missing
 if not exist ".venv\Scripts\python.exe" (
     echo [*] Creating dedicated Python virtual environment (.venv)...
     python -m venv .venv
+    echo [*] Creating dedicated Python virtual environment .venv...
+    %PY_CMD% -m venv .venv
     if %errorlevel% neq 0 (
         echo [ERROR] Failed to create virtual environment.
         pause
@@ -30,6 +47,7 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 :: 3. Install / upgrade required dependencies
+:: 2. Install / upgrade required dependencies
 echo [*] Checking and verifying package dependencies...
 call .venv\Scripts\python.exe -m pip install -q --disable-pip-version-check -r requirements.txt
 if %errorlevel% neq 0 (
@@ -38,6 +56,7 @@ if %errorlevel% neq 0 (
 )
 
 :: 4. Ensure .env exists with APP_SECRET_KEY
+:: 3. Ensure .env exists with APP_SECRET_KEY
 if not exist ".env" (
     echo [*] Generating secure local .env configuration...
     if exist ".env.example" (
@@ -53,12 +72,19 @@ if not exist ".env" (
 :: 5. Run database schema migrations
 echo [*] Checking database tables and running schema migrations...
 call .venv\Scripts\python.exe -c "import sys; sys.path.insert(0, 'scripts'); import migrate_db; migrate_db.run_migrations('quality_audit.db')" >nul 2>nul
+:: 4. Run database schema migrations if scripts exist
+if exist "scripts\migrate_db.py" (
+    echo [*] Checking database tables and running schema migrations...
+    call .venv\Scripts\python.exe -c "import sys; sys.path.insert(0, 'scripts'); import migrate_db; migrate_db.run_migrations('quality_audit.db')" >nul 2>nul
+)
 
 :: 6. Launch Application Server
+:: 5. Launch Application Server
 echo.
 echo ===============================================================================
 echo  Application is running at: http://127.0.0.1:5000
 echo  Default Admin Login:       Username: qaadmin   Password: password123
+echo  Default Admin Login:       Username: qaadmin   Password: Msedcl@123
 echo ===============================================================================
 echo.
 echo Press Ctrl+C in this window to stop the server anytime.

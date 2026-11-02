@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-26T15:31:09.941444",
+  "timestamp": "2026-10-27T20:51:12.004720",
   "sqlite_path": "quality_audit.db",
   "dry_run": true,
   "tables": {
@@ -94,8 +94,8 @@
       "columns": []
     },
     "audit_logs": {
-      "source_count": 136,
-      "migrated_count": 136,
+      "source_count": 138,
+      "migrated_count": 138,
       "skipped_count": 0,
       "failed_count": 0,
       "columns": [
@@ -129,6 +129,6 @@
     }
   },
   "status": "SUCCESS",
-  "total_source_records": 1457,
+  "total_source_records": 1459,
   "total_migrated_records": 0
 }
