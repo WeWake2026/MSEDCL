@@ -250,7 +250,7 @@
 <!-- 4. Reference Analytics Charts Row (3 Charts matching Screenshot) -->
 <div class="ref-charts-row">
   <!-- Chart 1: Score Category Distribution -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="scores" onclick="openChartModal('scores')" title="Click or scroll to inspect score category breakdown">
+  <div class="ref-chart-card" data-chart-type="scores">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📊</span>
@@ -292,7 +292,7 @@
   </div>
 
   <!-- Chart 2: Fatal vs Non-Fatal Ratio -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="fatals" onclick="openChartModal('fatals')" title="Click or scroll to inspect fatal compliance breakdown">
+  <div class="ref-chart-card" data-chart-type="fatals">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">👥</span>
@@ -322,7 +322,7 @@
   </div>
 
   <!-- Chart 3: Inbound vs Outbound Audits Line / Timeline Chart -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="timeline" onclick="openChartModal('timeline')" title="Click or scroll to inspect timeline breakdown">
+  <div class="ref-chart-card" data-chart-type="timeline">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📞</span>
@@ -345,7 +345,7 @@
 <!-- 4B. Secondary Analytics Charts Row: Auditor Evaluation Activity, Top Advisor Quality Scores, Warning & PIP Status -->
 <div class="ref-charts-row secondary-charts-row">
   <!-- Chart 4: Auditor Evaluation Activity -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="auditor" onclick="openChartModal('auditor')" title="Click or scroll to inspect auditor breakdown">
+  <div class="ref-chart-card" data-chart-type="auditor">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-purple);">📋</span>
@@ -364,7 +364,7 @@
   </div>
 
   <!-- Chart 5: Top Advisor Quality Scores -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="advisor" onclick="openChartModal('advisor')" title="Click or scroll to inspect advisor ranking">
+  <div class="ref-chart-card" data-chart-type="advisor">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-cyan);">🏆</span>
@@ -383,7 +383,7 @@
   </div>
 
   <!-- Chart 6: Warning & PIP Action Status -->
-  <div class="ref-chart-card interactive-chart-card" data-chart-type="warnings" onclick="openChartModal('warnings')" title="Click or scroll to inspect disciplinary action breakdown">
+  <div class="ref-chart-card" data-chart-type="warnings">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-orange);">🛡️</span>
@@ -899,57 +899,121 @@ document.addEventListener('DOMContentLoaded', function() {
   from { transform: scale(0.92); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-.interactive-chart-card {
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
-  position: relative;
-}
-.interactive-chart-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-  border-color: var(--primary) !important;
-}
 .chart-expand-btn {
-  background: rgba(79, 70, 229, 0.1);
-  border: 1px solid rgba(79, 70, 229, 0.25);
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
+  background: rgba(79, 70, 229, 0.12);
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  color: var(--brand-blue, #2563eb);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 12px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .chart-expand-btn:hover {
-  background: var(--primary) !important;
+  background: var(--brand-blue, #2563eb) !important;
   color: #fff !important;
-  transform: scale(1.05);
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+[data-theme="dark"] .chart-expand-btn {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+[data-theme="dark"] .chart-expand-btn:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
 }
 .search-highlight-bar {
-  background: #fef08a !important;
-  border-color: #eab308 !important;
-  box-shadow: 0 0 10px rgba(234, 179, 8, 0.6) !important;
+  background: #facc15 !important;
+  border-color: #ca8a04 !important;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.7) !important;
 }
 .table-highlight-cell {
   background-color: #fef08a !important;
   color: #854d0e !important;
   font-weight: 700 !important;
   border-radius: 3px;
-  padding: 0 3px;
+  padding: 1px 4px;
+}
+[data-theme="dark"] .table-highlight-cell {
+  background-color: #ca8a04 !important;
+  color: #ffffff !important;
 }
 .modal-search-box {
-  width: 280px;
+  width: 290px;
   font-size: 12.5px;
   padding: 7px 12px;
   border: 2px solid #cbd5e1;
   border-radius: 8px;
   transition: all 0.2s ease;
+  background: #ffffff;
+  color: #0f172a;
 }
 .modal-search-box:focus {
   outline: none;
   border-color: #2563eb !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+/* Modal Dark Theme Overrides */
+[data-theme="dark"] #chartDetailModal .modal-container {
+  background: #0f1929 !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e2e46 !important;
+}
+[data-theme="dark"] #chartDetailModal .modal-header,
+[data-theme="dark"] #chartDetailModal > div > div:first-child {
+  background: #09111e !important;
+  border-bottom: 1px solid #1e2e46 !important;
+}
+[data-theme="dark"] #modalChartTitle {
+  color: #f8fafc !important;
+}
+[data-theme="dark"] #modalChartSubtitle {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] #chartDetailModal .modal-filter-bar,
+[data-theme="dark"] #chartDetailModal .modal-container > div:nth-child(2) {
+  background: #0c1524 !important;
+  border-bottom: 1px solid #1e2e46 !important;
+}
+[data-theme="dark"] #modalTableFilter {
+  background: #142236 !important;
+  border-color: #243854 !important;
+  color: #f8fafc !important;
+}
+[data-theme="dark"] #modalTableFilter::placeholder {
+  color: #64748b !important;
+}
+[data-theme="dark"] #chartDetailModal .chart-canvas-box,
+[data-theme="dark"] #chartDetailModal .modal-container > div:nth-child(3) > div:first-child {
+  background: #09111e !important;
+  border-color: #1e2e46 !important;
+}
+[data-theme="dark"] #modalTableHeading {
+  color: #f8fafc !important;
+}
+[data-theme="dark"] #modalDataTable th {
+  background: #142236 !important;
+  color: #94a3b8 !important;
+  border-color: #1e2e46 !important;
+}
+[data-theme="dark"] #modalDataTable td {
+  border-color: #1e2e46 !important;
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] #modalDataTable tr:hover td {
+  background: rgba(30, 46, 70, 0.5) !important;
+}
+[data-theme="dark"] #chartDetailModal .modal-footer,
+[data-theme="dark"] #chartDetailModal .modal-container > div:last-child {
+  background: #09111e !important;
+  border-top: 1px solid #1e2e46 !important;
 }
 </style>
 
@@ -1420,17 +1484,18 @@ window.filterModalTable = function() {
         const newBorders = [];
         const newWidths = [];
 
+        const isNight = document.documentElement.getAttribute('data-theme') === 'dark';
         for (let i = 0; i < count; i++) {
           const lbl = String(labels[i] || '').toLowerCase();
           const isHighlighted = lbl.includes(query) || matchingLabels.has(lbl);
 
           if (isHighlighted) {
-            newBg.push('#facc15'); // Bright gold highlight
-            newBorders.push('#ca8a04');
+            newBg.push(isNight ? '#fde047' : '#f59e0b'); // Vivid luminous amber/gold
+            newBorders.push(isNight ? '#ffffff' : '#b45309');
             newWidths.push(3);
           } else {
-            newBg.push('rgba(148, 163, 184, 0.25)'); // Dimmed grey
-            newBorders.push('rgba(148, 163, 184, 0.3)');
+            newBg.push(isNight ? 'rgba(71, 85, 105, 0.25)' : 'rgba(148, 163, 184, 0.22)');
+            newBorders.push(isNight ? 'rgba(71, 85, 105, 0.35)' : 'rgba(148, 163, 184, 0.3)');
             newWidths.push(1);
           }
         }
@@ -1461,37 +1526,9 @@ window.exportModalTableToCSV = function() {
   document.body.removeChild(a);
 };
 
-// Mouse Hover and Wheel / Scroll Trigger to automatically Pop Up Chart in center of screen
+// Chart Modal Trigger & Keyboard Listeners (Opens ONLY when clicking 🔍 Inspect button)
 document.addEventListener('DOMContentLoaded', () => {
-  const cards = document.querySelectorAll('.interactive-chart-card');
-  cards.forEach(card => {
-    const chartType = card.dataset.chartType;
-    if (!chartType) return;
-
-    // Trigger pop-up on mouse hover with smooth delay (400ms)
-    card.addEventListener('mouseenter', () => {
-      clearTimeout(hoverTriggerTimer);
-      hoverTriggerTimer = setTimeout(() => {
-        const modal = document.getElementById('chartDetailModal');
-        if (!modal || modal.style.display === 'flex') return;
-        openChartModal(chartType);
-      }, 400);
-    });
-
-    card.addEventListener('mouseleave', () => {
-      clearTimeout(hoverTriggerTimer);
-    });
-
-    // Also trigger on mouse scroll wheel over the graph
-    card.addEventListener('wheel', (e) => {
-      const modal = document.getElementById('chartDetailModal');
-      if (!modal || modal.style.display !== 'flex') {
-        openChartModal(chartType);
-      }
-    }, { passive: true });
-  });
-
-  // Close modal when pressing ESC or clicking backdrop
+  // Close modal when pressing ESC or clicking outside the container
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeChartModal();
   });

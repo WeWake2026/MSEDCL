@@ -58,11 +58,11 @@
 
 <!-- Audits Data Card -->
 <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 12px;">
-  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding: 10px 14px; margin-bottom: 0; background: #fff; border-bottom: 1px solid var(--border);">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding: 10px 14px; margin-bottom: 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">
     <div>
-      <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 13.5px;">
+      <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 13.5px; color: var(--text-main);">
         <span>Audited Interactions</span>
-        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size: 11px;">Showing {{ rows|length }} of {{ total_count }} Records</span>
+        <span class="badge badge-info" style="font-size: 11px;">Showing {{ rows|length }} of {{ total_count }} Records</span>
       </h3>
       <p class="card-subtitle" style="margin:1px 0 0; font-size: 11px; color:var(--text-muted);">{{ subtitle }}</p>
     </div>
@@ -91,7 +91,7 @@
           <!-- Dense Col 1: Call Reference & Dates -->
           <td>
             <div class="dense-cell">
-              <span class="dense-primary" style="font-family:monospace; color:#1e293b;">{{ r.call_id or 'ID: —' }}</span>
+              <span class="dense-primary" style="font-family:monospace; color:var(--text-main);">{{ r.call_id or 'ID: —' }}</span>
               <div class="dense-secondary">
                 <span>📅 {{ r.call_date or r.evaluation_date or '—' }}</span>
                 <span class="badge badge-neutral" style="font-size:9px; padding:0 4px;">{{ r.department }}</span>
@@ -154,7 +154,7 @@
 
           <!-- Col 6: Area of Improvement -->
           <td>
-            <span style="font-size:11px; color:#475569; display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.error_categories or r.observation or 'None' }}">
+            <span style="font-size:11px; color:var(--text-muted); display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.error_categories or r.observation or 'None' }}">
               {{ r.error_categories or r.observation or '—' }}
             </span>
           </td>

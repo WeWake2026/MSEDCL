@@ -4,14 +4,22 @@
 
 {% block content %}
 <div class="card">
-  <div class="card-header">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
     <div>
       <h3 class="card-title">Upload Excel / CSV Audit Register</h3>
       <p class="card-subtitle">Upload Inbound and Outbound files separately. Duplicates are auto-suppressed.</p>
     </div>
-    {% if not import_enabled %}
-      <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
-    {% endif %}
+    <div style="display:flex; align-items:center; gap:8px;">
+      <a href="{{ url_for('download_sample_template', format='xlsx') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;" title="Download complete Excel sample template with all columns and proper data format">
+        <span>📊</span> Download Demo Template (.xlsx)
+      </a>
+      <a href="{{ url_for('download_sample_template', format='csv') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px;" title="Download CSV sample format">
+        <span>📄</span> Demo (.csv)
+      </a>
+      {% if not import_enabled %}
+        <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
+      {% endif %}
+    </div>
   </div>
 
   {% if not import_enabled %}

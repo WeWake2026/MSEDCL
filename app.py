@@ -1264,6 +1264,92 @@ def upload():
                            import_enabled=import_enabled,
                            max_mb=MAX_UPLOAD_MB)
 
+@app.route("/upload/sample-template")
+@login_required
+def download_sample_template():
+    fmt = request.args.get("format", "xlsx").lower()
+    sample_records = [
+        {
+            "Call ID": "MSEDCL-INB-100201",
+            "Call Date": "2026-10-15",
+            "Evaluation Date": "2026-10-16",
+            "Employee ID": "ADV-1042",
+            "Advisor Name": "Rahul Suresh Patil",
+            "Team Leader": "Pooja Deshmukh",
+            "Auditor Name": "Akash Santoshwar",
+            "Quality Score": 94,
+            "Fatal Status": "No",
+            "Fatal Category": "",
+            "Area of Improvement": "Active listening and CRM documentation",
+            "Call Observation": "Agent handled consumer billing inquiry with clear explanation of slab tariffs. Verification was complete as per script. Professional closing.",
+            "Location": "Pune Central",
+            "Call Audio URL": "https://storage.msedcl.in/recordings/call_100201.mp3"
+        },
+        {
+            "Call ID": "MSEDCL-INB-100202",
+            "Call Date": "2026-10-15",
+            "Evaluation Date": "2026-10-16",
+            "Employee ID": "ADV-1088",
+            "Advisor Name": "Sneha Amit Shinde",
+            "Team Leader": "Pooja Deshmukh",
+            "Auditor Name": "Akash Santoshwar",
+            "Quality Score": 78,
+            "Fatal Status": "No",
+            "Fatal Category": "",
+            "Area of Improvement": "Hold procedure adherence, Avoid long dead air",
+            "Call Observation": "Consumer inquired regarding meter replacement complaint status. Advisor kept consumer on hold for more than 90 seconds without refresh.",
+            "Location": "Nagpur Urban",
+            "Call Audio URL": ""
+        },
+        {
+            "Call ID": "MSEDCL-INB-100203",
+            "Call Date": "2026-10-16",
+            "Evaluation Date": "2026-10-16",
+            "Employee ID": "ADV-1105",
+            "Advisor Name": "Vikram Ramesh Kulkarni",
+            "Team Leader": "Sachin Gaikwad",
+            "Auditor Name": "Priya Jadhav",
+            "Quality Score": 0,
+            "Fatal Status": "Yes",
+            "Fatal Category": "Customer Disconnection / Dead Air",
+            "Area of Improvement": "Zero tolerance on abrupt call disconnect",
+            "Call Observation": "Advisor abruptly disconnected call while consumer was reporting outage concern. Critical compliance breach.",
+            "Location": "Nashik Circle",
+            "Call Audio URL": ""
+        },
+        {
+            "Call ID": "MSEDCL-INB-100204",
+            "Call Date": "2026-10-16",
+            "Evaluation Date": "2026-10-17",
+            "Employee ID": "ADV-1042",
+            "Advisor Name": "Rahul Suresh Patil",
+            "Team Leader": "Pooja Deshmukh",
+            "Auditor Name": "Priya Jadhav",
+            "Quality Score": 98,
+            "Fatal Status": "No",
+            "Fatal Category": "",
+            "Area of Improvement": "",
+            "Call Observation": "Excellent call ownership, immediate grievance registration, clear ticket ID provided to consumer with SLA duration.",
+            "Location": "Pune Central",
+            "Call Audio URL": ""
+        }
+    ]
+
+    df = pd.DataFrame(sample_records)
+    filename = f"MSEDCL_Quality_Audit_Demo_Template.{fmt}"
+
+    if fmt == "csv":
+        output = io.BytesIO(df.to_csv(index=False).encode("utf-8"))
+        mimetype = "text/csv"
+    else:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Audit Data")
+        output.seek(0)
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
+
 @app.route("/upload/batch/<batch_id>/delete", methods=["POST"])
 @roles("admin", "quality")
 def delete_import_batch(batch_id):
