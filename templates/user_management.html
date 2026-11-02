@@ -3,6 +3,60 @@
 {% block heading %}User Access & Role Management{% endblock %}
 
 {% block content %}
+<!-- Enterprise Bulk Provisioning & Auto-Provision Bar -->
+<div class="card" style="border-left:4px solid var(--brand-blue);background:var(--bg-card);">
+  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h3 class="card-title" style="display:flex;align-items:center;gap:8px;">
+        <span>⚡</span> Enterprise Bulk Onboarding &amp; Auto-Provisioning
+      </h3>
+      <span class="card-subtitle">Mass-provision advisor logins from uploaded audit batches or upload bulk roster files</span>
+    </div>
+    {% if unlinked_count and unlinked_count > 0 %}
+    <span class="badge badge-warning" style="font-size:12px;padding:6px 12px;">
+      ⚠️ {{ unlinked_count }} Audited Advisors Need User Accounts
+    </span>
+    {% else %}
+    <span class="badge badge-success" style="font-size:12px;padding:6px 12px;">
+      ✅ All Audited Advisors Have User Accounts
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="charts-grid-2" style="gap:16px;margin-top:8px;">
+    <!-- Bulk CSV/Excel Upload -->
+    <div style="background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+      <h4 style="font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <span>📤</span> <strong>Upload User Roster (CSV / Excel)</strong>
+      </h4>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+        Upload multiple employee accounts at once with roles, advisor links, and departments.
+      </p>
+      <form method="post" action="{{ url_for('user_bulk_import') }}" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="file" name="users_file" accept=".csv, .xlsx, .xls" class="form-control" style="flex:1;min-width:180px;padding:5px;" required>
+        <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap;">Upload Roster</button>
+      </form>
+    </div>
+
+    <!-- One-Click Auto-Provision from Audits -->
+    <div style="background:var(--bg-card-subtle);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
+      <div>
+        <h4 style="font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>🤖</span> <strong>Auto-Provision from Audits Table</strong>
+        </h4>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+          Instantly generate accounts for all <strong>{{ unlinked_count or 0 }} unlinked advisors</strong> from call records. Downloads a credentials manifest with passwords.
+        </p>
+      </div>
+      <form method="post" action="{{ url_for('user_auto_provision_advisors') }}" onsubmit="return confirm('Generate login accounts for all {{ unlinked_count or 0 }} unlinked advisors from the audits table?\n\nA credentials CSV manifest containing generated temporary passwords will download automatically.')">
+        <button type="submit" class="btn btn-secondary btn-sm" style="width:100%;border-color:var(--brand-blue);color:var(--brand-blue);font-weight:600;" {% if not unlinked_count or unlinked_count == 0 %}disabled{% endif %}>
+          <span>⚡</span> Auto-Generate Accounts &amp; Download Passwords
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Create New User ID Card -->
 <div class="card">
   <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">

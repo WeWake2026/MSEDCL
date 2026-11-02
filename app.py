@@ -1,4 +1,4 @@
-import os, io, sqlite3, hashlib, secrets, smtplib, ssl, json, sys, time, threading, subprocess
+import os, io, sqlite3, hashlib, secrets, smtplib, ssl, json, sys, time, threading, subprocess, csv
 from email.message import EmailMessage
 from datetime import datetime, date, timedelta
 from functools import wraps
@@ -1957,7 +1957,164 @@ def user_management():
             WHERE advisor_name IS NOT NULL AND advisor_name != ''
             ORDER BY advisor_name ASC
         """).fetchall()
-    return render_template("user_management.html", page="users", users=users, audited_advisors=audited_advisors)
+        
+        # Calculate unlinked advisors without user logins
+        user_adv_ids = set(u["advisor_id"] for u in users if u["advisor_id"])
+        unlinked_count = sum(1 for a in audited_advisors if a["advisor_id"] and a["advisor_id"] not in user_adv_ids)
+
+    return render_template("user_management.html", page="users", users=users, audited_advisors=audited_advisors, unlinked_count=unlinked_count)
+
+@app.route("/admin/users/bulk-import", methods=["POST"])
+@roles("admin", "manager")
+def user_bulk_import():
+    file = request.files.get("users_file")
+    if not file or not file.filename:
+        flash("Please select a CSV or Excel file to import.", "error")
+        return redirect(url_for("user_management"))
+
+    filename = secure_filename(file.filename).lower()
+    created = 0
+    skipped = 0
+    errors = []
+
+    try:
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file)
+        elif filename.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(file)
+        else:
+            flash("Invalid format. Please upload a .csv or .xlsx file.", "error")
+            return redirect(url_for("user_management"))
+
+        # Normalize column headers
+        df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+
+        with db() as con:
+            existing_usernames = set(r[0] for r in con.execute("SELECT username FROM users").fetchall())
+
+            for idx, row in df.iterrows():
+                username = str(row.get("username", "")).strip()
+                if not username or username == "nan" or username in existing_usernames:
+                    skipped += 1
+                    continue
+
+                full_name = str(row.get("full_name", "")).strip()
+                if full_name == "nan": full_name = ""
+                email = str(row.get("email", "")).strip()
+                if email == "nan": email = ""
+                role = str(row.get("role", "advisor")).strip().lower()
+                if role not in ("admin", "quality", "manager", "viewer", "advisor"):
+                    role = "advisor"
+
+                advisor_id = str(row.get("advisor_id", "")).strip()
+                if advisor_id == "nan" or not advisor_id:
+                    advisor_id = None
+
+                department = str(row.get("department", "All")).strip()
+                if department == "nan" or not department:
+                    department = "All"
+
+                location = str(row.get("location", "")).strip()
+                if location == "nan": location = ""
+
+                raw_pwd = str(row.get("temporary_password", "")).strip()
+                if raw_pwd == "nan" or not raw_pwd:
+                    raw_pwd = secrets.token_urlsafe(8)
+
+                pwd_hash = generate_password_hash(raw_pwd)
+
+                con.execute("""
+                    INSERT INTO users (username, password_hash, role, advisor_id, active, full_name, email, department, location, created_at)
+                    VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'))
+                """, (username, pwd_hash, role, advisor_id, full_name, email, department, location))
+
+                existing_usernames.add(username)
+                created += 1
+
+        log_audit("BULK_IMPORT_USERS", f"{created} accounts", f"Imported from {filename}. Skipped {skipped}.")
+        flash(f"Successfully provisioned {created} user accounts! ({skipped} skipped/duplicates)", "success")
+    except Exception as e:
+        flash(f"Error parsing user import file: {str(e)}", "error")
+
+    return redirect(url_for("user_management"))
+
+@app.route("/admin/users/auto-provision-advisors", methods=["POST"])
+@roles("admin")
+def user_auto_provision_advisors():
+    """Auto-generate advisor login accounts for all distinct audited advisors without accounts."""
+    created_manifest = []
+
+    with db() as con:
+        existing_users = con.execute("SELECT username, advisor_id FROM users").fetchall()
+        existing_adv_ids = set(u["advisor_id"] for u in existing_users if u["advisor_id"])
+        existing_usernames = set(u["username"] for u in existing_users)
+
+        audited_advisors = con.execute("""
+            SELECT DISTINCT advisor_id, advisor_name, department
+            FROM audits
+            WHERE advisor_id IS NOT NULL AND advisor_id != ''
+            ORDER BY advisor_name ASC
+        """).fetchall()
+
+        # Pre-hash once using pbkdf2 with low cost or standard hash to avoid 360 * 150ms delay
+        default_pwd = "Msedcl@Password2026"
+        shared_hash = generate_password_hash(default_pwd)
+
+        batch_inserts = []
+        for a in audited_advisors:
+            adv_id = a["advisor_id"].strip()
+            adv_name = a["advisor_name"].strip()
+            dept = a["department"] or "All"
+
+            if adv_id in existing_adv_ids:
+                continue
+
+            # Standardized username: adv.<cleaned_advisor_id>
+            clean_id = adv_id.lower().replace(" ", "").replace("-", "")
+            base_username = f"adv.{clean_id}"
+            username = base_username
+            ctr = 1
+            while username in existing_usernames:
+                username = f"{base_username}_{ctr}"
+                ctr += 1
+
+            email = f"{clean_id}@msedcl.in"
+
+            batch_inserts.append((username, shared_hash, adv_id, adv_name, email, dept))
+            existing_adv_ids.add(adv_id)
+            existing_usernames.add(username)
+
+            created_manifest.append({
+                "username": username,
+                "full_name": adv_name,
+                "advisor_id": adv_id,
+                "department": dept,
+                "email": email,
+                "initial_password": default_pwd
+            })
+
+        for row_vals in batch_inserts:
+            con.execute("""
+                INSERT INTO users (username, password_hash, role, advisor_id, active, full_name, email, department, location, created_at)
+                VALUES (?, ?, 'advisor', ?, 1, ?, ?, ?, 'Contact Center', datetime('now'))
+            """, row_vals)
+
+    if not created_manifest:
+        flash("All audited advisors already have user accounts.", "info")
+        return redirect(url_for("user_management"))
+
+    log_audit("AUTO_PROVISION_ADVISORS", f"{len(created_manifest)} accounts", "Auto-provisioned login accounts from audits table")
+
+    # Generate CSV manifest for download
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["username", "full_name", "advisor_id", "department", "email", "initial_password"])
+    writer.writeheader()
+    for row in created_manifest:
+        writer.writerow(row)
+
+    mem_bytes = io.BytesIO(output.getvalue().encode("utf-8"))
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return send_file(mem_bytes, mimetype="text/csv", as_attachment=True, download_name=f"msedcl_auto_provisioned_advisors_{timestamp}.csv")
 
 @app.route("/admin/users/create", methods=["POST"])
 @roles("admin", "manager")
