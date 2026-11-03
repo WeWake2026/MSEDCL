@@ -181,6 +181,19 @@
     <div class="ref-kpi-sub">Aggregated weighted quality</div>
   </div>
 
+  <!-- Live Monitored Calls KPI Card -->
+  <a href="{{ url_for('live_calls_view') }}" class="ref-kpi-card cyan">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon cyan">🎧</div>
+        <div class="ref-kpi-title">LIVE MONITORED CALLS</div>
+        <div class="ref-kpi-trend" style="color:var(--brand-cyan);">↗</div>
+      </div>
+      <div class="ref-kpi-value">{{ metrics.total_live_calls or 0 }}</div>
+    </div>
+    <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_live_calls or 0 }} &nbsp;|&nbsp; Feedback Done: {{ metrics.done_live_feedback or 0 }}</div>
+  </a>
+
   <!-- Warnings & PIPs -->
   <a href="{{ url_for('warnings') }}" class="ref-kpi-card cyan">
     <div>
@@ -401,6 +414,23 @@
     </div>
   </div>
 
+  <!-- Chart 5B: Live Calls Disposition Distribution -->
+  <div class="ref-chart-card" data-chart-type="live_calls">
+    <div class="ref-chart-header">
+      <div class="ref-chart-title">
+        <span style="color:#0284c7;">🎧</span>
+        <span>Live Calls Disposition &amp; Concerns</span>
+      </div>
+      <button type="button" class="chart-expand-btn" onclick="event.stopPropagation(); openChartModal('live_calls')">🔍 Inspect</button>
+      <div class="ref-chart-subtitle">
+        Total Live: <strong>{{ metrics.total_live_calls or 0 }}</strong>
+      </div>
+    </div>
+    <div style="position:relative;height:195px;width:100%;">
+      <canvas id="refLiveCallsChart"></canvas>
+    </div>
+  </div>
+
   <!-- Chart 6: Warning & PIP Action Status -->
   <div class="ref-chart-card" data-chart-type="warnings">
     <div class="ref-chart-header">
@@ -451,6 +481,9 @@
   </div>
   
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <a href="{{ url_for('live_calls_view') }}" class="ref-quick-link-item">
+      <span>🎧</span> <span>Live Calls</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
+    </a>
     <a href="{{ url_for('score_reports') }}" class="ref-quick-link-item">
       <span>📄</span> <span>View Reports</span> <span style="font-size:10px;color:var(--text-muted);">›</span>
     </a>
@@ -792,6 +825,57 @@ function renderMainDashboardCharts() {
                 return label.length > 12 ? label.slice(0, 11) + '…' : label;
               }
             }
+          }
+        }
+      }
+    }));
+  }
+
+  // 5B. Live Calls Disposition Bar Chart
+  const liveDisps = (chartData.live_dispositions && chartData.live_dispositions.length) ? chartData.live_dispositions : ['No Live Calls'];
+  const liveCounts = (chartData.live_disp_counts && chartData.live_disp_counts.length) ? chartData.live_disp_counts : [0];
+  const liveCtx = document.getElementById('refLiveCallsChart');
+  if (liveCtx) {
+    mainChartInstances.push(new Chart(liveCtx, {
+      type: 'bar',
+      data: {
+        labels: liveDisps,
+        datasets: [{
+          label: 'Monitored Calls',
+          data: liveCounts,
+          backgroundColor: '#0284c7',
+          borderRadius: 6,
+          barThickness: 'flex',
+          maxBarThickness: 24
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `Live Calls: ${ctx.raw}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: textColor,
+              font: { size: 9 },
+              callback: function(val, index) {
+                const label = this.getLabelForValue(val) || '';
+                return label.length > 12 ? label.slice(0, 11) + '…' : label;
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 10 }, precision: 0 }
           }
         }
       }
@@ -1585,6 +1669,63 @@ window.openChartModal = function(type) {
       options: {
         responsive: true,
         maintainAspectRatio: false
+      }
+    });
+
+  } else if (type === 'live_calls') {
+    icon.innerText = '🎧';
+    titleText.innerText = 'Live Call Monitoring Dispositions & Feedback';
+    subtitle.innerText = 'Distribution of call categories and consumer concerns identified during real-time quality monitoring.';
+    thead.innerHTML = `
+      <tr>
+        <th>Call Disposition / Concern</th>
+        <th style="text-align:center;">Monitored Calls</th>
+        <th style="text-align:center;">Percentage</th>
+        <th>Action</th>
+      </tr>
+    `;
+
+    const details = cd.live_disp_details || [];
+    currentModalRows = details;
+    const totalLive = cd.total_live_calls || details.reduce((a, b) => a + (b.cnt || 0), 0);
+    countBadge.innerText = `${totalLive} Live Calls`;
+    tbody.innerHTML = '';
+
+    details.forEach(d => {
+      const pct = totalLive > 0 ? ((d.cnt / totalLive) * 100).toFixed(1) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>🎧 ${d.disp || 'Uncategorized'}</strong></td>
+        <td style="text-align:center;"><span class="badge badge-info" style="font-size:12px;">${d.cnt || 0}</span></td>
+        <td style="text-align:center;"><strong>${pct}%</strong></td>
+        <td>
+          <a href="/live-calls?q=${encodeURIComponent(d.disp || '')}" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;">View Live Calls ↗</a>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const labels = details.map(d => d.disp);
+    const counts = details.map(d => d.cnt);
+
+    modalChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Live Calls',
+          data: counts,
+          backgroundColor: '#0284c7',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false }, ticks: { color: mTextColor } },
+          y: { beginAtZero: true, grid: { color: mGridColor }, ticks: { color: mTextColor, precision: 0 } }
+        }
       }
     });
 

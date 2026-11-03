@@ -50,6 +50,29 @@ def init_sqlite(conn):
     )
     """)
 
+    # Live Calls
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS live_calls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        department TEXT NOT NULL DEFAULT 'Inbound',
+        call_id TEXT,
+        call_date TEXT,
+        advisor_id TEXT,
+        advisor_name TEXT NOT NULL,
+        calling_no TEXT,
+        call_disposition TEXT,
+        observation TEXT,
+        improvement TEXT,
+        feedback TEXT,
+        location TEXT,
+        auditor_name TEXT,
+        source_file TEXT,
+        import_batch TEXT,
+        row_hash TEXT UNIQUE,
+        imported_at TEXT NOT NULL
+    )
+    """)
+
     # Warnings
     cur.execute("""
     CREATE TABLE IF NOT EXISTS warnings (

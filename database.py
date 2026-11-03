@@ -203,7 +203,7 @@ class UniversalCursor:
         sql = self._convert_query(query, has_params=has_params)
 
         # If PostgreSQL and query is an INSERT into key tables and caller expects lastrowid
-        if self._is_pg and re.match(r"^\s*INSERT\s+INTO\s+(warnings|users|audit_logs|email_history|audits)", sql, re.IGNORECASE):
+        if self._is_pg and re.match(r"^\s*INSERT\s+INTO\s+(warnings|users|audit_logs|email_history|audits|live_calls)", sql, re.IGNORECASE):
             if "RETURNING" not in sql.upper():
                 sql_with_returning = sql.rstrip("; \t\n") + " RETURNING id"
                 if params is not None:

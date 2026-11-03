@@ -1,0 +1,185 @@
+{% extends "layout.html" %}
+{% block title %}Live Call Monitoring Register · MSEDCL Quality Audit{% endblock %}
+{% block heading %}Live Call Monitoring Register{% endblock %}
+
+{% block content %}
+<!-- Compact Filter Bar -->
+<div class="card" style="margin-bottom: 12px; padding: 10px 14px;">
+  <form method="get" class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px;">
+    <div class="filter-group">
+      <label>Search Advisor / Emp ID / Call ID / Number</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Type keywords..." class="form-control" style="padding: 5px 8px; font-size: 12px;">
+    </div>
+    <div class="filter-group">
+      <label>Department</label>
+      <select name="department" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="All" {{ 'selected' if dept=='All' else '' }}>All Departments</option>
+        <option value="Inbound" {{ 'selected' if dept=='Inbound' else '' }}>Inbound</option>
+        <option value="Outbound" {{ 'selected' if dept=='Outbound' else '' }}>Outbound</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Auditor Name</label>
+      <select name="auditor" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="">All Auditors</option>
+        {% for a in auditors_list %}
+        <option value="{{ a }}" {{ 'selected' if selected_auditor==a else '' }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>From Date</label>
+      <input type="date" name="start" value="{{ start }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+    </div>
+    <div class="filter-group">
+      <label>To Date</label>
+      <input type="date" name="end" value="{{ end }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+    </div>
+    <div class="filter-group">
+      <label>Show Rows</label>
+      <select name="limit" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="500" {{ 'selected' if limit=='500' else '' }}>Latest 500</option>
+        <option value="1000" {{ 'selected' if limit=='1000' else '' }}>Latest 1,000</option>
+        <option value="2000" {{ 'selected' if limit=='2000' else '' }}>Latest 2,000</option>
+        <option value="all" {{ 'selected' if limit=='all' else '' }}>All Live Calls</option>
+      </select>
+    </div>
+    <div class="filter-group" style="display: flex; align-items: flex-end; gap: 6px;">
+      <button type="submit" class="btn btn-primary" style="flex: 1; padding: 6px 12px; font-size: 12px; height: 32px;">Apply Filter</button>
+      <a href="{{ url_for('live_calls_view') }}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; height: 32px;" title="Reset Filters">✕</a>
+    </div>
+  </form>
+</div>
+
+<!-- Header Stats & Quick Export -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">
+      Total Live Calls Monitored: <span class="badge badge-info" style="font-size: 12px;">{{ total_count }}</span>
+    </span>
+    <span style="font-size: 12px; color: var(--text-muted);">
+      (Showing latest {{ rows|length }} records)
+    </span>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{{ url_for('export_single', key='Live Calls', format='xlsx', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:5px; font-size:12px;">
+      <span>📥</span> Export Excel
+    </a>
+    <a href="{{ url_for('export_single', key='Live Calls', format='csv', department=dept, start=start, end=end, auditor=selected_auditor) }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:5px; font-size:12px;">
+      <span>📄</span> Export CSV
+    </a>
+    <a href="{{ url_for('download_sample_template', type='live_calls', format='xlsx') }}" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:5px; font-size:12px;" title="Download Live Calls Excel Template">
+      <span>📊</span> Sample Template
+    </a>
+  </div>
+</div>
+
+<!-- Dense Live Calls Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-responsive">
+    <table class="data-table" style="margin: 0; font-size: 12px;">
+      <thead>
+        <tr>
+          <th style="width: 150px;">Call ID &amp; Date</th>
+          <th style="width: 170px;">Advisor Details</th>
+          <th style="width: 130px;">Calling No</th>
+          <th style="width: 180px;">Call Disposition</th>
+          <th style="min-width: 260px;">Call Observation</th>
+          <th style="min-width: 240px;">Area of Improvement</th>
+          <th style="width: 90px; text-align: center;">Feedback</th>
+          <th style="width: 140px;">Location &amp; QA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <!-- Col 1: Call ID & Date -->
+          <td>
+            <div class="dense-cell">
+              <span class="dense-primary" style="font-family:monospace; color:var(--text-main); font-weight:700;">{{ r.call_id or 'ID: —' }}</span>
+              <div class="dense-secondary">
+                <span>📅 {{ r.call_date or '—' }}</span>
+                <span class="badge badge-neutral" style="font-size:9px; padding:0 4px;">{{ r.department }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Col 2: Advisor Name & Emp ID -->
+          <td>
+            <div class="dense-cell">
+              <span class="dense-primary">{{ r.advisor_name }}</span>
+              <div class="dense-secondary">
+                <a href="{{ url_for('advisor_search', emp_id=r.advisor_id or r.advisor_name) }}" class="dense-pill" style="text-decoration:none;">
+                  ID: {{ r.advisor_id or '—' }}
+                </a>
+              </div>
+            </div>
+          </td>
+
+          <!-- Col 3: Calling No -->
+          <td>
+            <span style="font-family:monospace; font-size:12px; color:var(--brand-blue); font-weight:600;">
+              {{ r.calling_no or '—' }}
+            </span>
+          </td>
+
+          <!-- Col 4: Call Disposition -->
+          <td>
+            <span class="badge badge-neutral" style="font-size:11px; white-space:normal; text-align:left; line-height:1.3; font-weight:600; color:var(--text-main);">
+              {{ r.call_disposition or '—' }}
+            </span>
+          </td>
+
+          <!-- Col 5: Call Observation -->
+          <td>
+            <div style="max-height: 85px; overflow-y: auto; font-size: 11.5px; line-height: 1.4; color: var(--text-main);">
+              {{ r.observation or '—' }}
+            </div>
+          </td>
+
+          <!-- Col 6: Area of Improvement -->
+          <td>
+            <div style="max-height: 85px; overflow-y: auto; font-size: 11.5px; line-height: 1.4; color: #b45309;">
+              {{ r.improvement or '—' }}
+            </div>
+          </td>
+
+          <!-- Col 7: Feedback -->
+          <td style="text-align: center;">
+            {% if r.feedback and r.feedback|lower == 'done' %}
+              <span class="badge badge-success" style="font-size:11px; padding:2px 8px; font-weight:700;">Done</span>
+            {% elif r.feedback and r.feedback|lower == 'pending' %}
+              <span class="badge badge-warning" style="font-size:11px; padding:2px 8px; font-weight:700;">Pending</span>
+            {% elif r.feedback %}
+              <span class="badge badge-info" style="font-size:11px; padding:2px 8px;">{{ r.feedback }}</span>
+            {% else %}
+              <span style="color:#94a3b8;">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Col 8: Location & Auditor -->
+          <td>
+            <div class="dense-cell">
+              <span class="dense-secondary" style="color:var(--text-main); font-weight:600;">
+                📍 {{ r.location or '—' }}
+              </span>
+              <div class="dense-secondary">
+                <strong style="color:var(--text-muted); font-size:10px;">QA:</strong> {{ r.auditor_name or '—' }}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 36px 12px; color: var(--text-muted);">
+            <div style="font-size: 28px; margin-bottom: 8px;">🎧</div>
+            <strong>No live call monitoring records match your search or filter criteria.</strong>
+            <div style="font-size: 12px; margin-top: 4px;">Upload a live calls workbook or adjust your date/keyword filter.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

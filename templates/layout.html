@@ -65,6 +65,10 @@
           <span class="icon">⚠️</span>
           <span>Fatal Calls</span>
         </a>
+        <a href="{{ url_for('live_calls_view') }}" class="nav-item {{ 'active' if page=='live_calls' else '' }}" title="Live Calls">
+          <span class="icon">🎧</span>
+          <span>Live Calls</span>
+        </a>
         <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}" title="Score Reports">
           <span class="icon">📊</span>
           <span>Score Reports</span>
@@ -108,6 +112,10 @@
         <a href="{{ url_for('fatal_calls') }}" class="nav-item {{ 'active' if page=='fatal_calls' else '' }}" title="Fatal Calls">
           <span class="icon">⚠️</span>
           <span>Fatal Calls</span>
+        </a>
+        <a href="{{ url_for('live_calls_view') }}" class="nav-item {{ 'active' if page=='live_calls' else '' }}" title="Live Calls">
+          <span class="icon">🎧</span>
+          <span>Live Calls</span>
         </a>
         <a href="{{ url_for('score_reports') }}" class="nav-item {{ 'active' if page=='score_reports' else '' }}" title="Score Reports">
           <span class="icon">📊</span>

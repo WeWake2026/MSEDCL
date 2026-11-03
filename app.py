@@ -220,6 +220,188 @@ def parse_date(value):
     except Exception:
         return None
 
+
+LIVE_CALL_ALIASES = {
+    "call_id": ["call id", "session id", "track id", "interaction id", "call_id", "sr no", "sr. no", "sr no."],
+    "call_date": ["date", "call date", "date of call", "interaction date"],
+    "advisor_id": ["advisor id", "employee id", "agent id", "emp id", "advisor code", "employee code"],
+    "advisor_name": ["advisor name", "employee name", "agent name", "name of advisor", "employee"],
+    "calling_no": ["calling no", "calling number", "contact number", "mobile number", "caller no", "phone number", "contact no"],
+    "call_disposition": ["call disposition", "consumer concern", "disposition", "concern", "complaint type", "type of complaint"],
+    "observation": ["call observation", "observation", "call observations", "remarks", "auditor remarks"],
+    "improvement": ["area of improvement", "improvement", "areas of improvement", "improvement areas", "coaching feedback"],
+    "feedback": ["feedback", "status", "action", "monitoring status"],
+    "location": ["location", "site", "center", "city"],
+    "auditor_name": ["auditor name", "qa name", "evaluator name", "evaluator", "quality auditor", "qa"]
+}
+
+def detect_live_call_columns(columns):
+    normalized = {norm(c): c for c in columns}
+    mapping = {}
+    for field, aliases in LIVE_CALL_ALIASES.items():
+        for alias in aliases:
+            if norm(alias) in normalized:
+                mapping[field] = normalized[norm(alias)]
+                break
+    return mapping
+
+def is_live_call_workbook(headers, data_rows):
+    live_map = detect_live_call_columns(headers)
+    audit_map = detect_columns(headers)
+    # If explicitly has calling_no or call_disposition or feedback AND lacks quality_score, it's live calls
+    if "quality_score" not in audit_map:
+        if "calling_no" in live_map or "call_disposition" in live_map or "feedback" in live_map:
+            return True
+    return False
+
+def make_live_call_hash(dept, row):
+    key = "|".join(str(row.get(k) or "").strip().lower() for k in
+                   ["call_id", "call_date", "advisor_id", "advisor_name", "calling_no", "call_disposition", "auditor_name"])
+    if not (row.get("call_id") or "").strip():
+        key += "|" + str(row.get("observation") or "").strip().lower()
+    return hashlib.sha256((dept.lower() + "|live|" + key).encode("utf-8")).hexdigest()
+
+def import_live_calls(headers, data_rows, department, filename, username, duplicate_handling="skip"):
+    mapping = detect_live_call_columns(headers)
+    if "advisor_name" not in mapping:
+        raise ValueError("Advisor Name column was not detected in live call file. Please verify headers.")
+    
+    batch_id = secrets.token_hex(8)
+    seen, inserted, duplicates, rejected = len(data_rows), 0, 0, 0
+    errors = []
+    duplicate_rows = []
+    rejected_rows = []
+    now = datetime.now().isoformat(timespec="seconds")
+    
+    with db() as con:
+        for ix, source_row in enumerate(data_rows):
+            row_num = ix + 2
+            row = {}
+            for field, source_col in mapping.items():
+                val = source_row.get(source_col)
+                row[field] = None if val is None or str(val).strip() == "" or str(val).strip().lower() == "nan" else val
+            
+            raw_record = {k: (None if v is None else str(v).strip()) for k, v in row.items()}
+            advisor = str(row.get("advisor_name") or "").strip()
+            
+            if not advisor:
+                rejected += 1
+                reason = "Missing advisor name"
+                errors.append({"row": row_num, "reason": reason})
+                rejected_rows.append({"row": row_num, "reason": reason, "data": raw_record})
+                continue
+            
+            record = {
+                "department": department,
+                "call_id": str(row.get("call_id") or "").strip() or None,
+                "call_date": parse_date(row.get("call_date")) or (str(row.get("call_date")).strip() if row.get("call_date") else None),
+                "advisor_id": str(row.get("advisor_id") or "").strip() or None,
+                "advisor_name": advisor,
+                "calling_no": str(row.get("calling_no") or "").strip() or None,
+                "call_disposition": str(row.get("call_disposition") or "").strip() or None,
+                "observation": str(row.get("observation") or "").strip() or None,
+                "improvement": str(row.get("improvement") or "").strip() or None,
+                "feedback": str(row.get("feedback") or "").strip() or None,
+                "location": str(row.get("location") or "").strip() or None,
+                "auditor_name": str(row.get("auditor_name") or "").strip() or None,
+                "source_file": filename,
+                "import_batch": batch_id,
+                "imported_at": now
+            }
+            row_hash = make_live_call_hash(department, record)
+            if duplicate_handling == "force_insert":
+                row_hash = row_hash[:56] + secrets.token_hex(4)
+                
+            is_dup = False
+            sp_name = f"sp_live_{ix}"
+            is_pg = getattr(con, "_is_pg", False)
+            raw_conn = getattr(con, "_conn", None)
+            if is_pg and raw_conn:
+                try:
+                    with raw_conn.cursor() as sp_cur:
+                        sp_cur.execute(f"SAVEPOINT {sp_name}")
+                except Exception:
+                    pass
+
+            try:
+                cur = con.execute("""INSERT OR IGNORE INTO live_calls(department,call_id,call_date,advisor_id,advisor_name,
+                calling_no,call_disposition,observation,improvement,feedback,location,auditor_name,
+                source_file,import_batch,row_hash,imported_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (department, record["call_id"], record["call_date"], record["advisor_id"], record["advisor_name"],
+                 record["calling_no"], record["call_disposition"], record["observation"], record["improvement"],
+                 record["feedback"], record["location"], record["auditor_name"], filename, batch_id, row_hash, now))
+                if getattr(cur, "rowcount", 0) > 0:
+                    inserted += 1
+                    if is_pg and raw_conn:
+                        try:
+                            with raw_conn.cursor() as sp_cur:
+                                sp_cur.execute(f"RELEASE SAVEPOINT {sp_name}")
+                        except Exception:
+                            pass
+                else:
+                    is_dup = True
+                    if is_pg and raw_conn:
+                        try:
+                            with raw_conn.cursor() as sp_cur:
+                                sp_cur.execute(f"RELEASE SAVEPOINT {sp_name}")
+                        except Exception:
+                            pass
+            except Exception as e:
+                if is_pg and raw_conn:
+                    try:
+                        with raw_conn.cursor() as sp_cur:
+                            sp_cur.execute(f"ROLLBACK TO SAVEPOINT {sp_name}")
+                    except Exception:
+                        try:
+                            raw_conn.rollback()
+                        except Exception:
+                            pass
+                
+                is_integrity = any(k in str(type(e).__name__).lower() for k in ["integrity", "unique", "duplicate"])
+                if is_integrity:
+                    is_dup = True
+                else:
+                    rejected += 1
+                    raw_msg = str(e).strip()
+                    clean_msg = raw_msg.split("\n")[0].strip()
+                    if clean_msg.startswith("ERROR:"):
+                        clean_msg = clean_msg[6:].strip()
+                    if not clean_msg or "current transaction is aborted" in clean_msg:
+                        clean_msg = "Database constraint or data format mismatch"
+                    reason = f"Database error: {clean_msg[:120]}"
+                    errors.append({"row": row_num, "reason": reason})
+                    rejected_rows.append({"row": row_num, "reason": reason, "data": raw_record})
+                    continue
+                
+            if is_dup:
+                duplicates += 1
+                duplicate_rows.append({"row": row_num, "reason": "Duplicate live call record", "data": raw_record})
+                
+        report = {
+            "type": "live_calls",
+            "errors": errors,
+            "mapping": mapping,
+            "duplicate_rows": duplicate_rows,
+            "rejected_rows": rejected_rows
+        }
+        con.execute("""INSERT INTO import_batches(id,department,source_file,uploaded_by,uploaded_at,rows_seen,
+        rows_inserted,duplicates,rejected,report_json) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+        (batch_id, department, filename, username, now, seen, inserted, duplicates, rejected, json.dumps(report, default=str)))
+        
+    log_audit("IMPORT_LIVE_CALLS", filename, f"Dept: {department}, Inserted: {inserted}, Dups: {duplicates}, Rejected: {rejected}")
+    return {
+        "batch_id": batch_id,
+        "type": "live_calls",
+        "seen": seen,
+        "inserted": inserted,
+        "duplicates": duplicates,
+        "rejected": rejected,
+        "mapping": mapping,
+        "errors": errors,
+        "duplicate_rows": duplicate_rows,
+        "rejected_rows": rejected_rows
+    }
+
 def read_upload(file_storage):
     filename = secure_filename(file_storage.filename or "upload.xlsx")
     ext = os.path.splitext(filename)[1].lower()
@@ -666,6 +848,44 @@ def dashboard():
             ORDER BY avg_score DESC, cnt DESC LIMIT 15
         """, params).fetchall()
 
+        # Live Calls Metrics & Chart Aggregations
+        live_where = ["1=1"]
+        live_params = []
+        if dept in ("Inbound", "Outbound"):
+            live_where.append("department=?")
+            live_params.append(dept)
+        if month:
+            live_where.append("call_date LIKE ?")
+            live_params.append(f"{month}%")
+        if start:
+            live_where.append("call_date >= ?")
+            live_params.append(start)
+        if end:
+            live_where.append("call_date <= ?")
+            live_params.append(end)
+        if selected_auditor:
+            live_where.append("auditor_name=?")
+            live_params.append(selected_auditor)
+        if advisor_query:
+            live_where.append("(advisor_id LIKE ? OR advisor_name LIKE ?)")
+            live_params.extend([f"%{advisor_query}%", f"%{advisor_query}%"])
+        if curr_user and curr_user["role"] in ("viewer", "advisor") and curr_user["advisor_id"]:
+            live_where.append("(advisor_id=? OR advisor_name LIKE ?)")
+            live_params.extend([curr_user["advisor_id"], f"%{curr_user['advisor_id']}%"])
+
+        live_base = " FROM live_calls WHERE " + " AND ".join(live_where)
+        total_live_calls = con.execute("SELECT COUNT(*)" + live_base, live_params).fetchone()[0]
+        inbound_live_calls = con.execute("SELECT COUNT(*)" + live_base + " AND department='Inbound'", live_params).fetchone()[0]
+        outbound_live_calls = con.execute("SELECT COUNT(*)" + live_base + " AND department='Outbound'", live_params).fetchone()[0]
+        done_live_feedback = con.execute("SELECT COUNT(*)" + live_base + " AND LOWER(feedback)='done'", live_params).fetchone()[0]
+
+        # Top Dispositions in Live Calls
+        live_disposition_rows = con.execute("""
+            SELECT COALESCE(call_disposition, 'Uncategorized') as disp, COUNT(*) as cnt
+            """ + live_base + """
+            GROUP BY call_disposition ORDER BY cnt DESC LIMIT 8
+        """, live_params).fetchall()
+
     metrics = {
         "total_audits": total_audits,
         "inbound_count": inbound_count,
@@ -678,7 +898,11 @@ def dashboard():
         "overall_avg": overall_avg,
         "total_warnings": total_warnings,
         "open_warnings": open_warnings,
-        "active_pips": active_pips
+        "active_pips": active_pips,
+        "total_live_calls": total_live_calls,
+        "inbound_live_calls": inbound_live_calls,
+        "outbound_live_calls": outbound_live_calls,
+        "done_live_feedback": done_live_feedback
     }
 
     chart_data = {
@@ -704,6 +928,10 @@ def dashboard():
         "in_progress_warnings": in_progress_warnings,
         "closed_warnings": closed_warnings,
         "active_pips": active_pips,
+        "total_live_calls": total_live_calls,
+        "live_dispositions": [r["disp"] for r in live_disposition_rows],
+        "live_disp_counts": [r["cnt"] for r in live_disposition_rows],
+        "live_disp_details": [dict(r) for r in live_disposition_rows],
         "latest_audit_date": [r["dt"] for r in timeline_rows][-1] if timeline_rows else None,
         "earliest_audit_date": [r["dt"] for r in timeline_rows][0] if timeline_rows else None
     }
@@ -800,6 +1028,66 @@ def audits_view(dept="Inbound"):
                            fixed_dept=True,
                            rows=rows, total_count=total_count, limit=limit,
                            q=q, dept=dept, start=start, end=end)
+
+@app.route("/live-calls")
+@login_required
+def live_calls_view():
+    q = request.args.get("q", "").strip()
+    dept = request.args.get("department", "All")
+    auditor = request.args.get("auditor", "").strip()
+    start = request.args.get("start", "")
+    end = request.args.get("end", "")
+    limit = request.args.get("limit", "1000").strip().lower()
+    
+    where = ["1=1"]
+    params = []
+    curr_user = getattr(request, "current_user", None)
+    if curr_user and curr_user["role"] in ("viewer", "advisor") and curr_user["advisor_id"]:
+        where.append("(advisor_id = ? OR advisor_name LIKE ?)")
+        params.extend([curr_user["advisor_id"], f"%{curr_user['advisor_id']}%"])
+    if dept in ("Inbound", "Outbound"):
+        where.append("department=?")
+        params.append(dept)
+    if auditor:
+        where.append("auditor_name=?")
+        params.append(auditor)
+    if q:
+        where.append("(advisor_name LIKE ? OR advisor_id LIKE ? OR auditor_name LIKE ? OR call_id LIKE ? OR calling_no LIKE ? OR call_disposition LIKE ?)")
+        params += [f"%{q}%"] * 6
+    if start:
+        where.append("call_date >= ?")
+        params.append(start)
+    if end:
+        where.append("call_date <= ?")
+        params.append(end)
+
+    limit_clause = ""
+    if limit != "all":
+        try:
+            limit_val = int(limit)
+            limit_clause = f" LIMIT {limit_val}"
+        except ValueError:
+            limit_clause = " LIMIT 1000"
+
+    sql = "SELECT * FROM live_calls WHERE " + " AND ".join(where) + " ORDER BY call_date DESC, id DESC" + limit_clause
+    count_sql = "SELECT COUNT(*) as total FROM live_calls WHERE " + " AND ".join(where)
+    
+    with db() as con:
+        total_count = con.execute(count_sql, params).fetchone()["total"]
+        rows = con.execute(sql, params).fetchall()
+        auditors_list = [r[0] for r in con.execute("SELECT DISTINCT auditor_name FROM live_calls WHERE auditor_name IS NOT NULL AND auditor_name != '' ORDER BY auditor_name").fetchall()]
+
+    return render_template("live_calls.html",
+                           page="live_calls",
+                           rows=rows,
+                           total_count=total_count,
+                           auditors_list=auditors_list,
+                           selected_auditor=auditor,
+                           limit=limit,
+                           q=q,
+                           dept=dept,
+                           start=start,
+                           end=end)
 
 @app.route("/fatal-calls")
 @login_required
@@ -1361,8 +1649,12 @@ def upload():
         else:
             try:
                 filename, headers, data_rows = read_upload(file)
-                result = import_dataframe(headers, data_rows, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
-                flash(f"Workbook ingested: {result['inserted']} inserted, {result['duplicates']} duplicates skipped, {result['rejected']} rejected.", "success")
+                if is_live_call_workbook(headers, data_rows):
+                    result = import_live_calls(headers, data_rows, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
+                    flash(f"Live Calls ingested: {result['inserted']} inserted, {result['duplicates']} duplicates skipped, {result['rejected']} rejected.", "success")
+                else:
+                    result = import_dataframe(headers, data_rows, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
+                    flash(f"Audit Workbook ingested: {result['inserted']} inserted, {result['duplicates']} duplicates skipped, {result['rejected']} rejected.", "success")
             except Exception as exc:
                 flash(f"Ingestion failed: {str(exc)}", "error")
 
@@ -1381,7 +1673,62 @@ def upload():
 @app.route("/upload/sample-template")
 @login_required
 def download_sample_template():
+    template_type = request.args.get("type", "audits").lower()
     fmt = request.args.get("format", "xlsx").lower()
+    if template_type == "live_calls":
+        filename = f"MSEDCL_Live_Calls_Template.{fmt}"
+        sample_records = [
+            {
+                "Call ID": "MSEDCL-INB-LIVE-100001",
+                "Date": "2026-10-01",
+                "Advisor ID": "AIPLCC1153",
+                "Advisor Name": "RISHABH MANOHAR PATHAK",
+                "Calling No": "9637933169",
+                "Call Disposition": "Billing Related (Reconnection)",
+                "Call Observation": "Opening given as per script. Consumer called regarding power failure in some houses. Apology done on call. Complete probing done.",
+                "Area of Improvement": "Advisor should personalize to consumer at least 1 time on call. Avoid dead air.",
+                "Feedback": "Done",
+                "Location": "Nagpur Inbound",
+                "Auditor Name": "Priya Latare"
+            },
+            {
+                "Call ID": "MSEDCL-INB-LIVE-100002",
+                "Date": "2026-10-01",
+                "Advisor ID": "AIPLCC1114",
+                "Advisor Name": "AACHAL RUSHIPAL TEMBHARE",
+                "Calling No": "8767548350",
+                "Call Disposition": "Billing Related (Reconnection)",
+                "Call Observation": "Opening given as per script. Advisor checked information and provided clear update on bill due date.",
+                "Area of Improvement": "Advisor should complete probing on call.",
+                "Feedback": "Done",
+                "Location": "Nagpur Inbound",
+                "Auditor Name": "Priya Latare"
+            }
+        ]
+        if fmt == "csv":
+            out = io.StringIO()
+            headers = list(sample_records[0].keys())
+            writer = csv.DictWriter(out, fieldnames=headers)
+            writer.writeheader()
+            for r in sample_records:
+                writer.writerow(r)
+            output = io.BytesIO(out.getvalue().encode("utf-8"))
+            mimetype = "text/csv"
+        else:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Live Calls"
+            headers = list(sample_records[0].keys())
+            ws.append(headers)
+            for r in sample_records:
+                ws.append([r.get(h) for h in headers])
+            export_service.apply_excel_styling(ws, "Live Calls")
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
+
     sample_records = [
         {
             "Call ID": "MSEDCL-INB-100201",
@@ -1484,12 +1831,14 @@ def delete_import_batch(batch_id):
         if not batch:
             flash("Import batch not found.", "error")
             return redirect(url_for("upload"))
-        # Delete associated audits and batch entry
+        # Delete associated audits or live_calls and batch entry
         deleted_audits = con.execute("DELETE FROM audits WHERE import_batch=?", (batch_id,)).rowcount
+        deleted_live = con.execute("DELETE FROM live_calls WHERE import_batch=?", (batch_id,)).rowcount
         con.execute("DELETE FROM import_batches WHERE id=?", (batch_id,))
     
-    log_audit("DELETE_IMPORT_BATCH", batch_id, f"File: {batch['source_file']}, Deleted {deleted_audits} audits")
-    flash(f"Import batch '{batch['source_file']}' removed along with {deleted_audits} associated audit records.", "success")
+    total_del = deleted_audits + deleted_live
+    log_audit("DELETE_IMPORT_BATCH", batch_id, f"File: {batch['source_file']}, Deleted {total_del} records")
+    flash(f"Import batch '{batch['source_file']}' removed along with {total_del} associated records.", "success")
     return redirect(url_for("upload"))
 
 @app.route("/upload/batch/<batch_id>/details", methods=["GET"])
@@ -1508,14 +1857,23 @@ def get_batch_details(batch_id):
             except Exception:
                 report = {}
         
-        # Fetch all inserted records for this batch
-        inserted_rows = con.execute(
-            """SELECT id, department, call_id, call_date, evaluation_date, advisor_id, advisor_name,
-                      team_leader, auditor_name, quality_score, is_fatal, fatal_category,
-                      error_categories, observation, location, audio_url, imported_at
-               FROM audits WHERE import_batch=? ORDER BY id ASC""",
-            (batch_id,)
-        ).fetchall()
+        # Fetch all inserted records for this batch (from audits or live_calls)
+        if report.get("type") == "live_calls":
+            inserted_rows = con.execute(
+                """SELECT id, department, call_id, call_date, advisor_id, advisor_name,
+                          calling_no, call_disposition, observation, improvement, feedback,
+                          location, auditor_name, imported_at
+                   FROM live_calls WHERE import_batch=? ORDER BY id ASC""",
+                (batch_id,)
+            ).fetchall()
+        else:
+            inserted_rows = con.execute(
+                """SELECT id, department, call_id, call_date, evaluation_date, advisor_id, advisor_name,
+                          team_leader, auditor_name, quality_score, is_fatal, fatal_category,
+                          error_categories, observation, location, audio_url, imported_at
+                   FROM audits WHERE import_batch=? ORDER BY id ASC""",
+                (batch_id,)
+            ).fetchall()
         
         inserted_list = [dict(r) for r in inserted_rows]
         duplicate_list = report.get("duplicate_rows", [])

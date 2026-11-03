@@ -135,6 +135,32 @@ def build_export_datasets(con, start_date=None, end_date=None, department=None, 
         FROM audits WHERE department='Inbound' AND {base_where.replace('department = ?', '1=1')}
         ORDER BY COALESCE(call_date, evaluation_date) DESC
     """, [p for i, p in enumerate(params) if not (department and department in ('Inbound','Outbound') and params[i] == department)])
+
+    # 1b. Live Monitored Calls
+    live_where = ["1=1"]
+    live_params = []
+    if department in ("Inbound", "Outbound"):
+        live_where.append("department = ?")
+        live_params.append(department)
+    if start_date:
+        live_where.append("call_date >= ?")
+        live_params.append(start_date)
+    if end_date:
+        live_where.append("call_date <= ?")
+        live_params.append(end_date)
+    if auditor:
+        live_where.append("auditor_name = ?")
+        live_params.append(auditor)
+    if current_advisor_id:
+        live_where.append("(advisor_id = ? OR advisor_name LIKE ?)")
+        live_params.extend([current_advisor_id, f"%{current_advisor_id}%"])
+
+    live_calls_ds = query_to_dataset(con, f"""
+        SELECT department, call_id, call_date, advisor_id, advisor_name, calling_no,
+               call_disposition, observation, improvement, feedback, location, auditor_name, source_file
+        FROM live_calls WHERE {" AND ".join(live_where)}
+        ORDER BY call_date DESC, id DESC
+    """, live_params)
     
     # 2. Outbound Audits
     outbound_ds = query_to_dataset(con, f"""
@@ -239,6 +265,7 @@ def build_export_datasets(con, start_date=None, end_date=None, department=None, 
     return {
         "Inbound Audits": inbound_ds,
         "Outbound Audits": outbound_ds,
+        "Live Calls": live_calls_ds,
         "All Audits": all_audits_ds,
         "Fatal Calls": fatal_ds,
         "Low Score (<80%)": low_ds,

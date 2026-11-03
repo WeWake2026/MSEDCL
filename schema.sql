@@ -36,6 +36,34 @@ CREATE INDEX IF NOT EXISTS idx_audits_call_date ON audits (call_date);
 CREATE INDEX IF NOT EXISTS idx_audits_is_fatal ON audits (is_fatal);
 CREATE INDEX IF NOT EXISTS idx_audits_row_hash ON audits (row_hash);
 
+-- 1b. Create Live Calls Table
+CREATE TABLE IF NOT EXISTS live_calls (
+    id SERIAL PRIMARY KEY,
+    department VARCHAR(100) NOT NULL DEFAULT 'Inbound',
+    call_id VARCHAR(150),
+    call_date VARCHAR(50),
+    advisor_id VARCHAR(100),
+    advisor_name VARCHAR(255) NOT NULL,
+    calling_no VARCHAR(50),
+    call_disposition VARCHAR(255),
+    observation TEXT,
+    improvement TEXT,
+    feedback TEXT,
+    location VARCHAR(255),
+    auditor_name VARCHAR(255),
+    source_file VARCHAR(255),
+    import_batch VARCHAR(100),
+    row_hash VARCHAR(64) UNIQUE,
+    imported_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_calls_department ON live_calls (department);
+CREATE INDEX IF NOT EXISTS idx_live_calls_call_date ON live_calls (call_date);
+CREATE INDEX IF NOT EXISTS idx_live_calls_advisor_id ON live_calls (advisor_id);
+CREATE INDEX IF NOT EXISTS idx_live_calls_advisor_name ON live_calls (advisor_name);
+CREATE INDEX IF NOT EXISTS idx_live_calls_auditor_name ON live_calls (auditor_name);
+CREATE INDEX IF NOT EXISTS idx_live_calls_row_hash ON live_calls (row_hash);
+
 -- 2. Create Warnings & PIP Table
 CREATE TABLE IF NOT EXISTS warnings (
     id SERIAL PRIMARY KEY,

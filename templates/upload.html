@@ -21,6 +21,11 @@
         title="Download CSV sample format">
         <span>📄</span> Demo (.csv)
       </a>
+      <a href="{{ url_for('download_sample_template', type='live_calls', format='xlsx') }}" class="btn btn-secondary btn-sm"
+        style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 12px; border-color:#0284c7; color:#0284c7;"
+        title="Download Live Call Monitoring Excel template">
+        <span>🎧</span> Live Calls Template (.xlsx)
+      </a>
       {% if not import_enabled %}
       <span class="badge badge-danger" style="font-size:13px;padding:6px 12px;">⛔ Excel Import Currently Disabled</span>
       {% endif %}
