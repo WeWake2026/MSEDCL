@@ -272,46 +272,29 @@
   </div>
 </div>
 
-<!-- 4. Interactive Analytics & Visual Intelligence Board (Shiftable & Reorderable Horizontally) -->
-<div class="analytics-board-section">
-  <div class="analytics-board-toolbar">
-    <div class="board-toolbar-left">
-      <div class="board-badge-icon">📊</div>
+<!-- 4. Single Horizontal Row Swipe Carousel for Analytics Graphs (No Scrollbars, Smooth Left/Right Touch & Mouse Swiping) -->
+<div class="analytics-carousel-wrapper">
+  <!-- Carousel Navigation & Header Bar -->
+  <div class="analytics-carousel-header">
+    <div class="carousel-title-group">
+      <div class="carousel-icon-box">📊</div>
       <div>
-        <h3 class="board-title">Analytics &amp; Performance Visualizations</h3>
-        <p class="board-subtitle">Shift positions horizontally (◀ Left / Right ▶ or drag &amp; drop cards) to customize your workspace view.</p>
+        <h3 class="carousel-title">Visual Analytics &amp; Performance Intelligence</h3>
+        <p class="carousel-subtitle">Swipe horizontally left/right or use controls to browse all 7 monitoring dimensions</p>
       </div>
     </div>
-    <div class="board-toolbar-right">
-      <span class="board-status-tag" id="boardLayoutStatus">✦ Custom Layout Saved</span>
-      <button type="button" class="btn-board-shift" onclick="shiftEntireBoard('left')" title="Shift all graphs horizontally one step to the left">
-        <span>◀</span> Shift Left
-      </button>
-      <button type="button" class="btn-board-shift" onclick="shiftEntireBoard('right')" title="Shift all graphs horizontally one step to the right">
-        Shift Right <span>▶</span>
-      </button>
-      <button type="button" class="btn-board-reset" onclick="resetChartsBoardOrder()" title="Restore default chart positions">
-        <span>🔄</span> Reset
-      </button>
+    <div class="carousel-nav-controls">
+      <span class="carousel-counter-badge" id="carouselSlideCounter">1 of 7</span>
+      <button type="button" class="carousel-arrow-btn" id="carouselPrevBtn" onclick="carouselScroll('left')" title="Scroll Left (Previous Graph)" aria-label="Previous">◀</button>
+      <button type="button" class="carousel-arrow-btn" id="carouselNextBtn" onclick="carouselScroll('right')" title="Scroll Right (Next Graph)" aria-label="Next">▶</button>
     </div>
   </div>
 
-  <!-- Reorderable Charts Container Grid -->
-  <div class="analytics-charts-grid" id="analyticsChartsGrid">
-  <!-- Draggable Chart Item: Score Category Distribution -->
-  <div class="analytics-chart-item" data-chart-id="scores" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
-      </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('scores')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('scores')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 1: Score Category Distribution -->
-  <div class="ref-chart-card" data-chart-type="scores">
+  <!-- Single Horizontal Row Viewport (Overflow hidden scrollbars, CSS scroll-snap) -->
+  <div class="analytics-carousel-viewport" id="analyticsCarouselViewport">
+    <div class="analytics-carousel-track" id="analyticsCarouselTrack">
+      <div class="analytics-carousel-slide" data-slide-index="0" data-chart-id="scores">
+        <div class="ref-chart-card" data-chart-type="scores">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📊</span>
@@ -351,21 +334,9 @@
       </div>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Fatal vs Non-Fatal Ratio -->
-  <div class="analytics-chart-item" data-chart-id="fatals" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('fatals')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('fatals')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 2: Fatal vs Non-Fatal Ratio -->
-  <div class="ref-chart-card" data-chart-type="fatals">
+      <div class="analytics-carousel-slide" data-slide-index="1" data-chart-id="fatals">
+        <div class="ref-chart-card" data-chart-type="fatals">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">👥</span>
@@ -393,21 +364,9 @@
       </div>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Inbound vs Outbound Audits -->
-  <div class="analytics-chart-item" data-chart-id="timeline" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('timeline')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('timeline')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 3: Inbound vs Outbound Audits Line / Timeline Chart -->
-  <div class="ref-chart-card" data-chart-type="timeline">
+      <div class="analytics-carousel-slide" data-slide-index="2" data-chart-id="timeline">
+        <div class="ref-chart-card" data-chart-type="timeline">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-blue);">📞</span>
@@ -425,21 +384,9 @@
       <canvas id="refDeptTrendChart"></canvas>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Auditor Evaluation Activity -->
-  <div class="analytics-chart-item" data-chart-id="auditor" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('auditor')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('auditor')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 4: Auditor Evaluation Activity -->
-  <div class="ref-chart-card" data-chart-type="auditor">
+      <div class="analytics-carousel-slide" data-slide-index="3" data-chart-id="auditor">
+        <div class="ref-chart-card" data-chart-type="auditor">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-purple);">📋</span>
@@ -456,21 +403,9 @@
       <canvas id="refAuditorActivityChart"></canvas>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Top Advisor Quality Scores -->
-  <div class="analytics-chart-item" data-chart-id="advisor" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('advisor')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('advisor')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 5: Top Advisor Quality Scores -->
-  <div class="ref-chart-card" data-chart-type="advisor">
+      <div class="analytics-carousel-slide" data-slide-index="4" data-chart-id="advisor">
+        <div class="ref-chart-card" data-chart-type="advisor">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-cyan);">🏆</span>
@@ -487,21 +422,9 @@
       <canvas id="refTopAdvisorChart"></canvas>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Live Calls Disposition -->
-  <div class="analytics-chart-item" data-chart-id="live_calls" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('live_calls')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('live_calls')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 5B: Live Calls Disposition Distribution -->
-  <div class="ref-chart-card" data-chart-type="live_calls">
+      <div class="analytics-carousel-slide" data-slide-index="5" data-chart-id="live_calls">
+        <div class="ref-chart-card" data-chart-type="live_calls">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:#0284c7;">🎧</span>
@@ -516,21 +439,9 @@
       <canvas id="refLiveCallsChart"></canvas>
     </div>
   </div>
-  </div>
-  <!-- Draggable Chart Item: Warning & PIP Action Status -->
-  <div class="analytics-chart-item" data-chart-id="warnings" draggable="true">
-    <div class="chart-drag-handle" title="Drag to reorder horizontally or use Shift buttons">
-      <div class="handle-grips">
-        <span class="grip-dot"></span><span class="grip-dot"></span><span class="grip-dot"></span>
-        <span class="drag-label">⇅ Drag / Shift</span>
       </div>
-      <div class="chart-shift-btns">
-        <button type="button" class="btn-chart-shift" onclick="shiftChartLeft('warnings')" title="Shift Left (Move Before)">◀</button>
-        <button type="button" class="btn-chart-shift" onclick="shiftChartRight('warnings')" title="Shift Right (Move After)">▶</button>
-      </div>
-    </div>
-    <!-- Chart 6: Warning & PIP Action Status -->
-  <div class="ref-chart-card" data-chart-type="warnings">
+      <div class="analytics-carousel-slide" data-slide-index="6" data-chart-id="warnings">
+        <div class="ref-chart-card" data-chart-type="warnings">
     <div class="ref-chart-header">
       <div class="ref-chart-title">
         <span style="color:var(--brand-orange);">🛡️</span>
@@ -569,7 +480,19 @@
       </div>
     </div>
   </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Pagination Dots Indicator Bar -->
+  <div class="carousel-pagination-dots" id="carouselPaginationDots">
+    <button type="button" class="carousel-dot active" onclick="carouselGoToSlide(0)" title="1. Score Category Distribution"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(1)" title="2. Fatal vs Non-Fatal Ratio"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(2)" title="3. Inbound vs Outbound Audits"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(3)" title="4. Auditor Evaluation Activity"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(4)" title="5. Top Advisor Quality Scores"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(5)" title="6. Live Calls Disposition & Concerns"></button>
+    <button type="button" class="carousel-dot" onclick="carouselGoToSlide(6)" title="7. Warning & PIP Action Status"></button>
   </div>
 </div>
 
@@ -1008,7 +931,7 @@ function renderMainDashboardCharts() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  initChartsBoardDragAndDrop();
+  initCarouselSwipeAndDrag();
   window.chartData = {{ chart_data|tojson }};
   // Ensure DOM is fully painted before initializing Chart.js
   setTimeout(function() {
@@ -1302,180 +1225,111 @@ let hoverTriggerTimer = null;
 // --- Dashboard Quick Range Selectors ---
 
 // ==========================================================================
-// Interactive Charts Board: Shift Left / Shift Right & Drag-Drop Reordering
+// Single Horizontal Row Swipe Carousel: Touch Gestures, Mouse Drag, Arrows & Dots
 // ==========================================================================
-const DEFAULT_CHARTS_ORDER = ['scores', 'fatals', 'timeline', 'auditor', 'advisor', 'live_calls', 'warnings'];
+let currentCarouselIndex = 0;
+const totalCarouselSlides = 7;
 
-window.saveChartsBoardOrder = function(order) {
-  try {
-    localStorage.setItem('msedcl_dashboard_charts_order', JSON.stringify(order));
-    const tag = document.getElementById('boardLayoutStatus');
-    if (tag) {
-      tag.style.display = 'inline-block';
-      setTimeout(() => { tag.style.display = 'none'; }, 2400);
-    }
-  } catch (e) {}
+window.carouselScroll = function(direction) {
+  const vp = document.getElementById('analyticsCarouselViewport');
+  if (!vp) return;
+  const slide = vp.querySelector('.analytics-carousel-slide');
+  const slideWidth = slide ? slide.offsetWidth + 16 : 396; // width + gap
+  const scrollAmount = direction === 'left' ? -slideWidth : slideWidth;
+  vp.scrollBy({ left: scrollAmount, behavior: 'smooth' });
 };
 
-window.getChartsBoardOrder = function() {
-  try {
-    const saved = localStorage.getItem('msedcl_dashboard_charts_order');
-    if (saved) {
-      const arr = JSON.parse(saved);
-      if (Array.isArray(arr) && arr.length > 0) return arr;
-    }
-  } catch (e) {}
-  return [...DEFAULT_CHARTS_ORDER];
-};
-
-window.applyChartsBoardOrder = function(order) {
-  const grid = document.getElementById('analyticsChartsGrid');
-  if (!grid) return;
-  const items = Array.from(grid.querySelectorAll('.analytics-chart-item'));
-  const map = {};
-  items.forEach(item => {
-    map[item.getAttribute('data-chart-id')] = item;
-  });
-
-  order.forEach(id => {
-    if (map[id]) {
-      grid.appendChild(map[id]);
-    }
-  });
-
-  // Re-render chart canvases seamlessly after DOM position movement
-  setTimeout(() => {
-    if (typeof renderMainDashboardCharts === 'function') {
-      renderMainDashboardCharts();
-    }
-  }, 40);
-};
-
-// Shift individual chart left
-window.shiftChartLeft = function(chartId) {
-  const grid = document.getElementById('analyticsChartsGrid');
-  if (!grid) return;
-  const currentItems = Array.from(grid.querySelectorAll('.analytics-chart-item'));
-  const currentIds = currentItems.map(it => it.getAttribute('data-chart-id'));
-  const idx = currentIds.indexOf(chartId);
-  if (idx > 0) {
-    // Swap with previous
-    const prev = currentIds[idx - 1];
-    currentIds[idx - 1] = chartId;
-    currentIds[idx] = prev;
-    applyChartsBoardOrder(currentIds);
-    saveChartsBoardOrder(currentIds);
-  } else if (idx === 0) {
-    // Wrap around to the end
-    currentIds.shift();
-    currentIds.push(chartId);
-    applyChartsBoardOrder(currentIds);
-    saveChartsBoardOrder(currentIds);
+window.carouselGoToSlide = function(index) {
+  const vp = document.getElementById('analyticsCarouselViewport');
+  if (!vp) return;
+  const slides = vp.querySelectorAll('.analytics-carousel-slide');
+  if (slides[index]) {
+    const leftPos = slides[index].offsetLeft - vp.offsetLeft;
+    vp.scrollTo({ left: leftPos, behavior: 'smooth' });
   }
 };
 
-// Shift individual chart right
-window.shiftChartRight = function(chartId) {
-  const grid = document.getElementById('analyticsChartsGrid');
-  if (!grid) return;
-  const currentItems = Array.from(grid.querySelectorAll('.analytics-chart-item'));
-  const currentIds = currentItems.map(it => it.getAttribute('data-chart-id'));
-  const idx = currentIds.indexOf(chartId);
-  if (idx !== -1 && idx < currentIds.length - 1) {
-    // Swap with next
-    const next = currentIds[idx + 1];
-    currentIds[idx + 1] = chartId;
-    currentIds[idx] = next;
-    applyChartsBoardOrder(currentIds);
-    saveChartsBoardOrder(currentIds);
-  } else if (idx === currentIds.length - 1) {
-    // Wrap around to start
-    currentIds.pop();
-    currentIds.unshift(chartId);
-    applyChartsBoardOrder(currentIds);
-    saveChartsBoardOrder(currentIds);
-  }
-};
+window.updateCarouselIndicators = function() {
+  const vp = document.getElementById('analyticsCarouselViewport');
+  if (!vp) return;
+  const slides = Array.from(vp.querySelectorAll('.analytics-carousel-slide'));
+  if (slides.length === 0) return;
+  
+  const vpCenter = vp.scrollLeft + (vp.clientWidth / 2);
+  let closestIdx = 0;
+  let minDiff = Infinity;
 
-// Shift entire board horizontally (Rotate all graphs left or right)
-window.shiftEntireBoard = function(direction) {
-  const grid = document.getElementById('analyticsChartsGrid');
-  if (!grid) return;
-  const currentItems = Array.from(grid.querySelectorAll('.analytics-chart-item'));
-  const currentIds = currentItems.map(it => it.getAttribute('data-chart-id'));
-  if (currentIds.length <= 1) return;
-
-  if (direction === 'left') {
-    // Move first to last
-    const first = currentIds.shift();
-    currentIds.push(first);
-  } else {
-    // Move last to first
-    const last = currentIds.pop();
-    currentIds.unshift(last);
-  }
-
-  applyChartsBoardOrder(currentIds);
-  saveChartsBoardOrder(currentIds);
-};
-
-// Reset to initial default position
-window.resetChartsBoardOrder = function() {
-  try {
-    localStorage.removeItem('msedcl_dashboard_charts_order');
-  } catch (e) {}
-  applyChartsBoardOrder([...DEFAULT_CHARTS_ORDER]);
-};
-
-// Initialize Drag & Drop for chart items
-function initChartsBoardDragAndDrop() {
-  const grid = document.getElementById('analyticsChartsGrid');
-  if (!grid) return;
-  let draggedItem = null;
-
-  grid.addEventListener('dragstart', (e) => {
-    const item = e.target.closest('.analytics-chart-item');
-    if (item) {
-      draggedItem = item;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', item.getAttribute('data-chart-id'));
+  slides.forEach((s, idx) => {
+    const sCenter = s.offsetLeft + (s.offsetWidth / 2);
+    const diff = Math.abs(vpCenter - sCenter);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestIdx = idx;
     }
   });
 
-  grid.addEventListener('dragend', (e) => {
-    if (draggedItem) {
-      draggedItem.classList.remove('dragging');
-      draggedItem = null;
-    }
-    const currentItems = Array.from(grid.querySelectorAll('.analytics-chart-item'));
-    currentItems.forEach(it => it.classList.remove('drag-over'));
-    const newOrder = currentItems.map(it => it.getAttribute('data-chart-id'));
-    saveChartsBoardOrder(newOrder);
-    if (typeof renderMainDashboardCharts === 'function') {
-      renderMainDashboardCharts();
+  currentCarouselIndex = closestIdx;
+  const counter = document.getElementById('carouselSlideCounter');
+  if (counter) counter.innerText = `${closestIdx + 1} of ${slides.length}`;
+
+  const dots = document.querySelectorAll('#carouselPaginationDots .carousel-dot');
+  dots.forEach((d, idx) => {
+    if (idx === closestIdx) d.classList.add('active');
+    else d.classList.remove('active');
+  });
+
+  const prevBtn = document.getElementById('carouselPrevBtn');
+  const nextBtn = document.getElementById('carouselNextBtn');
+  if (prevBtn) prevBtn.style.opacity = vp.scrollLeft <= 5 ? '0.5' : '1';
+  if (nextBtn) nextBtn.style.opacity = (vp.scrollLeft + vp.clientWidth >= vp.scrollWidth - 5) ? '0.5' : '1';
+};
+
+function initCarouselSwipeAndDrag() {
+  const vp = document.getElementById('analyticsCarouselViewport');
+  if (!vp) return;
+
+  // Listen to native scroll to sync counter and dots in real-time
+  let scrollTimeout;
+  vp.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(updateCarouselIndicators, 30);
+  }, { passive: true });
+
+  // Mouse Drag to Swipe on Desktop
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+  let hasMoved = false;
+
+  vp.addEventListener('mousedown', (e) => {
+    // Only drag with left mouse button and not on interactive buttons/canvas
+    if (e.button !== 0 || e.target.closest('button, canvas, a')) return;
+    isDown = true;
+    hasMoved = false;
+    vp.classList.add('grabbing');
+    startX = e.pageX - vp.offsetLeft;
+    scrollLeft = vp.scrollLeft;
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDown) {
+      isDown = false;
+      vp.classList.remove('grabbing');
     }
   });
 
-  grid.addEventListener('dragover', (e) => {
+  vp.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const targetItem = e.target.closest('.analytics-chart-item');
-    if (targetItem && targetItem !== draggedItem) {
-      const rect = targetItem.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      if (e.clientX < midX) {
-        grid.insertBefore(draggedItem, targetItem);
-      } else {
-        grid.insertBefore(draggedItem, targetItem.nextSibling);
-      }
-    }
+    const x = e.pageX - vp.offsetLeft;
+    const walk = (x - startX) * 1.5; // Drag sensitivity multiplier
+    if (Math.abs(walk) > 4) hasMoved = true;
+    vp.scrollLeft = scrollLeft - walk;
   });
 
-  // Apply saved order on page load
-  const savedOrder = getChartsBoardOrder();
-  applyChartsBoardOrder(savedOrder);
+  updateCarouselIndicators();
 }
+
 
 window.setDashboardRange = function(rangeType) {
   const form = document.getElementById('refFilterForm');

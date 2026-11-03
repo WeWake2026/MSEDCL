@@ -1776,16 +1776,15 @@ table.data-table th {
   }
 }
 
-
-
 /* ==========================================================================
-   Interactive Shiftable & Reorderable Analytics Visualizations Board
+   Single Horizontal Row Analytics Carousel (Clean, Zero Scrollbars, Touch & Swipe)
    ========================================================================== */
-.analytics-board-section {
+.analytics-carousel-wrapper {
   margin-bottom: 16px;
+  position: relative;
 }
 
-.analytics-board-toolbar {
+.analytics-carousel-header {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1799,13 +1798,13 @@ table.data-table th {
   box-shadow: var(--shadow-sm);
 }
 
-.board-toolbar-left {
+.carousel-title-group {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.board-badge-icon {
+.carousel-icon-box {
   width: 36px;
   height: 36px;
   border-radius: 9px;
@@ -1818,7 +1817,7 @@ table.data-table th {
   font-size: 18px;
 }
 
-.board-title {
+.carousel-title {
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text-main);
@@ -1826,193 +1825,161 @@ table.data-table th {
   line-height: 1.2;
 }
 
-.board-subtitle {
+.carousel-subtitle {
   font-size: 11.5px;
   color: var(--text-muted);
   margin: 2px 0 0 0;
 }
 
-.board-toolbar-right {
+.carousel-nav-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.board-status-tag {
-  font-size: 11px;
-  font-weight: 600;
+.carousel-counter-badge {
+  font-size: 11.5px;
+  font-weight: 700;
   color: var(--brand-blue);
   background: var(--kpi-blue-bg);
   border: 1px solid var(--kpi-blue-border);
   padding: 4px 10px;
   border-radius: 6px;
-  display: none;
-  animation: fadeIn 0.3s ease;
 }
 
-.btn-board-shift {
+.carousel-arrow-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--bg-card);
   border: 1.5px solid var(--border);
   color: var(--text-main);
   font-size: 12px;
-  font-weight: 700;
-  padding: 6px 13px;
-  border-radius: 7px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-board-shift:hover {
-  background: var(--brand-blue);
-  color: #ffffff;
-  border-color: var(--brand-blue);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-}
-
-.btn-board-reset {
-  background: transparent;
-  border: 1px dashed var(--border);
-  color: var(--text-muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 6px 10px;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-board-reset:hover {
-  border-color: var(--brand-red);
-  color: var(--brand-red);
-  background: rgba(239, 68, 68, 0.06);
-}
-
-/* 3-Column Flexible Grid for Chart Items */
-.analytics-charts-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-
-.analytics-chart-item {
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, opacity 0.2s ease;
-  position: relative;
-}
-
-.analytics-chart-item.dragging {
-  opacity: 0.45;
-  transform: scale(0.97);
-}
-
-.analytics-chart-item.drag-over {
-  border: 2px dashed var(--brand-blue) !important;
-  border-radius: var(--radius);
-  background: rgba(37, 99, 235, 0.05);
-}
-
-.analytics-chart-item .ref-chart-card {
-  height: 100%;
-  flex: 1;
-  margin-bottom: 0;
-}
-
-/* Individual Drag & Shift Handle */
-.chart-drag-handle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px;
-  background: var(--bg-card-subtle, rgba(241, 245, 249, 0.6));
-  border: 1px solid var(--border);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  cursor: grab;
-  user-select: none;
-}
-
-.chart-drag-handle:active {
-  cursor: grabbing;
-}
-
-.chart-drag-handle .handle-grips {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.chart-drag-handle .grip-dot {
-  width: 4px;
-  height: 4px;
-  background: var(--text-muted);
-  border-radius: 50%;
-  opacity: 0.6;
-}
-
-.chart-drag-handle .drag-label {
-  font-weight: 600;
-  font-size: 10.5px;
-  letter-spacing: 0.3px;
-}
-
-.chart-shift-btns {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-chart-shift {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-  font-size: 10.5px;
   font-weight: 800;
-  width: 22px;
-  height: 20px;
-  border-radius: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
   padding: 0;
-  transition: all 0.15s ease;
 }
 
-.btn-chart-shift:hover {
+.carousel-arrow-btn:hover {
   background: var(--brand-blue);
   color: #ffffff;
   border-color: var(--brand-blue);
-  transform: scale(1.1);
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 
-/* Attach the handle seamlessly with the card below it */
-.analytics-chart-item .ref-chart-card {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
+/* Single Horizontal Viewport with Hidden Scrollbars (Both X and Y) */
+.analytics-carousel-viewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  cursor: grab;
+  user-select: none;
+  padding: 2px 2px 8px 2px;
 }
 
-/* Responsive adjustments for Charts Grid */
-@media (max-width: 1200px) {
-  .analytics-charts-grid {
-    grid-template-columns: repeat(2, 1fr);
+/* Completely Remove Scrollbar for Chrome, Safari, Edge, Opera */
+.analytics-carousel-viewport::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+.analytics-carousel-viewport.grabbing {
+  cursor: grabbing;
+  scroll-behavior: auto; /* Instant tracking while dragging */
+}
+
+/* Single Flex Row Track */
+.analytics-carousel-track {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 16px;
+  width: max-content;
+}
+
+/* Uniform Single-Row Carousel Card Slide */
+.analytics-carousel-slide {
+  flex: 0 0 380px;
+  width: 380px;
+  max-width: 380px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-carousel-slide .ref-chart-card {
+  height: 100%;
+  width: 100%;
+  margin-bottom: 0;
+  box-shadow: var(--shadow-card);
+}
+
+/* Pagination Dots */
+.carousel-pagination-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.carousel-dot:hover {
+  background: var(--text-muted);
+  transform: scale(1.2);
+}
+
+.carousel-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--brand-blue);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+/* Responsive Sizing for Carousel Cards */
+@media (max-width: 992px) {
+  .analytics-carousel-slide {
+    flex: 0 0 330px;
+    width: 330px;
+    max-width: 330px;
   }
 }
 
-@media (max-width: 768px) {
-  .analytics-charts-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 600px) {
+  .analytics-carousel-slide {
+    flex: 0 0 calc(100vw - 44px);
+    width: calc(100vw - 44px);
+    max-width: calc(100vw - 44px);
   }
-  .board-toolbar-right {
+  .carousel-title-group {
     width: 100%;
-    justify-content: flex-start;
+  }
+  .carousel-nav-controls {
+    width: 100%;
+    justify-content: space-between;
   }
 }
