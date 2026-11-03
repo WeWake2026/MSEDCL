@@ -36,12 +36,13 @@
       <input type="date" name="end" value="{{ end }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
     <div class="filter-group">
-      <label>Show Rows</label>
-      <select name="limit" class="form-control" style="padding: 5px 8px; font-size: 12px;">
-        <option value="500" {{ 'selected' if limit=='500' else '' }}>Latest 500</option>
-        <option value="1000" {{ 'selected' if limit=='1000' else '' }}>Latest 1,000</option>
-        <option value="2000" {{ 'selected' if limit=='2000' else '' }}>Latest 2,000</option>
-        <option value="all" {{ 'selected' if limit=='all' else '' }}>All Live Calls</option>
+      <label>Items Per Page</label>
+      <select name="per_page" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="50" {{ 'selected' if per_page=='50' else '' }}>50 per page</option>
+        <option value="100" {{ 'selected' if per_page=='100' or not per_page else '' }}>100 per page</option>
+        <option value="200" {{ 'selected' if per_page=='200' else '' }}>200 per page</option>
+        <option value="500" {{ 'selected' if per_page=='500' else '' }}>500 per page</option>
+        <option value="all" {{ 'selected' if per_page=='all' else '' }}>All Records</option>
       </select>
     </div>
     <div class="filter-group" style="display: flex; align-items: flex-end; gap: 6px;">
@@ -58,7 +59,11 @@
       Total Live Calls Monitored: <span class="badge badge-info" style="font-size: 12px;">{{ total_count }}</span>
     </span>
     <span style="font-size: 12px; color: var(--text-muted);">
+      {% if pagination %}
+      (Showing {{ pagination.start_record }}–{{ pagination.end_record }} of {{ pagination.total }} records)
+      {% else %}
       (Showing latest {{ rows|length }} records)
+      {% endif %}
     </span>
   </div>
   <div style="display:flex; gap:8px;">
@@ -130,17 +135,34 @@
             </span>
           </td>
 
-          <!-- Col 5: Call Observation -->
+          <!-- Col 5: Call Observation (Supervisor/QA only) -->
           <td>
-            <div style="max-height: 85px; overflow-y: auto; font-size: 11.5px; line-height: 1.4; color: var(--text-main);">
+            {% if user.role not in ('viewer', 'advisor') %}
+            <div style="max-height: 95px; overflow-y: auto; font-size: 11.5px; line-height: 1.4; color: var(--text-main); word-break: break-word;">
               {{ r.observation or '—' }}
             </div>
+            {% else %}
+            <span style="font-size:11px; color:#94a3b8; font-style:italic;">Internal QA Observation (Hidden)</span>
+            {% endif %}
           </td>
 
-          <!-- Col 6: Area of Improvement -->
+          <!-- Col 6: Area of Improvement (Dynamic text wrap, no clipped words) -->
           <td>
-            <div style="max-height: 85px; overflow-y: auto; font-size: 11.5px; line-height: 1.4; color: #b45309;">
-              {{ r.improvement or '—' }}
+            <div class="improvement-cell-wrapper" style="max-height: 120px; overflow-y: auto;">
+              {% if r.improvement and r.improvement|trim != '' %}
+                {% if ';' in r.improvement %}
+                  {% for item in r.improvement.split(';') %}
+                    {% set clean_item = item|trim %}
+                    {% if clean_item %}
+                      <span class="improvement-chip">{{ clean_item }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <span class="improvement-chip">{{ r.improvement|trim }}</span>
+                {% endif %}
+              {% else %}
+                <span style="color:#94a3b8; font-size:11px;">None</span>
+              {% endif %}
             </div>
           </td>
 
@@ -181,6 +203,44 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Server-Side Pagination Bar -->
+  {% if pagination and pagination.total_pages > 1 %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:10px 14px; background:var(--bg-card); border-top:1px solid var(--border);">
+    <div style="font-size:12px; color:var(--text-muted);">
+      Page <strong>{{ pagination.page }}</strong> of <strong>{{ pagination.total_pages }}</strong> &nbsp;·&nbsp;
+      Showing <strong>{{ pagination.start_record }}–{{ pagination.end_record }}</strong> of <strong>{{ pagination.total }}</strong> records
+    </div>
+    
+    <div style="display:flex; align-items:center; gap:6px;">
+      {% if pagination.has_prev %}
+      <a href="?page=1&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&auditor={{ selected_auditor }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="First Page">« First</a>
+      <a href="?page={{ pagination.prev_page }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&auditor={{ selected_auditor }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Previous Page">‹ Prev</a>
+      {% else %}
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">« First</span>
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">‹ Prev</span>
+      {% endif %}
+
+      <div style="display:flex; gap:3px;">
+        {% for p in pagination.page_numbers %}
+          {% if p == pagination.page %}
+          <span class="btn btn-primary btn-sm" style="font-size:11.5px; padding:3px 9px; font-weight:700;">{{ p }}</span>
+          {% else %}
+          <a href="?page={{ p }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&auditor={{ selected_auditor }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 9px;">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if pagination.has_next %}
+      <a href="?page={{ pagination.next_page }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&auditor={{ selected_auditor }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Next Page">Next ›</a>
+      <a href="?page={{ pagination.total_pages }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&auditor={{ selected_auditor }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Last Page">Last »</a>
+      {% else %}
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">Next ›</span>
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">Last »</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 

@@ -110,7 +110,7 @@
       </div>
       <div class="ref-kpi-value">{{ metrics.total_audits }}</div>
     </div>
-    <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_count }} &nbsp;|&nbsp; Outbound: {{ metrics.outbound_count }}</div>
+    <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_count }} &nbsp;|&nbsp; Outbound: {{ metrics.outbound_count }} &nbsp;·&nbsp; Live: {{ metrics.total_live_calls or 0 }}</div>
   </a>
 
   <!-- 2. Fatal Call Errors -->

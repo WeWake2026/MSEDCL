@@ -49,9 +49,13 @@
       {% if user.role in ('viewer', 'advisor') %}
         <!-- Dedicated Advisor Workspace Menu (Strictly Personal Data Only) -->
         <div class="nav-section-title">My Workspace</div>
-        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}" title="Dashboard">
+        <a href="{{ url_for('agent_dashboard') }}" class="nav-item {{ 'active' if page=='agent_dashboard' else '' }}" title="My Self-Service Dashboard">
+          <span class="icon">👤</span>
+          <span>Agent Dashboard</span>
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if page=='dashboard' else '' }}" title="Overview Dashboard">
           <span class="icon">🏠</span>
-          <span>Dashboard</span>
+          <span>Overview</span>
         </a>
         <a href="{{ url_for('audits_view', dept='Inbound') }}" class="nav-item {{ 'active' if page=='inbound_audits' else '' }}" title="Inbound Audits">
           <span class="icon">📞</span>
@@ -123,8 +127,12 @@
         </a>
 
         <div class="nav-section-title">ANALYSIS & SEARCH</div>
-        <a href="{{ url_for('auditors_view') }}" class="nav-item {{ 'active' if page=='auditors' else '' }}" title="Auditor Reports">
+        <a href="{{ url_for('agent_dashboard') }}" class="nav-item {{ 'active' if page=='agent_dashboard' else '' }}" title="Agent Self-Service Workspace">
           <span class="icon">👤</span>
+          <span>Agent Dashboard</span>
+        </a>
+        <a href="{{ url_for('auditors_view') }}" class="nav-item {{ 'active' if page=='auditors' else '' }}" title="Auditor Reports">
+          <span class="icon">📊</span>
           <span>Auditor Reports</span>
         </a>
         <a href="{{ url_for('advisor_search') }}" class="nav-item {{ 'active' if page=='advisor_search' else '' }}" title="Advisor Search">

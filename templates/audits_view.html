@@ -40,13 +40,13 @@
       <input type="date" name="end" value="{{ end }}" class="form-control" style="padding: 5px 8px; font-size: 12px;">
     </div>
     <div class="filter-group">
-      <label>Show Rows</label>
-      <select name="limit" class="form-control" style="padding: 5px 8px; font-size: 12px;">
-        <option value="500" {{ 'selected' if limit=='500' else '' }}>Latest 500</option>
-        <option value="1000" {{ 'selected' if limit=='1000' else '' }}>Latest 1,000</option>
-        <option value="2000" {{ 'selected' if limit=='2000' else '' }}>Latest 2,000</option>
-        <option value="5000" {{ 'selected' if limit=='5000' else '' }}>Latest 5,000</option>
-        <option value="all" {{ 'selected' if limit=='all' else '' }}>All Audits</option>
+      <label>Items Per Page</label>
+      <select name="per_page" class="form-control" style="padding: 5px 8px; font-size: 12px;">
+        <option value="50" {{ 'selected' if per_page=='50' else '' }}>50 per page</option>
+        <option value="100" {{ 'selected' if per_page=='100' or not per_page else '' }}>100 per page</option>
+        <option value="200" {{ 'selected' if per_page=='200' else '' }}>200 per page</option>
+        <option value="500" {{ 'selected' if per_page=='500' else '' }}>500 per page</option>
+        <option value="all" {{ 'selected' if per_page=='all' else '' }}>All Records</option>
       </select>
     </div>
     <div style="display:flex; gap:6px; align-items:flex-end;">
@@ -62,7 +62,11 @@
     <div>
       <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 13.5px; color: var(--text-main);">
         <span>Audited Interactions</span>
+        {% if pagination %}
+        <span class="badge badge-info" style="font-size: 11px;">Showing {{ pagination.start_record }}–{{ pagination.end_record }} of {{ pagination.total }} Records</span>
+        {% else %}
         <span class="badge badge-info" style="font-size: 11px;">Showing {{ rows|length }} of {{ total_count }} Records</span>
+        {% endif %}
       </h3>
       <p class="card-subtitle" style="margin:1px 0 0; font-size: 11px; color:var(--text-muted);">{{ subtitle }}</p>
     </div>
@@ -152,11 +156,25 @@
             </div>
           </td>
 
-          <!-- Col 6: Area of Improvement -->
+          <!-- Col 6: Area of Improvement (Dynamic text wrap, no clipped words) -->
           <td>
-            <span style="font-size:11px; color:var(--text-muted); display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.error_categories or r.observation or 'None' }}">
-              {{ r.error_categories or r.observation or '—' }}
-            </span>
+            <div class="improvement-cell-wrapper">
+              {% set imp_text = r.error_categories if r.error_categories else (r.observation if user.role not in ('viewer', 'advisor') else None) %}
+              {% if imp_text and imp_text|trim != '' %}
+                {% if ';' in imp_text %}
+                  {% for item in imp_text.split(';') %}
+                    {% set clean_item = item|trim %}
+                    {% if clean_item %}
+                      <span class="improvement-chip">{{ clean_item }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <span class="improvement-chip">{{ imp_text|trim }}</span>
+                {% endif %}
+              {% else %}
+                <span style="color:#94a3b8; font-size:11px;">None</span>
+              {% endif %}
+            </div>
           </td>
 
           <!-- Dense Col 8: Audio Player (Enterprise Audio Pill Widget) -->
@@ -186,6 +204,45 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Server-Side Pagination Bar -->
+  {% if pagination and pagination.total_pages > 1 %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:10px 14px; background:var(--bg-card); border-top:1px solid var(--border);">
+    <div style="font-size:12px; color:var(--text-muted);">
+      Page <strong>{{ pagination.page }}</strong> of <strong>{{ pagination.total_pages }}</strong> &nbsp;·&nbsp;
+      Showing <strong>{{ pagination.start_record }}–{{ pagination.end_record }}</strong> of <strong>{{ pagination.total }}</strong> audits
+    </div>
+    
+    <div style="display:flex; align-items:center; gap:6px;">
+      {% if pagination.has_prev %}
+      <a href="?page=1&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&score_band={{ score_band or '' }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="First Page">« First</a>
+      <a href="?page={{ pagination.prev_page }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&score_band={{ score_band or '' }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Previous Page">‹ Prev</a>
+      {% else %}
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">« First</span>
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">‹ Prev</span>
+      {% endif %}
+
+      <div style="display:flex; gap:3px;">
+        {% for p in pagination.page_numbers %}
+          {% if p == pagination.page %}
+          <span class="btn btn-primary btn-sm" style="font-size:11.5px; padding:3px 9px; font-weight:700;">{{ p }}</span>
+          {% else %}
+          <a href="?page={{ p }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&score_band={{ score_band or '' }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 9px;">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if pagination.has_next %}
+      <a href="?page={{ pagination.next_page }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&score_band={{ score_band or '' }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Next Page">Next ›</a>
+      <a href="?page={{ pagination.total_pages }}&per_page={{ per_page }}&q={{ q }}&department={{ dept }}&start={{ start }}&end={{ end }}&score_band={{ score_band or '' }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;" title="Last Page">Last »</a>
+      {% else %}
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">Next ›</span>
+      <span class="btn btn-secondary btn-sm disabled" style="font-size:11.5px; padding:3px 8px; opacity:0.45; cursor:not-allowed;">Last »</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <script>

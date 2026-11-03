@@ -211,6 +211,17 @@ body {
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sidebar-nav::-webkit-scrollbar,
+.app-sidebar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .nav-section-title {
@@ -1982,4 +1993,39 @@ table.data-table th {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+
+/* Area of Improvement Badges & Chips (Multi-line wrapping, no clipped words) */
+.improvement-chip {
+  display: inline-block;
+  background: var(--kpi-amber-bg, #fef3c7);
+  color: #b45309;
+  border: 1px solid var(--kpi-amber-border, #fde68a);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  margin: 2px 0;
+}
+
+[data-theme="dark"] .improvement-chip {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde047;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.improvement-cell-wrapper {
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }

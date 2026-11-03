@@ -690,6 +690,8 @@ def login():
             except Exception:
                 pass
             log_audit("LOGIN_SUCCESS", username, "User logged in")
+            if user["role"] in ("advisor", "viewer"):
+                return redirect(url_for("agent_dashboard"))
             return redirect(url_for("dashboard"))
 
         log_audit("LOGIN_FAILED", username, "Invalid login credentials")
@@ -886,8 +888,13 @@ def dashboard():
             GROUP BY call_disposition ORDER BY cnt DESC LIMIT 8
         """, live_params).fetchall()
 
+        # Combined Total Audited (Recorded Audits + Live Call Audits)
+        recorded_audits = total_audits
+        combined_total_audits = recorded_audits + total_live_calls
+
     metrics = {
-        "total_audits": total_audits,
+        "total_audits": combined_total_audits,
+        "recorded_audits": recorded_audits,
         "inbound_count": inbound_count,
         "outbound_count": outbound_count,
         "fatal_count": fatal_count,
@@ -980,6 +987,51 @@ def dashboard():
                            dept=dept, start=start, end=end)
 
 # --- Routes: Audits Views (Inbound, Outbound, Fatal, Scores) ---
+
+def paginate_query(con, count_sql, data_sql, params, page_num=1, per_page=100):
+    total = con.execute(count_sql, params).fetchone()["total"]
+    
+    if str(per_page).lower() == "all":
+        items_per_page = total if total > 0 else 1
+        page = 1
+        total_pages = 1
+        offset = 0
+        paged_sql = data_sql
+        rows = con.execute(paged_sql, params).fetchall()
+    else:
+        try:
+            items_per_page = max(1, int(per_page))
+        except (ValueError, TypeError):
+            items_per_page = 100
+        
+        total_pages = max(1, (total + items_per_page - 1) // items_per_page)
+        try:
+            page = max(1, min(int(page_num), total_pages))
+        except (ValueError, TypeError):
+            page = 1
+            
+        offset = (page - 1) * items_per_page
+        paged_sql = f"{data_sql} LIMIT {items_per_page} OFFSET {offset}"
+        rows = con.execute(paged_sql, params).fetchall()
+        
+    start_record = offset + 1 if total > 0 else 0
+    end_record = min(offset + len(rows), total)
+    
+    pagination = {
+        "page": page,
+        "per_page": str(per_page).lower() if str(per_page).lower() == "all" else items_per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "prev_page": page - 1,
+        "next_page": page + 1,
+        "start_record": start_record,
+        "end_record": end_record,
+        "page_numbers": [p for p in range(max(1, page - 3), min(total_pages + 1, page + 4))]
+    }
+    return rows, pagination
+
 @app.route("/audits")
 @app.route("/audits/<dept>")
 @login_required
@@ -989,7 +1041,9 @@ def audits_view(dept="Inbound"):
     q = request.args.get("q", "").strip()
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    limit = request.args.get("limit", "1000").strip().lower()
+    page_num = request.args.get("page", "1").strip()
+    per_page = request.args.get("per_page") or request.args.get("limit") or "100"
+    per_page = per_page.strip()
     
     where = ["department=?"]
     params = [dept]
@@ -1007,26 +1061,19 @@ def audits_view(dept="Inbound"):
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    limit_clause = ""
-    if limit != "all":
-        try:
-            limit_val = int(limit)
-            limit_clause = f" LIMIT {limit_val}"
-        except ValueError:
-            limit_clause = " LIMIT 1000"
-
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC" + limit_clause
+    base_sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC, id DESC"
     count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
+    
     with db() as con:
-        total_count = con.execute(count_sql, params).fetchone()["total"]
-        rows = con.execute(sql, params).fetchall()
+        rows, pagination = paginate_query(con, count_sql, base_sql, params, page_num=page_num, per_page=per_page)
 
     return render_template("audits_view.html",
                            page=f"{dept.lower()}_audits",
                            title=f"{dept} Call Audits",
                            subtitle=f"Displaying evaluated customer calls for {dept} operations",
                            fixed_dept=True,
-                           rows=rows, total_count=total_count, limit=limit,
+                           rows=rows, total_count=pagination["total"], pagination=pagination,
+                           limit=per_page, per_page=per_page,
                            q=q, dept=dept, start=start, end=end)
 
 @app.route("/live-calls")
@@ -1037,7 +1084,9 @@ def live_calls_view():
     auditor = request.args.get("auditor", "").strip()
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    limit = request.args.get("limit", "1000").strip().lower()
+    page_num = request.args.get("page", "1").strip()
+    per_page = request.args.get("per_page") or request.args.get("limit") or "100"
+    per_page = per_page.strip()
     
     where = ["1=1"]
     params = []
@@ -1061,29 +1110,22 @@ def live_calls_view():
         where.append("call_date <= ?")
         params.append(end)
 
-    limit_clause = ""
-    if limit != "all":
-        try:
-            limit_val = int(limit)
-            limit_clause = f" LIMIT {limit_val}"
-        except ValueError:
-            limit_clause = " LIMIT 1000"
-
-    sql = "SELECT * FROM live_calls WHERE " + " AND ".join(where) + " ORDER BY call_date DESC, id DESC" + limit_clause
+    base_sql = "SELECT * FROM live_calls WHERE " + " AND ".join(where) + " ORDER BY call_date DESC, id DESC"
     count_sql = "SELECT COUNT(*) as total FROM live_calls WHERE " + " AND ".join(where)
     
     with db() as con:
-        total_count = con.execute(count_sql, params).fetchone()["total"]
-        rows = con.execute(sql, params).fetchall()
+        rows, pagination = paginate_query(con, count_sql, base_sql, params, page_num=page_num, per_page=per_page)
         auditors_list = [r[0] for r in con.execute("SELECT DISTINCT auditor_name FROM live_calls WHERE auditor_name IS NOT NULL AND auditor_name != '' ORDER BY auditor_name").fetchall()]
 
     return render_template("live_calls.html",
                            page="live_calls",
                            rows=rows,
-                           total_count=total_count,
+                           total_count=pagination["total"],
+                           pagination=pagination,
                            auditors_list=auditors_list,
                            selected_auditor=auditor,
-                           limit=limit,
+                           limit=per_page,
+                           per_page=per_page,
                            q=q,
                            dept=dept,
                            start=start,
@@ -1096,7 +1138,9 @@ def fatal_calls():
     dept = request.args.get("department", "All")
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    limit = request.args.get("limit", "1000").strip().lower()
+    page_num = request.args.get("page", "1").strip()
+    per_page = request.args.get("per_page") or request.args.get("limit") or "100"
+    per_page = per_page.strip()
     
     where = ["is_fatal=1"]
     params = []
@@ -1117,25 +1161,17 @@ def fatal_calls():
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    limit_clause = ""
-    if limit != "all":
-        try:
-            limit_val = int(limit)
-            limit_clause = f" LIMIT {limit_val}"
-        except ValueError:
-            limit_clause = " LIMIT 1000"
-
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC" + limit_clause
+    base_sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC, id DESC"
     count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
     with db() as con:
-        total_count = con.execute(count_sql, params).fetchone()["total"]
-        rows = con.execute(sql, params).fetchall()
+        rows, pagination = paginate_query(con, count_sql, base_sql, params, page_num=page_num, per_page=per_page)
 
     return render_template("audits_view.html",
                            page="fatal_calls",
                            title="Fatal Call Register",
                            subtitle="Critical compliance, zero-tolerance, and policy breach calls (independent of Quality Score)",
-                           rows=rows, total_count=total_count, limit=limit,
+                           rows=rows, total_count=pagination["total"], pagination=pagination,
+                           limit=per_page, per_page=per_page,
                            q=q, dept=dept, start=start, end=end)
 
 @app.route("/score-reports")
@@ -1146,7 +1182,9 @@ def score_reports():
     score_band = request.args.get("score_band", "All")
     start = request.args.get("start", "")
     end = request.args.get("end", "")
-    limit = request.args.get("limit", "1000").strip().lower()
+    page_num = request.args.get("page", "1").strip()
+    per_page = request.args.get("per_page") or request.args.get("limit") or "100"
+    per_page = per_page.strip()
     
     where = ["1=1"]
     params = []
@@ -1173,19 +1211,10 @@ def score_reports():
         where.append("COALESCE(call_date, evaluation_date) <= ?")
         params.append(end)
 
-    limit_clause = ""
-    if limit != "all":
-        try:
-            limit_val = int(limit)
-            limit_clause = f" LIMIT {limit_val}"
-        except ValueError:
-            limit_clause = " LIMIT 1000"
-
-    sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY quality_score ASC" + limit_clause
+    base_sql = "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY quality_score ASC, id DESC"
     count_sql = "SELECT COUNT(*) as total FROM audits WHERE " + " AND ".join(where)
     with db() as con:
-        total_count = con.execute(count_sql, params).fetchone()["total"]
-        rows = con.execute(sql, params).fetchall()
+        rows, pagination = paginate_query(con, count_sql, base_sql, params, page_num=page_num, per_page=per_page)
 
     return render_template("audits_view.html",
                            page="score_reports",
@@ -1193,7 +1222,8 @@ def score_reports():
                            subtitle="Detailed score category breakdown (Low <80%, Average 80-90%, Good >90%)",
                            show_score_filter=True,
                            score_band=score_band,
-                           rows=rows, total_count=total_count, limit=limit,
+                           rows=rows, total_count=pagination["total"], pagination=pagination,
+                           limit=per_page, per_page=per_page,
                            q=q, dept=dept, start=start, end=end)
 
 @app.route("/auditors")
@@ -3177,3 +3207,158 @@ def internal_error(e):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+# --- Route: Dedicated Agent Self-Service Dashboard ---
+@app.route("/agent/dashboard")
+@login_required
+def agent_dashboard():
+    curr_user = getattr(request, "current_user", None)
+    user_role = curr_user["role"] if curr_user else "viewer"
+    
+    # Determine which advisor ID to query
+    if user_role in ("advisor", "viewer"):
+        agent_id = curr_user["advisor_id"] if curr_user else None
+        agent_name = curr_user["full_name"] or curr_user["username"] if curr_user else "Agent"
+    else:
+        # QA / Admin / Manager can inspect any advisor or default to first active advisor
+        agent_id = request.args.get("advisor_id", "").strip()
+        agent_name = ""
+        
+    date_range = request.args.get("range", "30d") # 7d, 30d, 90d, all
+    page_num = request.args.get("page", "1").strip()
+    per_page = request.args.get("per_page", "50").strip()
+    q = request.args.get("q", "").strip()
+
+    with db() as con:
+        # If no agent_id selected for manager, pick the top audited advisor
+        if not agent_id:
+            top_adv = con.execute("SELECT advisor_id, advisor_name FROM audits WHERE advisor_id IS NOT NULL AND advisor_id != '' GROUP BY advisor_id, advisor_name ORDER BY COUNT(*) DESC LIMIT 1").fetchone()
+            if top_adv:
+                agent_id = top_adv["advisor_id"]
+                agent_name = top_adv["advisor_name"]
+            else:
+                agent_id = "UNKNOWN"
+                agent_name = "No Advisor Found"
+                
+        # Resolve Advisor details
+        adv_info = con.execute("SELECT advisor_name, department, location, team_leader FROM audits WHERE advisor_id = ? ORDER BY COALESCE(call_date, evaluation_date) DESC LIMIT 1", (agent_id,)).fetchone()
+        if adv_info:
+            agent_name = adv_info["advisor_name"] or agent_name
+            dept = adv_info["department"] or "Inbound"
+            location = adv_info["location"] or "Maharashtra Ops"
+            team_leader = adv_info["team_leader"] or "Operations TL"
+        else:
+            dept = "Inbound"
+            location = "Operations Centre"
+            team_leader = "Supervisor"
+
+        # List of advisors for manager selector
+        all_advisors = []
+        if user_role not in ("advisor", "viewer"):
+            all_advisors = con.execute("SELECT DISTINCT advisor_id, advisor_name FROM audits WHERE advisor_id IS NOT NULL AND advisor_id != '' ORDER BY advisor_name ASC").fetchall()
+
+        # Date boundary logic
+        date_filter = ""
+        if date_range == "7d":
+            date_filter = " AND COALESCE(call_date, evaluation_date) >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYY-MM-DD')"
+        elif date_range == "30d":
+            date_filter = " AND COALESCE(call_date, evaluation_date) >= TO_CHAR(CURRENT_DATE - INTERVAL '30 days', 'YYYY-MM-DD')"
+        elif date_range == "90d":
+            date_filter = " AND COALESCE(call_date, evaluation_date) >= TO_CHAR(CURRENT_DATE - INTERVAL '90 days', 'YYYY-MM-DD')"
+
+        # Agent Audits Query Scope (Strictly scoped to agent_id / advisor_id)
+        where = ["(advisor_id = ? OR advisor_name LIKE ?)" + date_filter]
+        params = [agent_id, f"%{agent_id}%"]
+        if q:
+            where.append("(call_id LIKE ? OR fatal_category LIKE ? OR error_categories LIKE ?)")
+            params += [f"%{q}%", f"%{q}%", f"%{q}%"]
+
+        sql_base = " FROM audits WHERE " + " AND ".join(where)
+
+        total_audits = con.execute("SELECT COUNT(*)" + sql_base, params).fetchone()[0]
+        avg_row = con.execute("SELECT ROUND(AVG(quality_score), 2) " + sql_base, params).fetchone()
+        avg_score = avg_row[0] if avg_row and avg_row[0] is not None else 0.0
+        fatal_count = con.execute("SELECT COUNT(*)" + sql_base + " AND is_fatal = 1", params).fetchone()[0]
+        fatal_rate = round((fatal_count / max(1, total_audits)) * 100, 1)
+
+        low_score_count = con.execute("SELECT COUNT(*)" + sql_base + " AND quality_score < 80", params).fetchone()[0]
+        avg_score_count = con.execute("SELECT COUNT(*)" + sql_base + " AND quality_score >= 80 AND quality_score <= 90", params).fetchone()[0]
+        good_score_count = con.execute("SELECT COUNT(*)" + sql_base + " AND quality_score > 90", params).fetchone()[0]
+
+        # Inbound vs Outbound
+        inbound_count = con.execute("SELECT COUNT(*)" + sql_base + " AND department = 'Inbound'", params).fetchone()[0]
+        outbound_count = con.execute("SELECT COUNT(*)" + sql_base + " AND department = 'Outbound'", params).fetchone()[0]
+
+        # Live Calls Monitored for this agent
+        live_count = con.execute("SELECT COUNT(*) FROM live_calls WHERE (advisor_id = ? OR advisor_name LIKE ?)", (agent_id, f"%{agent_id}%")).fetchone()[0]
+
+        # Active Warnings / PIPs
+        open_warnings = con.execute("SELECT COUNT(*) FROM warnings WHERE (advisor_id = ? OR advisor_name LIKE ?) AND status != 'Closed'", (agent_id, f"%{agent_id}%")).fetchone()[0]
+
+        # Weekly / Daily Trend for Chart (Recent evaluations)
+        trend_rows = con.execute("""
+            SELECT COALESCE(call_date, evaluation_date) as dt,
+                   ROUND(AVG(quality_score), 1) as avg_score,
+                   COUNT(*) as call_count,
+                   SUM(is_fatal) as fatals
+            """ + sql_base + """
+            AND COALESCE(call_date, evaluation_date) IS NOT NULL
+            GROUP BY COALESCE(call_date, evaluation_date)
+            ORDER BY dt DESC LIMIT 20
+        """, params).fetchall()
+        trend_rows = list(reversed(trend_rows))
+
+        # Personal Audit History (EXCLUDING internal supervisor observation notes)
+        history_base_sql = "SELECT id, department, call_id, call_date, evaluation_date, advisor_id, advisor_name, auditor_name, quality_score, is_fatal, fatal_category, error_categories, audio_url" + sql_base + " ORDER BY COALESCE(call_date, evaluation_date) DESC, id DESC"
+        history_count_sql = "SELECT COUNT(*) as total" + sql_base
+        
+        history_rows, pagination = paginate_query(con, history_count_sql, history_base_sql, params, page_num=page_num, per_page=per_page)
+
+        # Recent Live Coaching Feedbacks (Exclude observation notes, include constructive improvement and feedback status)
+        live_feedbacks = con.execute("""
+            SELECT id, call_id, call_date, call_disposition, improvement, feedback, auditor_name
+            FROM live_calls
+            WHERE (advisor_id = ? OR advisor_name LIKE ?)
+            ORDER BY call_date DESC, id DESC LIMIT 10
+        """, (agent_id, f"%{agent_id}%")).fetchall()
+
+    kpis = {
+        "agent_id": agent_id,
+        "agent_name": agent_name,
+        "department": dept,
+        "location": location,
+        "team_leader": team_leader,
+        "total_audits": total_audits,
+        "avg_score": avg_score,
+        "fatal_count": fatal_count,
+        "fatal_rate": fatal_rate,
+        "low_score_count": low_score_count,
+        "avg_score_count": avg_score_count,
+        "good_score_count": good_score_count,
+        "inbound_count": inbound_count,
+        "outbound_count": outbound_count,
+        "live_count": live_count,
+        "open_warnings": open_warnings
+    }
+
+    chart_payload = {
+        "dates": [r["dt"] for r in trend_rows],
+        "scores": [float(r["avg_score"] or 0) for r in trend_rows],
+        "calls": [int(r["call_count"] or 0) for r in trend_rows],
+        "fatals": [int(r["fatals"] or 0) for r in trend_rows],
+        "bracket_distribution": [good_score_count, avg_score_count, low_score_count, fatal_count]
+    }
+
+    return render_template("agent_dashboard.html",
+                           page="agent_dashboard",
+                           kpis=kpis,
+                           chart_data=chart_payload,
+                           rows=history_rows,
+                           pagination=pagination,
+                           live_feedbacks=live_feedbacks,
+                           all_advisors=all_advisors,
+                           selected_agent_id=agent_id,
+                           date_range=date_range,
+                           per_page=per_page,
+                           q=q)

@@ -1,0 +1,495 @@
+{% extends "layout.html" %}
+{% block title %}My Performance Dashboard · {{ kpis.agent_name }}{% endblock %}
+{% block heading %}Agent Self-Service Workspace{% endblock %}
+
+{% block content %}
+<!-- Agent Profile & Welcome Banner -->
+<div class="card" style="padding: 16px 20px; margin-bottom: 16px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, var(--brand-blue), var(--brand-purple)); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);">
+        👤
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <h2 style="margin: 0; font-size: 19px; font-weight: 700; color: #f8fafc; letter-spacing: -0.3px;">
+            {{ kpis.agent_name }}
+          </h2>
+          <span class="badge badge-info" style="font-size: 11px; padding: 2px 8px; font-weight: 700;">
+            ID: {{ kpis.agent_id }}
+          </span>
+          <span class="badge badge-neutral" style="font-size: 11px; padding: 2px 8px;">
+            🏢 {{ kpis.department }} Dept
+          </span>
+          <span class="badge badge-neutral" style="font-size: 11px; padding: 2px 8px;">
+            📍 {{ kpis.location }}
+          </span>
+        </div>
+        <p style="margin: 4px 0 0; font-size: 12px; color: #94a3b8;">
+          Supervisor: <strong style="color: #cbd5e1;">{{ kpis.team_leader }}</strong> &nbsp;|&nbsp; 
+          Role: <strong style="color: #38bdf8;">Customer Service Advisor</strong> &nbsp;|&nbsp;
+          Status: <span style="color: #22c55e;">● Active Performance Tracking</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Manager/Admin Advisor Selector & Date Range Filter -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      {% if all_advisors %}
+      <form method="get" style="display: flex; align-items: center; gap: 6px;">
+        <input type="hidden" name="range" value="{{ date_range }}">
+        <select name="advisor_id" onchange="this.form.submit()" class="form-control" style="font-size: 12px; padding: 5px 10px; min-width: 200px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border);">
+          {% for adv in all_advisors %}
+          <option value="{{ adv.advisor_id }}" {{ 'selected' if adv.advisor_id == selected_agent_id else '' }}>
+            {{ adv.advisor_name }} ({{ adv.advisor_id }})
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+
+      <div style="display: flex; background: rgba(15, 23, 42, 0.6); padding: 3px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <a href="?advisor_id={{ selected_agent_id }}&range=7d" class="btn btn-sm {{ 'btn-primary' if date_range=='7d' else 'btn-secondary' }}" style="font-size: 11px; padding: 3px 8px; border: none;">7 Days</a>
+        <a href="?advisor_id={{ selected_agent_id }}&range=30d" class="btn btn-sm {{ 'btn-primary' if date_range=='30d' else 'btn-secondary' }}" style="font-size: 11px; padding: 3px 8px; border: none;">30 Days</a>
+        <a href="?advisor_id={{ selected_agent_id }}&range=90d" class="btn btn-sm {{ 'btn-primary' if date_range=='90d' else 'btn-secondary' }}" style="font-size: 11px; padding: 3px 8px; border: none;">90 Days</a>
+        <a href="?advisor_id={{ selected_agent_id }}&range=all" class="btn btn-sm {{ 'btn-primary' if date_range=='all' else 'btn-secondary' }}" style="font-size: 11px; padding: 3px 8px; border: none;">All Time</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 1. Personal KPI Cards Grid (4 Essential Metrics) -->
+<div class="ref-kpi-grid" style="margin-bottom: 16px;">
+  <!-- Total Calls Audited -->
+  <div class="ref-kpi-card blue" style="cursor: default;">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon blue">📞</div>
+        <div class="ref-kpi-title">TOTAL AUDITED CALLS</div>
+        <div class="ref-kpi-trend">↗</div>
+      </div>
+      <div class="ref-kpi-value">{{ kpis.total_audits }}</div>
+    </div>
+    <div class="ref-kpi-sub">Inbound: {{ kpis.inbound_count }} &nbsp;|&nbsp; Outbound: {{ kpis.outbound_count }}</div>
+  </div>
+
+  <!-- Average Quality Score -->
+  <div class="ref-kpi-card {{ 'green' if kpis.avg_score >= 90 else ('blue' if kpis.avg_score >= 80 else 'amber') }}" style="cursor: default;">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon {{ 'green' if kpis.avg_score >= 90 else ('blue' if kpis.avg_score >= 80 else 'amber') }}">★</div>
+        <div class="ref-kpi-title">AVG QUALITY SCORE</div>
+        <div class="ref-kpi-trend">
+          {% if kpis.avg_score >= 90 %}🏆{% elif kpis.avg_score >= 80 %}⭐{% else %}⚠️{% endif %}
+        </div>
+      </div>
+      <div class="ref-kpi-value">{{ kpis.avg_score }}%</div>
+    </div>
+    <div class="ref-kpi-sub">
+      {% if kpis.avg_score >= 90 %}Benchmark Performer (&gt;90%)
+      {% elif kpis.avg_score >= 80 %}Acceptable Standard (80–90%)
+      {% else %}Target Coaching Required (&lt;80%){% endif %}
+    </div>
+  </div>
+
+  <!-- Fatal Error Count & Rate -->
+  <div class="ref-kpi-card {{ 'red' if kpis.fatal_count > 0 else 'green' }}" style="cursor: default;">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon {{ 'red' if kpis.fatal_count > 0 else 'green' }}">⚠️</div>
+        <div class="ref-kpi-title">FATAL ERRORS</div>
+        <div class="ref-kpi-trend">{{ kpis.fatal_rate }}%</div>
+      </div>
+      <div class="ref-kpi-value">{{ kpis.fatal_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">{{ kpis.fatal_rate }}% fatal rate across audited calls</div>
+  </div>
+
+  <!-- Live Monitoring & Coaching Status -->
+  <div class="ref-kpi-card cyan" style="cursor: default;">
+    <div>
+      <div class="ref-kpi-header">
+        <div class="ref-kpi-icon cyan">🎧</div>
+        <div class="ref-kpi-title">LIVE MONITORING</div>
+        <div class="ref-kpi-trend">↗</div>
+      </div>
+      <div class="ref-kpi-value">{{ kpis.live_count }}</div>
+    </div>
+    <div class="ref-kpi-sub">
+      Active Warnings: <strong style="color:{{ 'var(--brand-red)' if kpis.open_warnings > 0 else 'var(--brand-green)' }}">{{ kpis.open_warnings }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Performance Trend & Score Quality Distribution (Two Charts Side-by-Side) -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; margin-bottom: 16px;">
+  <!-- Trend Chart -->
+  <div class="card" style="padding: 14px 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+      <h3 style="margin:0; font-size:13.5px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+        <span>📈</span>
+        <span>Quality Score Trend Over Time</span>
+      </h3>
+      <span class="badge badge-neutral" style="font-size:10.5px;">Recent Evaluations</span>
+    </div>
+    <div style="height: 220px; position: relative;">
+      <canvas id="agentTrendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Score Distribution Chart -->
+  <div class="card" style="padding: 14px 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+      <h3 style="margin:0; font-size:13.5px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+        <span>🎯</span>
+        <span>Quality Category Breakdown</span>
+      </h3>
+      <span class="badge badge-neutral" style="font-size:10.5px;">Benchmark vs Coaching Bands</span>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:center; height: 220px; position: relative;">
+      <canvas id="agentScoreDistChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Live Monitoring Feedback & Coaching Highlights (If any exist) -->
+{% if live_feedbacks %}
+<div class="card" style="padding: 14px 16px; margin-bottom: 16px; border-left: 4px solid var(--brand-cyan);">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+    <h3 style="margin:0; font-size:13.5px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+      <span>🎧</span>
+      <span>Recent Live Coaching Feedback & Observations</span>
+    </h3>
+    <span class="badge badge-info" style="font-size:11px;">Constructive Guidance</span>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+    {% for fb in live_feedbacks %}
+    <div style="background:var(--bg-card-subtle); border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:11.5px; font-weight:700; color:var(--text-main);">{{ fb.call_date or 'Recent' }}</span>
+        <span class="badge {{ 'badge-success' if fb.feedback|lower == 'done' else 'badge-warning' }}" style="font-size:10px; padding:1px 6px;">
+          Feedback: {{ fb.feedback or 'Recorded' }}
+        </span>
+      </div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:4px;">
+        <strong>Disposition:</strong> {{ fb.call_disposition or 'General Call' }} &nbsp;·&nbsp; <strong>QA:</strong> {{ fb.auditor_name or 'Quality Team' }}
+      </div>
+      {% if fb.improvement %}
+      <div style="font-size:11.5px; color:var(--text-main);">
+        <strong style="color:var(--brand-amber);">Area of Improvement:</strong>
+        <div class="improvement-cell-wrapper" style="margin-top: 4px;">
+          <span class="improvement-chip" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border-color: rgba(245, 158, 11, 0.3);">
+            {{ fb.improvement }}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- 4. Personal Audit History Table -->
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 16px;">
+  <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border); margin:0;">
+    <div>
+      <h3 class="card-title" style="display:flex; align-items:center; gap:6px; font-size: 14px; color: var(--text-main); margin:0;">
+        <span>📋</span>
+        <span>My Evaluation History</span>
+        <span class="badge badge-info" style="font-size: 11px;">Showing {{ pagination.start_record }}–{{ pagination.end_record }} of {{ pagination.total }} Audits</span>
+      </h3>
+      <p class="card-subtitle" style="margin:2px 0 0; font-size: 11.5px; color:var(--text-muted);">
+        Detailed score results and constructive coaching feedback for your calls
+      </p>
+    </div>
+
+    <!-- Quick Table Search & Per Page -->
+    <form method="get" style="display:flex; align-items:center; gap:8px;">
+      <input type="hidden" name="advisor_id" value="{{ selected_agent_id }}">
+      <input type="hidden" name="range" value="{{ date_range }}">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search Call ID / Category..." class="form-control" style="font-size:12px; padding:4px 8px; width:180px;">
+      <select name="per_page" onchange="this.form.submit()" class="form-control" style="font-size:12px; padding:4px 8px; width:95px;">
+        <option value="25" {{ 'selected' if per_page=='25' else '' }}>25 / page</option>
+        <option value="50" {{ 'selected' if per_page=='50' else '' }}>50 / page</option>
+        <option value="100" {{ 'selected' if per_page=='100' else '' }}>100 / page</option>
+        <option value="all" {{ 'selected' if per_page=='all' else '' }}>All</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm" style="font-size:11.5px; padding:4px 10px;">Search</button>
+      {% if q %}
+      <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:4px 8px;" title="Clear Search">✕</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive" style="max-height: 520px; overflow: auto; border:none; border-radius:0;">
+    <table class="data-table" style="width:100%;">
+      <thead>
+        <tr>
+          <th style="width: 140px;">Call Reference</th>
+          <th style="width: 110px;">Department</th>
+          <th style="width: 130px; text-align: center;">Quality Score</th>
+          <th style="width: 120px; text-align: center;">Fatal Status</th>
+          <th style="min-width: 280px;">Constructive Feedback & Improvement Areas</th>
+          <th style="width: 130px;">Evaluated By</th>
+          <th style="width: 110px; text-align: center;">Call Audio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <!-- Col 1: Call Reference -->
+          <td>
+            <div class="dense-cell">
+              <strong style="color:var(--brand-blue); font-size:12.5px;">{{ r.call_id or '—' }}</strong>
+              <div class="dense-secondary">
+                📅 {{ r.call_date or r.evaluation_date or '—' }}
+              </div>
+            </div>
+          </td>
+
+          <!-- Col 2: Department -->
+          <td>
+            <span class="badge {{ 'badge-blue' if r.department == 'Inbound' else 'badge-neutral' }}" style="font-size:11px;">
+              {{ r.department }}
+            </span>
+          </td>
+
+          <!-- Col 3: Quality Score -->
+          <td style="text-align: center;">
+            {% if r.quality_score is not none %}
+              {% if r.quality_score >= 90 %}
+                <span class="badge badge-success" style="font-size:12px; font-weight:700; padding:3px 9px;">{{ r.quality_score }}%</span>
+              {% elif r.quality_score >= 80 %}
+                <span class="badge badge-info" style="font-size:12px; font-weight:700; padding:3px 9px;">{{ r.quality_score }}%</span>
+              {% else %}
+                <span class="badge badge-warning" style="font-size:12px; font-weight:700; padding:3px 9px;">{{ r.quality_score }}%</span>
+              {% endif %}
+            {% else %}
+              <span style="color:#94a3b8;">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Col 4: Fatal Status -->
+          <td style="text-align: center;">
+            {% if r.is_fatal %}
+              <span class="badge badge-danger" style="font-size:11px; padding:3px 8px; font-weight:700;" title="{{ r.fatal_category or 'Fatal non-compliance' }}">
+                ⚠️ Fatal Call
+              </span>
+              {% if r.fatal_category %}
+              <div style="font-size:10px; color:#ef4444; margin-top:2px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.fatal_category }}">
+                {{ r.fatal_category }}
+              </div>
+              {% endif %}
+            {% else %}
+              <span class="badge badge-neutral" style="font-size:11px; padding:3px 8px; color:#22c55e;">
+                ✓ Compliant
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Col 5: Constructive Feedback & Improvement Areas (Proper dynamic text wrap) -->
+          <td>
+            <div class="improvement-cell-wrapper">
+              {% if r.error_categories %}
+                {% if ';' in r.error_categories %}
+                  {% for item in r.error_categories.split(';') %}
+                    {% set clean_item = item|trim %}
+                    {% if clean_item %}
+                      <span class="improvement-chip">{{ clean_item }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% elif ',' in r.error_categories %}
+                  {% for item in r.error_categories.split(',') %}
+                    {% set clean_item = item|trim %}
+                    {% if clean_item %}
+                      <span class="improvement-chip">{{ clean_item }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <span class="improvement-chip">{{ r.error_categories|trim }}</span>
+                {% endif %}
+              {% elif r.is_fatal and r.fatal_category %}
+                <span class="improvement-chip" style="background:rgba(239, 68, 68, 0.12); color:#ef4444; border-color:rgba(239, 68, 68, 0.3);">
+                  {{ r.fatal_category }}
+                </span>
+              {% else %}
+                <span style="color:#22c55e; font-size:11.5px; font-weight:500;">✓ Excellent Call Handling</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Col 6: Evaluated By -->
+          <td>
+            <div class="dense-cell">
+              <span style="font-size:12px; font-weight:600; color:var(--text-main);">
+                {{ r.auditor_name or 'Quality Auditor' }}
+              </span>
+              <span class="dense-secondary">QA Audit Team</span>
+            </div>
+          </td>
+
+          <!-- Col 7: Call Audio -->
+          <td style="text-align: center;">
+            {% if r.audio_url %}
+              <button type="button" class="btn btn-secondary btn-sm" onclick="playAgentAudio('{{ r.audio_url }}', this)" style="font-size:11px; padding:2px 8px;">
+                ▶ Listen
+              </button>
+            {% else %}
+              <span style="color:#94a3b8; font-size:11px;">No Audio</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center; padding:36px; color:var(--text-muted); font-size:12.5px;">
+            <div style="font-size:28px; margin-bottom:8px;">📞</div>
+            <strong>No evaluated calls found for the selected time range.</strong>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Server-Side Pagination Bar -->
+  {% if pagination and pagination.total_pages > 1 %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:10px 14px; background:var(--bg-card); border-top:1px solid var(--border);">
+    <div style="font-size:12px; color:var(--text-muted);">
+      Page <strong>{{ pagination.page }}</strong> of <strong>{{ pagination.total_pages }}</strong> &nbsp;·&nbsp;
+      Showing <strong>{{ pagination.start_record }}–{{ pagination.end_record }}</strong> of <strong>{{ pagination.total }}</strong> audits
+    </div>
+    
+    <div style="display:flex; align-items:center; gap:6px;">
+      {% if pagination.has_prev %}
+      <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}&page=1&per_page={{ per_page }}&q={{ q }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;">« First</a>
+      <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}&page={{ pagination.prev_page }}&per_page={{ per_page }}&q={{ q }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;">‹ Prev</a>
+      {% endif %}
+
+      <div style="display:flex; gap:3px;">
+        {% for p in pagination.page_numbers %}
+          {% if p == pagination.page %}
+          <span class="btn btn-primary btn-sm" style="font-size:11.5px; padding:3px 9px; font-weight:700;">{{ p }}</span>
+          {% else %}
+          <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}&page={{ p }}&per_page={{ per_page }}&q={{ q }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 9px;">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if pagination.has_next %}
+      <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}&page={{ pagination.next_page }}&per_page={{ per_page }}&q={{ q }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;">Next ›</a>
+      <a href="?advisor_id={{ selected_agent_id }}&range={{ date_range }}&page={{ pagination.total_pages }}&per_page={{ per_page }}&q={{ q }}" class="btn btn-secondary btn-sm" style="font-size:11.5px; padding:3px 8px;">Last »</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Chart.js & Audio Player Initialization Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const chartPayload = {{ chart_data|tojson }};
+  const isDark = document.body.classList.contains('dark-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+  // 1. Quality Score Trend Line Chart
+  const trendCtx = document.getElementById('agentTrendChart');
+  if (trendCtx && chartPayload.dates && chartPayload.dates.length > 0) {
+    new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: chartPayload.dates,
+        datasets: [{
+          label: 'Quality Score (%)',
+          data: chartPayload.scores,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointBackgroundColor: '#2563eb',
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }, {
+          label: 'Call Volume',
+          data: chartPayload.calls,
+          borderColor: '#94a3b8',
+          borderDash: [4, 4],
+          borderWidth: 1.5,
+          pointRadius: 2,
+          yAxisID: 'y1'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: textColor, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.datasetIndex === 0) return `Score: ${ctx.parsed.y}%`;
+                return `Calls Audited: ${ctx.parsed.y}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+          y: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+          y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+        }
+      }
+    });
+  } else if (trendCtx) {
+    trendCtx.parentElement.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:12.5px;">No trend data available for current date range</div>';
+  }
+
+  // 2. Score Category Breakdown Doughnut Chart
+  const distCtx = document.getElementById('agentScoreDistChart');
+  if (distCtx) {
+    new Chart(distCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Good (>90%)', 'Average (80-90%)', 'Low (<80%)', 'Fatal Errors'],
+        datasets: [{
+          data: chartPayload.bracket_distribution,
+          backgroundColor: ['#16a34a', '#2563eb', '#f59e0b', '#dc2626'],
+          borderWidth: 2,
+          borderColor: isDark ? '#1e293b' : '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: textColor, font: { size: 11 } } }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+});
+
+let currentAudio = null;
+function playAgentAudio(url, btn) {
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause();
+    btn.innerText = '▶ Listen';
+    currentAudio = null;
+    return;
+  }
+  currentAudio = new Audio(url);
+  btn.innerText = '⏸ Pause';
+  currentAudio.play().catch(e => {
+    alert("Audio stream could not be loaded: " + e.message);
+    btn.innerText = '▶ Listen';
+  });
+  currentAudio.onended = () => {
+    btn.innerText = '▶ Listen';
+  };
+}
+</script>
+{% endblock %}
