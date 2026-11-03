@@ -126,7 +126,9 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMP WITHOUT TIME ZONE,
     email VARCHAR(255),
     full_name VARCHAR(255),
-    advisor_id VARCHAR(100)
+    advisor_id VARCHAR(100),
+    department VARCHAR(100),
+    location VARCHAR(255)
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);

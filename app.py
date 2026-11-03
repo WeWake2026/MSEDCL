@@ -2631,17 +2631,40 @@ def user_auto_provision_advisors():
             """, row_vals)
 
     try:
-        if not created_manifest:
-            flash("All audited advisors already have user accounts.", "info")
-            return redirect(url_for("user_management"))
+        manifest_rows = []
+        if created_manifest:
+            manifest_rows = created_manifest
+            log_audit("AUTO_PROVISION_ADVISORS", f"{len(created_manifest)} accounts", "Auto-provisioned login accounts from audits table")
+            flash(f"Successfully auto-provisioned {len(created_manifest)} advisor accounts! Credentials CSV downloaded.", "success")
+        else:
+            # If all are already provisioned, export current active advisor accounts manifest so the user always receives the credentials manifest
+            with db() as con:
+                active_adv_users = con.execute("""
+                    SELECT username, full_name, advisor_id, department, email
+                    FROM users
+                    WHERE role = 'advisor' AND advisor_id IS NOT NULL AND advisor_id != ''
+                    ORDER BY username ASC
+                """).fetchall()
+                for u in active_adv_users:
+                    manifest_rows.append({
+                        "username": u["username"],
+                        "full_name": u["full_name"] or "",
+                        "advisor_id": u["advisor_id"] or "",
+                        "department": u["department"] or "Inbound",
+                        "email": u["email"] or "",
+                        "initial_password": "(Existing Account Password)"
+                    })
+            flash(f"All audited advisors already have user accounts. Downloaded roster manifest of {len(manifest_rows)} advisor accounts.", "info")
 
-        log_audit("AUTO_PROVISION_ADVISORS", f"{len(created_manifest)} accounts", "Auto-provisioned login accounts from audits table")
+        if not manifest_rows:
+            flash("No advisor records available to generate accounts or export manifest.", "warning")
+            return redirect(url_for("user_management"))
 
         # Generate CSV manifest for download
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=["username", "full_name", "advisor_id", "department", "email", "initial_password"])
         writer.writeheader()
-        for row in created_manifest:
+        for row in manifest_rows:
             writer.writerow(row)
 
         csv_content = output.getvalue()
@@ -2652,11 +2675,11 @@ def user_auto_provision_advisors():
             mem_bytes,
             mimetype="text/csv",
             as_attachment=True,
-            download_name=f"msedcl_auto_provisioned_advisors_{timestamp}.csv"
+            download_name=f"msedcl_advisor_accounts_manifest_{timestamp}.csv"
         )
     except Exception as e:
         print(f"[ERROR] Auto-provision manifest export failed: {e}", file=sys.stderr)
-        flash(f"Accounts provisioned, but failed to prepare credentials manifest download: {str(e)}", "warning")
+        flash(f"Failed to prepare credentials manifest download: {str(e)}", "warning")
         return redirect(url_for("user_management"))
 
 @app.route("/admin/users/create", methods=["POST"])

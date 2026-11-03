@@ -137,7 +137,9 @@ def init_sqlite(conn):
         last_login TEXT,
         email TEXT,
         full_name TEXT,
-        advisor_id TEXT
+        advisor_id TEXT,
+        department TEXT,
+        location TEXT
     )
     """)
 
@@ -223,6 +225,21 @@ def init_db(db_path=None):
             init_sqlite(conn)
 
         cur = conn.cursor()
+        # Auto-migrate users table columns (department, location) if missing
+        try:
+            if is_postgres():
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100)")
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(255)")
+            else:
+                user_cols = [r[1] for r in cur.execute("PRAGMA table_info(users)").fetchall()]
+                if "department" not in user_cols:
+                    cur.execute("ALTER TABLE users ADD COLUMN department TEXT")
+                if "location" not in user_cols:
+                    cur.execute("ALTER TABLE users ADD COLUMN location TEXT")
+            conn.commit()
+        except Exception as _mig_err:
+            print(f"[Notice] Users table schema migration check: {_mig_err}")
+
 
         # Seed system settings
         defaults = [
