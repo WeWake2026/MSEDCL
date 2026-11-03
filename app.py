@@ -2682,9 +2682,9 @@ def user_create():
     pwd_hash = generate_password_hash(password)
     try:
         with db() as con:
-            existing = con.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+            existing = con.execute("SELECT id FROM users WHERE LOWER(username)=LOWER(?)", (username,)).fetchone()
             if existing:
-                flash(f"Username '{username}' is already registered.", "error")
+                flash(f"Username '{username}' is already registered. Please choose a different username.", "error")
                 return redirect(url_for("user_management"))
 
             con.execute("""
@@ -2695,6 +2695,9 @@ def user_create():
         flash(f"User '{username}' created successfully.", "success")
     except DbIntegrityError as e:
         flash(f"Could not create user: {e}", "error")
+    except Exception as e:
+        print(f"[ERROR] User creation failed: {e}", file=sys.stderr)
+        flash(f"Error creating account: {str(e)}", "error")
 
     return redirect(url_for("user_management"))
 
