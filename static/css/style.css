@@ -1777,3 +1777,242 @@ table.data-table th {
 }
 
 
+
+/* ==========================================================================
+   Interactive Shiftable & Reorderable Analytics Visualizations Board
+   ========================================================================== */
+.analytics-board-section {
+  margin-bottom: 16px;
+}
+
+.analytics-board-toolbar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.board-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.board-badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--kpi-blue-bg);
+  border: 1px solid var(--kpi-blue-border);
+  color: var(--brand-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.board-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.board-subtitle {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+}
+
+.board-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.board-status-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-blue);
+  background: var(--kpi-blue-bg);
+  border: 1px solid var(--kpi-blue-border);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.btn-board-shift {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-board-shift:hover {
+  background: var(--brand-blue);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-board-reset {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-board-reset:hover {
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+/* 3-Column Flexible Grid for Chart Items */
+.analytics-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.analytics-chart-item {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, opacity 0.2s ease;
+  position: relative;
+}
+
+.analytics-chart-item.dragging {
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+
+.analytics-chart-item.drag-over {
+  border: 2px dashed var(--brand-blue) !important;
+  border-radius: var(--radius);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.analytics-chart-item .ref-chart-card {
+  height: 100%;
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Individual Drag & Shift Handle */
+.chart-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--bg-card-subtle, rgba(241, 245, 249, 0.6));
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+}
+
+.chart-drag-handle:active {
+  cursor: grabbing;
+}
+
+.chart-drag-handle .handle-grips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chart-drag-handle .grip-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.chart-drag-handle .drag-label {
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+}
+
+.chart-shift-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-chart-shift {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-size: 10.5px;
+  font-weight: 800;
+  width: 22px;
+  height: 20px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-chart-shift:hover {
+  background: var(--brand-blue);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+  transform: scale(1.1);
+}
+
+/* Attach the handle seamlessly with the card below it */
+.analytics-chart-item .ref-chart-card {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* Responsive adjustments for Charts Grid */
+@media (max-width: 1200px) {
+  .analytics-charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .board-toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
