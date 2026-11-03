@@ -354,9 +354,11 @@ def import_dataframe(headers, data_rows, department, filename, username, duplica
             is_dup = False
             sp_name = f"sp_row_{ix}"
             is_pg = getattr(con, "_is_pg", False)
-            if is_pg:
+            raw_conn = getattr(con, "_conn", None)
+            if is_pg and raw_conn:
                 try:
-                    con.execute(f"SAVEPOINT {sp_name}")
+                    with raw_conn.cursor() as sp_cur:
+                        sp_cur.execute(f"SAVEPOINT {sp_name}")
                 except Exception:
                     pass
 
@@ -370,19 +372,32 @@ def import_dataframe(headers, data_rows, department, filename, username, duplica
                  record["location"], record["audio_url"], filename, batch_id, row_hash, now))
                 if getattr(cur, "rowcount", 0) > 0:
                     inserted += 1
-                    if is_pg:
-                        con.execute(f"RELEASE SAVEPOINT {sp_name}")
+                    if is_pg and raw_conn:
+                        try:
+                            with raw_conn.cursor() as sp_cur:
+                                sp_cur.execute(f"RELEASE SAVEPOINT {sp_name}")
+                        except Exception:
+                            pass
                 else:
                     is_dup = True
-                    if is_pg:
-                        con.execute(f"RELEASE SAVEPOINT {sp_name}")
+                    if is_pg and raw_conn:
+                        try:
+                            with raw_conn.cursor() as sp_cur:
+                                sp_cur.execute(f"RELEASE SAVEPOINT {sp_name}")
+                        except Exception:
+                            pass
             except Exception as e:
                 # If an error occurred on this specific row, rollback to savepoint so the transaction block remains valid
-                if is_pg:
+                if is_pg and raw_conn:
                     try:
-                        con.execute(f"ROLLBACK TO SAVEPOINT {sp_name}")
+                        with raw_conn.cursor() as sp_cur:
+                            sp_cur.execute(f"ROLLBACK TO SAVEPOINT {sp_name}")
                     except Exception:
-                        pass
+                        try:
+                            # If savepoint rollback failed and transaction is in error, recover transaction
+                            raw_conn.rollback()
+                        except Exception:
+                            pass
                 
                 # Check if it's an integrity / duplicate error or a malformed data error
                 is_integrity = any(k in str(type(e).__name__).lower() for k in ["integrity", "unique", "duplicate"])
@@ -390,7 +405,14 @@ def import_dataframe(headers, data_rows, department, filename, username, duplica
                     is_dup = True
                 else:
                     rejected += 1
-                    reason = f"Database error: {str(e).strip()[:100]}"
+                    raw_msg = str(e).strip()
+                    # Clean up PostgreSQL error message to be clear and informative
+                    clean_msg = raw_msg.split("\n")[0].strip()
+                    if clean_msg.startswith("ERROR:"):
+                        clean_msg = clean_msg[6:].strip()
+                    if not clean_msg or "current transaction is aborted" in clean_msg:
+                        clean_msg = "Database constraint or data format mismatch"
+                    reason = f"Database error: {clean_msg[:120]}"
                     errors.append({"row": row_num, "reason": reason})
                     rejected_rows.append({
                         "row": row_num,

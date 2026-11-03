@@ -206,18 +206,19 @@ class UniversalCursor:
         if self._is_pg and re.match(r"^\s*INSERT\s+INTO\s+(warnings|users|audit_logs|email_history|audits)", sql, re.IGNORECASE):
             if "RETURNING" not in sql.upper():
                 sql_with_returning = sql.rstrip("; \t\n") + " RETURNING id"
+                if params is not None:
+                    self._cursor.execute(sql_with_returning, params)
+                else:
+                    self._cursor.execute(sql_with_returning)
                 try:
-                    if params:
-                        self._cursor.execute(sql_with_returning, params)
-                    else:
-                        self._cursor.execute(sql_with_returning)
                     row = self._cursor.fetchone()
                     if row:
                         self.lastrowid = row[0] if isinstance(row, (tuple, list)) else row.get("id")
-                    self.description = getattr(self._cursor, "description", None)
-                    return self
                 except Exception:
-                    pass
+                    # fetchone() might raise ProgrammingError if no row was returned (e.g. ON CONFLICT DO NOTHING)
+                    self.lastrowid = None
+                self.description = getattr(self._cursor, "description", None)
+                return self
         
         if params is not None:
             self._cursor.execute(sql, params)
