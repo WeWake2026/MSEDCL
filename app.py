@@ -352,6 +352,14 @@ def import_dataframe(headers, data_rows, department, filename, username, duplica
                 row_hash = row_hash[:56] + secrets.token_hex(4)
                 
             is_dup = False
+            sp_name = f"sp_row_{ix}"
+            is_pg = getattr(con, "_is_pg", False)
+            if is_pg:
+                try:
+                    con.execute(f"SAVEPOINT {sp_name}")
+                except Exception:
+                    pass
+
             try:
                 cur = con.execute("""INSERT OR IGNORE INTO audits(department,call_id,call_date,evaluation_date,advisor_id,advisor_name,
                 team_leader,auditor_name,quality_score,is_fatal,fatal_category,error_categories,observation,location,
@@ -362,10 +370,49 @@ def import_dataframe(headers, data_rows, department, filename, username, duplica
                  record["location"], record["audio_url"], filename, batch_id, row_hash, now))
                 if getattr(cur, "rowcount", 0) > 0:
                     inserted += 1
+                    if is_pg:
+                        con.execute(f"RELEASE SAVEPOINT {sp_name}")
                 else:
                     is_dup = True
-            except DbIntegrityError:
-                is_dup = True
+                    if is_pg:
+                        con.execute(f"RELEASE SAVEPOINT {sp_name}")
+            except Exception as e:
+                # If an error occurred on this specific row, rollback to savepoint so the transaction block remains valid
+                if is_pg:
+                    try:
+                        con.execute(f"ROLLBACK TO SAVEPOINT {sp_name}")
+                    except Exception:
+                        pass
+                
+                # Check if it's an integrity / duplicate error or a malformed data error
+                is_integrity = any(k in str(type(e).__name__).lower() for k in ["integrity", "unique", "duplicate"])
+                if is_integrity:
+                    is_dup = True
+                else:
+                    rejected += 1
+                    reason = f"Database error: {str(e).strip()[:100]}"
+                    errors.append({"row": row_num, "reason": reason})
+                    rejected_rows.append({
+                        "row": row_num,
+                        "reason": reason,
+                        "data": {
+                            "call_id": record["call_id"] or "",
+                            "call_date": record["call_date"] or "",
+                            "evaluation_date": record["evaluation_date"] or "",
+                            "advisor_id": record["advisor_id"] or "",
+                            "advisor_name": record["advisor_name"],
+                            "team_leader": record["team_leader"] or "",
+                            "auditor_name": record["auditor_name"] or "",
+                            "quality_score": record["quality_score"],
+                            "is_fatal": record["is_fatal"],
+                            "fatal_category": record["fatal_category"] or "",
+                            "error_categories": record["error_categories"] or "",
+                            "observation": record["observation"] or "",
+                            "location": record["location"] or "",
+                            "audio_url": record["audio_url"] or ""
+                        }
+                    })
+                    continue
                 
             if is_dup:
                 duplicates += 1
