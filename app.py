@@ -2,8 +2,9 @@ import os, io, sqlite3, hashlib, secrets, smtplib, ssl, json, sys, time, threadi
 from email.message import EmailMessage
 from datetime import datetime, date, timedelta
 from functools import wraps
+import dateutil.parser
+import openpyxl
 
-import pandas as pd
 from flask import Flask, request, redirect, url_for, render_template, session, flash, send_file, abort, Response, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -183,7 +184,7 @@ def detect_columns(columns):
     return mapping
 
 def parse_score(value):
-    if pd.isna(value) or str(value).strip() == "":
+    if value is None or str(value).strip() == "" or str(value).strip().lower() == "nan":
         return None
     try:
         v = float(str(value).replace("%", "").strip())
@@ -200,11 +201,12 @@ def truthy_fatal(value):
     return s in {"yes", "y", "true", "1", "fatal", "fatal call", "critical"} or ("fatal" in s and s not in {"non fatal", "not fatal"})
 
 def parse_date(value):
-    if pd.isna(value) or str(value).strip() == "":
+    if value is None or str(value).strip() == "" or str(value).strip().lower() == "nan":
         return None
+    if isinstance(value, (datetime, date)):
+        return value.strftime("%Y-%m-%d")
     try:
-        dt = pd.to_datetime(value, errors="coerce", dayfirst=True)
-        if pd.isna(dt): return None
+        dt = dateutil.parser.parse(str(value).strip(), dayfirst=True)
         return dt.strftime("%Y-%m-%d")
     except Exception:
         return None
@@ -215,14 +217,42 @@ def read_upload(file_storage):
     if ext not in ALLOWED_EXTENSIONS:
         raise ValueError("Upload .xlsx, .xlsm or .csv files only.")
     raw = file_storage.read()
+    
+    rows = []
     if ext == ".csv":
-        df = pd.read_csv(io.BytesIO(raw), dtype=object)
+        text = raw.decode("utf-8", errors="replace")
+        reader = csv.reader(io.StringIO(text))
+        for r in reader:
+            if any(cell.strip() for cell in r):
+                rows.append([c.strip() for c in r])
     else:
-        df = pd.read_excel(io.BytesIO(raw), dtype=object)
-    df = df.dropna(how="all")
-    if df.empty:
+        wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(values_only=True):
+            if any(cell is not None and str(cell).strip() != "" for cell in row):
+                cleaned = []
+                for cell in row:
+                    if cell is None:
+                        cleaned.append(None)
+                    elif isinstance(cell, (datetime, date)):
+                        cleaned.append(cell.strftime("%Y-%m-%d"))
+                    else:
+                        cleaned.append(str(cell).strip())
+                rows.append(cleaned)
+                
+    if not rows or len(rows) < 2:
         raise ValueError("The uploaded file has no data rows.")
-    return filename, df
+        
+    headers = [str(h or "").strip() for h in rows[0]]
+    data_rows = []
+    for r in rows[1:]:
+        row_dict = {}
+        for idx, h in enumerate(headers):
+            val = r[idx] if idx < len(r) else None
+            row_dict[h] = val
+        data_rows.append(row_dict)
+        
+    return filename, headers, data_rows
 
 def make_hash(dept, row):
     key = "|".join(str(row.get(k) or "").strip().lower() for k in
@@ -232,29 +262,29 @@ def make_hash(dept, row):
         key += "|" + str(row.get("auditor_name") or "").strip().lower() + "|" + str(row.get("observation") or "").strip().lower()
     return hashlib.sha256((dept.lower() + "|" + key).encode("utf-8")).hexdigest()
 
-def import_dataframe(df, department, filename, username, duplicate_handling="skip"):
-    mapping = detect_columns(df.columns)
+def import_dataframe(headers, data_rows, department, filename, username, duplicate_handling="skip"):
+    mapping = detect_columns(headers)
     if "advisor_name" not in mapping:
         raise ValueError("Advisor Name column was not detected. Please verify your column headers.")
     if "quality_score" not in mapping:
         raise ValueError("Quality Score column was not detected. Please ensure a Score header exists.")
     
     batch_id = secrets.token_hex(8)
-    seen, inserted, duplicates, rejected = len(df), 0, 0, 0
+    seen, inserted, duplicates, rejected = len(data_rows), 0, 0, 0
     errors = []
     duplicate_rows = []
     rejected_rows = []
     now = datetime.now().isoformat(timespec="seconds")
     
     with db() as con:
-        for ix, source_row in df.iterrows():
-            row_num = int(ix) + 2
+        for ix, source_row in enumerate(data_rows):
+            row_num = ix + 2
             row = {}
             for field, source_col in mapping.items():
                 val = source_row.get(source_col)
-                row[field] = None if pd.isna(val) else val
+                row[field] = None if val is None or str(val).strip() == "" or str(val).strip().lower() == "nan" else val
             
-            raw_record = {k: (None if pd.isna(v) else str(v).strip()) for k, v in row.items()}
+            raw_record = {k: (None if v is None else str(v).strip()) for k, v in row.items()}
             advisor = str(row.get("advisor_name") or "").strip()
             score = parse_score(row.get("quality_score"))
             
@@ -914,7 +944,7 @@ def export_center():
 
     with db() as con:
         datasets = export_service.build_export_datasets(con, start_date=start, end_date=end, department=dept, auditor=auditor, current_advisor_id=restrict_advisor)
-        counts = {k: len(v) for k, v in datasets.items()}
+        counts = {k: len(v.get("rows", [])) for k, v in datasets.items()}
         auditors_list = [r[0] for r in con.execute("SELECT DISTINCT auditor_name FROM audits WHERE auditor_name IS NOT NULL AND auditor_name != '' ORDER BY auditor_name").fetchall()]
 
     return render_template("export_center.html",
@@ -941,18 +971,19 @@ def export_single(key):
         if key not in datasets:
             flash(f"Requested dataset '{key}' does not exist.", "error")
             return redirect(url_for("export_center"))
-        df = datasets[key]
+        dataset = datasets[key]
 
     clean_name = key.lower().replace(" ", "_").replace("(", "").replace(")", "").replace("<", "lt").replace(">", "gt").replace("-", "_").replace("%", "pct")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     
-    log_audit("EXPORT_REPORT", key, f"Format: {fmt}, Auditor: {auditor or 'All'}, Rows: {len(df)}")
+    log_audit("EXPORT_REPORT", key, f"Format: {fmt}, Auditor: {auditor or 'All'}, Rows: {len(dataset.get('rows', []))}")
     
     if fmt == "csv":
-        output = io.BytesIO(df.to_csv(index=False).encode("utf-8"))
+        csv_bytes = export_service.dataset_to_csv_bytes(dataset)
+        output = io.BytesIO(csv_bytes)
         return send_file(output, mimetype="text/csv", as_attachment=True, download_name=f"{clean_name}_{timestamp}.csv")
     else:
-        output = export_service.dataframe_to_styled_excel(df, sheet_name=key)
+        output = export_service.dataframe_to_styled_excel(dataset, sheet_name=key)
         return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                          as_attachment=True, download_name=f"{clean_name}_{timestamp}.xlsx")
 
@@ -1025,14 +1056,14 @@ def export_advisor_report(emp_id):
             where.append("COALESCE(call_date, evaluation_date) <= ?")
             params.append(end)
 
-        audits_df = pd.read_sql_query("SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC", con, params=params)
-        warn_df = pd.read_sql_query("SELECT * FROM warnings WHERE (advisor_id=? OR advisor_name LIKE ?) ORDER BY issue_date DESC", con, params=(emp_id, f"%{emp_id}%"))
+        audits_ds = export_service.query_to_dataset(con, "SELECT * FROM audits WHERE " + " AND ".join(where) + " ORDER BY COALESCE(call_date, evaluation_date) DESC", params)
+        warn_ds = export_service.query_to_dataset(con, "SELECT * FROM warnings WHERE (advisor_id=? OR advisor_name LIKE ?) ORDER BY issue_date DESC", (emp_id, f"%{emp_id}%"))
 
     output = export_service.generate_combined_excel({
-        "Audited Calls": audits_df,
-        "Warnings and PIPs": warn_df
+        "Audited Calls": audits_ds,
+        "Warnings and PIPs": warn_ds
     })
-    log_audit("EXPORT_ADVISOR_PROFILE", emp_id, f"Exported individual advisor report ({len(audits_df)} calls)")
+    log_audit("EXPORT_ADVISOR_PROFILE", emp_id, f"Exported individual advisor report ({len(audits_ds.get('rows', []))} calls)")
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name=f"Advisor_Report_{emp_id}_{datetime.now().strftime('%Y%m%d')}.xlsx")
 
@@ -1251,8 +1282,8 @@ def upload():
             flash("Please select either Inbound or Outbound department.", "error")
         else:
             try:
-                filename, df = read_upload(file)
-                result = import_dataframe(df, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
+                filename, headers, data_rows = read_upload(file)
+                result = import_dataframe(headers, data_rows, department, filename, request.current_user["username"], duplicate_handling=dup_handling)
                 flash(f"Workbook ingested: {result['inserted']} inserted, {result['duplicates']} duplicates skipped, {result['rejected']} rejected.", "success")
             except Exception as exc:
                 flash(f"Ingestion failed: {str(exc)}", "error")
@@ -1338,16 +1369,28 @@ def download_sample_template():
         }
     ]
 
-    df = pd.DataFrame(sample_records)
     filename = f"MSEDCL_Quality_Audit_Demo_Template.{fmt}"
 
     if fmt == "csv":
-        output = io.BytesIO(df.to_csv(index=False).encode("utf-8"))
+        out = io.StringIO()
+        headers = list(sample_records[0].keys())
+        writer = csv.DictWriter(out, fieldnames=headers)
+        writer.writeheader()
+        for r in sample_records:
+            writer.writerow(r)
+        output = io.BytesIO(out.getvalue().encode("utf-8"))
         mimetype = "text/csv"
     else:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Audit Data"
+        headers = list(sample_records[0].keys())
+        ws.append(headers)
+        for r in sample_records:
+            ws.append([r.get(h) for h in headers])
+        export_service.apply_excel_styling(ws, "Audit Data")
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Audit Data")
+        wb.save(output)
         output.seek(0)
         mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -1978,47 +2021,67 @@ def user_bulk_import():
     errors = []
 
     try:
+        raw_bytes = file.read()
+        rows = []
         if filename.endswith(".csv"):
-            df = pd.read_csv(file)
+            text = raw_bytes.decode("utf-8", errors="replace")
+            reader = csv.reader(io.StringIO(text))
+            for r in reader:
+                if any(cell.strip() for cell in r):
+                    rows.append([c.strip() for c in r])
         elif filename.endswith((".xlsx", ".xls")):
-            df = pd.read_excel(file)
+            wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+            ws = wb.active
+            for r in ws.iter_rows(values_only=True):
+                if any(cell is not None and str(cell).strip() != "" for cell in r):
+                    rows.append([str(c).strip() if c is not None else "" for c in r])
         else:
             flash("Invalid format. Please upload a .csv or .xlsx file.", "error")
             return redirect(url_for("user_management"))
 
-        # Normalize column headers
-        df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+        if not rows or len(rows) < 2:
+            flash("The uploaded user roster has no data rows.", "error")
+            return redirect(url_for("user_management"))
+
+        headers = [str(c).strip().lower().replace(" ", "_") for c in rows[0]]
+        dict_rows = []
+        for r in rows[1:]:
+            row_dict = {}
+            for idx, h in enumerate(headers):
+                val = r[idx] if idx < len(r) else ""
+                row_dict[h] = val
+            dict_rows.append(row_dict)
 
         with db() as con:
             existing_usernames = set(r[0] for r in con.execute("SELECT username FROM users").fetchall())
 
-            for idx, row in df.iterrows():
+            for row in dict_rows:
                 username = str(row.get("username", "")).strip()
-                if not username or username == "nan" or username in existing_usernames:
+                if not username or username.lower() == "nan" or username in existing_usernames:
                     skipped += 1
                     continue
 
                 full_name = str(row.get("full_name", "")).strip()
-                if full_name == "nan": full_name = ""
+                if full_name.lower() == "nan": full_name = ""
                 email = str(row.get("email", "")).strip()
-                if email == "nan": email = ""
+                if email.lower() == "nan": email = ""
                 role = str(row.get("role", "advisor")).strip().lower()
                 if role not in ("admin", "quality", "manager", "viewer", "advisor"):
                     role = "advisor"
 
                 advisor_id = str(row.get("advisor_id", "")).strip()
-                if advisor_id == "nan" or not advisor_id:
+                if advisor_id.lower() == "nan" or not advisor_id:
                     advisor_id = None
 
                 department = str(row.get("department", "All")).strip()
-                if department == "nan" or not department:
+                if department.lower() == "nan" or not department:
                     department = "All"
 
                 location = str(row.get("location", "")).strip()
-                if location == "nan": location = ""
+                if location.lower() == "nan": location = ""
 
                 raw_pwd = str(row.get("temporary_password", "")).strip()
-                if raw_pwd == "nan" or not raw_pwd:
+                if raw_pwd.lower() == "nan" or not raw_pwd:
                     raw_pwd = secrets.token_urlsafe(8)
 
                 pwd_hash = generate_password_hash(raw_pwd)
