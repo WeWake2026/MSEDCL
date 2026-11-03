@@ -2570,7 +2570,7 @@ def user_bulk_import():
     return redirect(url_for("user_management"))
 
 @app.route("/admin/users/auto-provision-advisors", methods=["POST"])
-@roles("admin")
+@roles("admin", "manager")
 def user_auto_provision_advisors():
     """Auto-generate advisor login accounts for all distinct audited advisors without accounts."""
     created_manifest = []
@@ -2630,22 +2630,34 @@ def user_auto_provision_advisors():
                 VALUES (?, ?, 'advisor', ?, 1, ?, ?, ?, 'Contact Center', datetime('now'))
             """, row_vals)
 
-    if not created_manifest:
-        flash("All audited advisors already have user accounts.", "info")
+    try:
+        if not created_manifest:
+            flash("All audited advisors already have user accounts.", "info")
+            return redirect(url_for("user_management"))
+
+        log_audit("AUTO_PROVISION_ADVISORS", f"{len(created_manifest)} accounts", "Auto-provisioned login accounts from audits table")
+
+        # Generate CSV manifest for download
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=["username", "full_name", "advisor_id", "department", "email", "initial_password"])
+        writer.writeheader()
+        for row in created_manifest:
+            writer.writerow(row)
+
+        csv_content = output.getvalue()
+        mem_bytes = io.BytesIO(csv_content.encode("utf-8"))
+        mem_bytes.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return send_file(
+            mem_bytes,
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=f"msedcl_auto_provisioned_advisors_{timestamp}.csv"
+        )
+    except Exception as e:
+        print(f"[ERROR] Auto-provision manifest export failed: {e}", file=sys.stderr)
+        flash(f"Accounts provisioned, but failed to prepare credentials manifest download: {str(e)}", "warning")
         return redirect(url_for("user_management"))
-
-    log_audit("AUTO_PROVISION_ADVISORS", f"{len(created_manifest)} accounts", "Auto-provisioned login accounts from audits table")
-
-    # Generate CSV manifest for download
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["username", "full_name", "advisor_id", "department", "email", "initial_password"])
-    writer.writeheader()
-    for row in created_manifest:
-        writer.writerow(row)
-
-    mem_bytes = io.BytesIO(output.getvalue().encode("utf-8"))
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return send_file(mem_bytes, mimetype="text/csv", as_attachment=True, download_name=f"msedcl_auto_provisioned_advisors_{timestamp}.csv")
 
 @app.route("/admin/users/create", methods=["POST"])
 @roles("admin", "manager")

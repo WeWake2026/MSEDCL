@@ -29,9 +29,17 @@
       <h4 style="font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
         <span>📤</span> <strong>Upload User Roster (CSV / Excel)</strong>
       </h4>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
         Upload multiple employee accounts at once with roles, advisor links, and departments.
       </p>
+      <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/static/demo_users_roster_template.xlsx" download class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--brand-green);color:var(--brand-green);" title="Download pre-formatted Excel template">
+          📥 Download Demo Excel Roster (.xlsx)
+        </a>
+        <a href="/static/demo_users_import_template.csv" download class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" title="Download pre-formatted CSV template">
+          📄 Demo CSV (.csv)
+        </a>
+      </div>
       <form method="post" action="{{ url_for('user_bulk_import') }}" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input type="file" name="users_file" accept=".csv, .xlsx, .xls" class="form-control" style="flex:1;min-width:180px;padding:5px;" required>
         <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap;">Upload Roster</button>
