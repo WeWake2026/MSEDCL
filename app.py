@@ -2332,7 +2332,7 @@ def settings_page():
             ("excellence_score_threshold", request.form.get("excellence_score_threshold", "90").strip()),
             ("coaching_trigger_threshold", request.form.get("coaching_trigger_threshold", "80").strip()),
             ("calibration_variance_limit", request.form.get("calibration_variance_limit", "3.5").strip()),
-            ("max_upload_size_mb", request.form.get("max_upload_size_mb", "50").strip())
+            ("max_upload_size_mb", request.form.get("max_upload_size_mb", "500").strip())
         ]
         with db() as con:
             for k, v in updates:

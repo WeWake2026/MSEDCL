@@ -65,7 +65,7 @@ if not exist ".env" (
         echo APP_SECRET_KEY=msedcl_production_secure_key_2026_antigravity > .env
         echo DATABASE_PATH=quality_audit.db >> .env
         echo PORT=5000 >> .env
-        echo MAX_UPLOAD_MB=25 >> .env
+        echo MAX_UPLOAD_MB=500 >> .env
     )
 )
 
