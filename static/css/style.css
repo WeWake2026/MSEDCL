@@ -549,9 +549,16 @@ body.sidebar-collapsed .app-main {
 /* ==========================================================================
    Reference KPI Cards (Row 1 & Row 2 Matching Screenshot)
    ========================================================================== */
+.ref-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .ref-kpi-row-1 {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 10px;
 }
@@ -596,6 +603,7 @@ body.sidebar-collapsed .app-main {
 .ref-kpi-card.green::before { background: var(--brand-green); }
 .ref-kpi-card.purple::before { background: var(--brand-purple); }
 .ref-kpi-card.cyan::before { background: var(--brand-cyan); }
+.ref-kpi-card.orange::before { background: #f97316; }
 
 .ref-kpi-header {
   display: flex;
@@ -621,6 +629,7 @@ body.sidebar-collapsed .app-main {
 .ref-kpi-icon.green { background: #10b981; }
 .ref-kpi-icon.purple { background: #8b5cf6; }
 .ref-kpi-icon.cyan { background: #06b6d4; }
+.ref-kpi-icon.orange { background: #f97316; }
 
 .ref-kpi-title {
   font-size: 10.5px;
@@ -709,6 +718,11 @@ body.sidebar-collapsed .app-main {
   grid-template-columns: 1fr 1fr 1.3fr;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.secondary-charts-row {
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px;
 }
 
 .ref-chart-card {
@@ -1216,9 +1230,11 @@ table.data-table th {
 
 /* Responsive Grid Breakdowns */
 @media (max-width: 1200px) {
+  .ref-kpi-grid { grid-template-columns: repeat(4, 1fr); }
   .ref-kpi-row-1 { grid-template-columns: repeat(3, 1fr); }
   .ref-kpi-row-2 { grid-template-columns: 1fr 1fr; }
   .ref-charts-row { grid-template-columns: 1fr; }
+  .secondary-charts-row { grid-template-columns: repeat(2, 1fr) !important; }
   .ref-filter-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-grid-2, .charts-grid-3 { grid-template-columns: 1fr; }
 }
@@ -1628,6 +1644,9 @@ table.data-table th {
    ========================================================================== */
 
 @media (max-width: 992px) {
+  .ref-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .ref-kpi-row-1 {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1641,6 +1660,13 @@ table.data-table th {
 
 @media (max-width: 768px) {
   /* Dashboard KPI Card Stacking */
+  .ref-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .secondary-charts-row {
+    grid-template-columns: 1fr !important;
+  }
   .ref-kpi-row-1 {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -1725,6 +1751,9 @@ table.data-table th {
 
 @media (max-width: 480px) {
   /* 1-column KPI on very small devices */
+  .ref-kpi-grid {
+    grid-template-columns: 1fr;
+  }
   .ref-kpi-row-1 {
     grid-template-columns: 1fr;
   }

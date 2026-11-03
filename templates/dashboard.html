@@ -98,10 +98,10 @@
   </div>
 </div>
 
-<!-- 2. Primary KPI Row 1 (5 Cards: Total Calls, Fatal Calls, Low Score, Average Score, Good Calls) -->
-<div class="ref-kpi-row-1">
-  <!-- Total Audited Calls -->
-  <a href="{{ url_for('audits_view', dept='Inbound') }}" class="ref-kpi-card blue">
+<!-- 2. Primary KPI Metrics Grid (8 Distinct Cards Exactly Matched to Specification) -->
+<div class="ref-kpi-grid">
+  <!-- 1. Total Audited Calls -->
+  <a href="{{ url_for('audits_view', dept='Inbound') }}" class="ref-kpi-card blue" title="View Inbound & Outbound audited calls">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon blue">📞</div>
@@ -113,8 +113,8 @@
     <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_count }} &nbsp;|&nbsp; Outbound: {{ metrics.outbound_count }}</div>
   </a>
 
-  <!-- Fatal Call Errors -->
-  <a href="{{ url_for('fatal_calls') }}" class="ref-kpi-card red">
+  <!-- 2. Fatal Call Errors -->
+  <a href="{{ url_for('fatal_calls') }}" class="ref-kpi-card red" title="View Fatal compliance and policy breaches">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon red">⚠️</div>
@@ -126,8 +126,8 @@
     <div class="ref-kpi-sub">{{ "%.1f"|format(metrics.fatal_rate) }}% of total audited interactions</div>
   </a>
 
-  <!-- Low Score (<80%) -->
-  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card amber">
+  <!-- 3. Low Score (<80%) -->
+  <a href="{{ url_for('score_reports', score_band='Low') }}" class="ref-kpi-card amber" title="View calls requiring coaching">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon amber">⏱️</div>
@@ -139,8 +139,8 @@
     <div class="ref-kpi-sub">Requires active coaching</div>
   </a>
 
-  <!-- Average Score (80-90%) -->
-  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card blue">
+  <!-- 4. Average Score (80-90%) -->
+  <a href="{{ url_for('score_reports', score_band='Mid') }}" class="ref-kpi-card blue" title="View standard performance band calls">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon blue">⭐</div>
@@ -152,8 +152,8 @@
     <div class="ref-kpi-sub">Acceptable quality band</div>
   </a>
 
-  <!-- Good Calls (>90%) -->
-  <a href="{{ url_for('score_reports') }}" class="ref-kpi-card green">
+  <!-- 5. Good Calls (>90%) -->
+  <a href="{{ url_for('score_reports', score_band='Good') }}" class="ref-kpi-card green" title="View benchmark performance calls">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon green">👍</div>
@@ -164,12 +164,9 @@
     </div>
     <div class="ref-kpi-sub">Benchmark performers</div>
   </a>
-</div>
 
-<!-- 3. Primary KPI Row 2 (Average Quality Score, Warnings & PIPs, Last Updated Banner with Graphic) -->
-<div class="ref-kpi-row-2">
-  <!-- Average Quality Score -->
-  <div class="ref-kpi-card purple">
+  <!-- 6. Average Quality Score -->
+  <div class="ref-kpi-card purple" title="Aggregated weighted score across all audited interactions">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon purple">★</div>
@@ -181,8 +178,8 @@
     <div class="ref-kpi-sub">Aggregated weighted quality</div>
   </div>
 
-  <!-- Live Monitored Calls KPI Card -->
-  <a href="{{ url_for('live_calls_view') }}" class="ref-kpi-card cyan">
+  <!-- 7. Live Monitored Calls -->
+  <a href="{{ url_for('live_calls_view') }}" class="ref-kpi-card cyan" title="View real-time live monitoring observations and dispositions">
     <div>
       <div class="ref-kpi-header">
         <div class="ref-kpi-icon cyan">🎧</div>
@@ -194,88 +191,84 @@
     <div class="ref-kpi-sub">Inbound: {{ metrics.inbound_live_calls or 0 }} &nbsp;|&nbsp; Feedback Done: {{ metrics.done_live_feedback or 0 }}</div>
   </a>
 
-  <!-- Warnings & PIPs -->
-  <a href="{{ url_for('warnings') }}" class="ref-kpi-card cyan">
+  <!-- 8. Warnings & PIPs -->
+  <a href="{{ url_for('warnings') }}" class="ref-kpi-card orange" title="Manage disciplinary notices and performance improvement plans">
     <div>
       <div class="ref-kpi-header">
-        <div class="ref-kpi-icon cyan">⚠️</div>
+        <div class="ref-kpi-icon orange">⚠️</div>
         <div class="ref-kpi-title">WARNINGS &amp; PIPs</div>
-        <div class="ref-kpi-trend" style="color:var(--brand-cyan);">↗</div>
+        <div class="ref-kpi-trend" style="color:#f97316;">↗</div>
       </div>
       <div class="ref-kpi-value">{{ metrics.total_warnings }}</div>
     </div>
     <div class="ref-kpi-sub">Open: {{ metrics.open_warnings }} &nbsp;|&nbsp; PIPs: {{ metrics.active_pips }}</div>
   </a>
+</div>
 
-  <!-- Last Updated Banner with City Skyline & Electrical Tower Artwork from Reference -->
-  <div class="ref-banner-card">
-    <div class="ref-banner-info">
-      <div class="ref-banner-calendar-icon" title="System Live Sync Status">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-      </div>
-      <div>
-        <span style="font-size:11.5px;color:var(--text-muted);display:block;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Updated</span>
-        <strong style="font-size:15px;color:var(--text-main);font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span id="liveBannerDate">{{ sync_status.display_date }}</span>
-          <span style="color:var(--border);">|</span>
-          <span id="liveBannerTime">{{ sync_status.display_time }}</span>
-        </strong>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-          <span style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;display:inline-block;animation:pulseLive 2s infinite;"></span>
-          <span style="font-size:11.5px;color:#10b981;font-weight:700;letter-spacing:0.3px;">Live Data</span>
-          <span style="font-size:11px;color:var(--text-muted);margin-left:4px;" title="Connected source">({{ sync_status.last_sync_file }})</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stylized Transmission Tower & Power Grid Graphic -->
-    <div class="ref-banner-art hide-mobile">
-      <svg width="240" height="82" viewBox="0 0 240 82" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-        <defs>
-          <linearGradient id="sunGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.5"/>
-            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.1"/>
-          </linearGradient>
-          <linearGradient id="waveBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"/>
-          </linearGradient>
-          <linearGradient id="waveGold" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.95"/>
-            <stop offset="100%" stop-color="#d97706" stop-opacity="0.9"/>
-          </linearGradient>
-        </defs>
-        <!-- Ambient Sun / Energy Sphere -->
-        <circle cx="205" cy="36" r="26" fill="url(#sunGlow)"/>
-        <!-- City Substation Silhouettes -->
-        <path d="M70 72V52H85V72M85 72V42H102V72M102 72V56H118V72M118 72V46H136V72M136 72V58H154V72M154 72V40H175V72" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
-        <!-- Dynamic Power Waves -->
-        <path d="M0 66C50 66 90 75 160 63C195 57 215 62 240 64V82H0V66Z" fill="url(#waveBlue)"/>
-        <path d="M0 72C40 70 80 77 155 67C190 62 215 65 240 68V82H0V72Z" fill="url(#waveGold)"/>
-        <!-- Electrical Power Lines -->
-        <path d="M0 32 Q 95 52 185 24" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.65"/>
-        <path d="M0 40 Q 100 60 185 36" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.5"/>
-        <!-- High Voltage Transmission Tower / Pylon -->
-        <g stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round" class="banner-tower-svg">
-          <!-- Main Legs -->
-          <path d="M185 10L168 76M185 10L202 76"/>
-          <!-- Horizontal Crossarms -->
-          <path d="M158 24H212M162 38H208M166 54H204"/>
-          <!-- Internal Cross Lattice Bracing -->
-          <path d="M172 24L198 38M198 24L172 38"/>
-          <path d="M170 38L200 54M200 38L170 54"/>
-          <path d="M168 54L202 76M202 54L168 76"/>
-          <!-- Warning Beacon on Top -->
-          <circle cx="185" cy="9" r="2.5" fill="#ef4444"/>
-          <circle cx="185" cy="9" r="6" stroke="#ef4444" stroke-width="1" opacity="0.4"/>
-        </g>
+<!-- 3. Real-Time System Status & Power Grid Live Banner -->
+<div class="ref-banner-card" style="margin-bottom:14px;">
+  <div class="ref-banner-info">
+    <div class="ref-banner-calendar-icon" title="System Live Sync Status">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
       </svg>
     </div>
+    <div>
+      <span style="font-size:11.5px;color:var(--text-muted);display:block;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Updated</span>
+      <strong style="font-size:15px;color:var(--text-main);font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span id="liveBannerDate">{{ sync_status.display_date }}</span>
+        <span style="color:var(--border);">|</span>
+        <span id="liveBannerTime">{{ sync_status.display_time }}</span>
+      </strong>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;display:inline-block;animation:pulseLive 2s infinite;"></span>
+        <span style="font-size:11.5px;color:#10b981;font-weight:700;letter-spacing:0.3px;">Live Data</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:4px;" title="Connected source">({{ sync_status.last_sync_file }})</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stylized Transmission Tower & Power Grid Graphic -->
+  <div class="ref-banner-art hide-mobile">
+    <svg width="240" height="82" viewBox="0 0 240 82" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+      <defs>
+        <linearGradient id="sunGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#ef4444" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="waveBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"/>
+        </linearGradient>
+        <linearGradient id="waveGold" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.95"/>
+          <stop offset="100%" stop-color="#d97706" stop-opacity="0.9"/>
+        </linearGradient>
+      </defs>
+      <!-- Ambient Sun / Energy Sphere -->
+      <circle cx="205" cy="36" r="26" fill="url(#sunGlow)"/>
+      <!-- City Substation Silhouettes -->
+      <path d="M70 72V52H85V72M85 72V42H102V72M102 72V56H118V72M118 72V46H136V72M136 72V58H154V72M154 72V40H175V72" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
+      <!-- Dynamic Power Waves -->
+      <path d="M0 66C50 66 90 75 160 63C195 57 215 62 240 64V82H0V66Z" fill="url(#waveBlue)"/>
+      <path d="M0 72C40 70 80 77 155 67C190 62 215 65 240 68V82H0V72Z" fill="url(#waveGold)"/>
+      <!-- Electrical Power Lines -->
+      <path d="M0 32 Q 95 52 185 24" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.65"/>
+      <path d="M0 40 Q 100 60 185 36" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.5"/>
+      <!-- High Voltage Transmission Tower / Pylon -->
+      <g stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round" class="banner-tower-svg">
+        <path d="M185 10L168 76M185 10L202 76"/>
+        <path d="M158 24H212M162 38H208M166 54H204"/>
+        <path d="M172 24L198 38M198 24L172 38"/>
+        <path d="M170 38L200 54M200 38L170 54"/>
+        <path d="M168 54L202 76M202 54L168 76"/>
+        <circle cx="185" cy="9" r="2.5" fill="#ef4444"/>
+        <circle cx="185" cy="9" r="6" stroke="#ef4444" stroke-width="1" opacity="0.4"/>
+      </g>
+    </svg>
   </div>
 </div>
 
