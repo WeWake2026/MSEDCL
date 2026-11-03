@@ -29,7 +29,7 @@ if not APP_SECRET:
     os.environ["APP_SECRET_KEY"] = APP_SECRET
 
 DB_PATH = os.environ.get("DATABASE_PATH", "quality_audit.db")
-MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "25"))
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "500"))
 
 # Auto-initialize database schema if database or tables don't exist yet
 try:
@@ -40,9 +40,18 @@ except Exception as _e:
 
 from database import get_db, is_postgres, check_db_health, DbIntegrityError
 
+def get_max_upload_mb():
+    try:
+        val = get_setting("max_upload_size_mb")
+        if val and str(val).strip():
+            return int(str(val).strip())
+    except Exception:
+        pass
+    return MAX_UPLOAD_MB
+
 app = Flask(__name__)
 app.secret_key = APP_SECRET
-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = False  # Set to True automatically if behind HTTPS
@@ -1291,12 +1300,14 @@ def upload():
     with db() as con:
         import_batches = con.execute("SELECT * FROM import_batches ORDER BY uploaded_at DESC LIMIT 50").fetchall()
 
+    effective_max_mb = get_max_upload_mb()
+
     return render_template("upload.html",
                            page="upload",
                            result=result,
                            import_batches=import_batches,
                            import_enabled=import_enabled,
-                           max_mb=MAX_UPLOAD_MB)
+                           max_mb=effective_max_mb)
 
 @app.route("/upload/sample-template")
 @login_required
@@ -2712,7 +2723,8 @@ def not_found(e):
 
 @app.errorhandler(413)
 def too_large(e):
-    return f"<h2 style='font-family:sans-serif;'>413 Request Entity Too Large: File upload exceeds maximum limit ({MAX_UPLOAD_MB} MB).</h2>", 413
+    limit_mb = get_max_upload_mb()
+    return f"<h2 style='font-family:sans-serif;'>413 Request Entity Too Large: File upload exceeds maximum limit ({limit_mb} MB).</h2>", 413
 
 @app.errorhandler(500)
 def internal_error(e):

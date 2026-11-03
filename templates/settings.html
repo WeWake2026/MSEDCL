@@ -211,8 +211,8 @@
 
         <div class="filter-group">
           <label>Maximum Workbook Upload Size (MB)</label>
-          <input type="number" name="max_upload_size_mb" value="{{ settings.max_upload_size_mb or '50' }}" class="form-control" required>
-          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Safety ceiling for batch excel/csv ingestion files.</small>
+          <input type="number" name="max_upload_size_mb" value="{{ settings.max_upload_size_mb or '500' }}" class="form-control" required min="10" max="1000">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:3px;display:block;">Safety ceiling for batch excel/csv ingestion files (Default: 500 MB).</small>
         </div>
       </div>
 
